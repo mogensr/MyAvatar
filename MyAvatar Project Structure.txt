@@ -1,0 +1,23 @@
+MyAvatar Project Structure
+MyAvatar/
+├── .env                      # Environment variables (✓ done)
+├── README.md                 # Project documentation
+├── requirements.txt          # Python dependencies
+│
+├── backend/                  # FastAPI backend
+│   ├── __init__.py
+│   ├── main.py              # FastAPI app entry point
+│   ├── models.py            # Database models
+│   ├── database.py          # Database setup
+│   ├── auth.py              # Authentication logic
+│   ├── heygen_client.py     # HeyGen API integration
+│   └── oauth.py             # Google/LinkedIn OAuth
+│
+├── frontend/                 # React web app
+│   ├── public/
+│   ├── src/
+│   └── package.json
+│
+└── uploads/                  # File storage (auto-created)
+    ├── audio/
+    └── videos/
