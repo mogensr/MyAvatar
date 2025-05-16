@@ -140,62 +140,69 @@ async def generate_video(audio: UploadFile = File(...)):
         async with aiohttp.ClientSession() as session:
             print("Starting HeyGen upload process...")
             
-            # Convert audio to base64 for direct JSON upload
-            print("Converting audio to base64...")
+            # Try HeyGen's v2 streaming endpoint
+            print("Trying streaming upload endpoint...")
+            
+            # Create form data for streaming endpoint
+            data = aiohttp.FormData()
+            
+            # Read audio file
             with open(audio_path, 'rb') as audio_file:
                 audio_content = audio_file.read()
-                import base64
-                audio_base64 = base64.b64encode(audio_content).decode('utf-8')
+                data.add_field('audio', audio_content, filename=audio_filename, content_type='audio/webm')
             
-            print(f"Audio file size: {len(audio_content)} bytes")
-            
-            # Generate video with base64 audio
-            print("Starting video generation with base64 audio...")
-            video_payload = {
-                "video_inputs": [
-                    {
-                        "character": {
-                            "type": "avatar",
-                            "avatar_id": avatar_id
-                        },
-                        "voice": {
-                            "type": "audio",
-                            "audio_data": audio_base64,
-                            "format": "webm"
-                        }
-                    }
-                ],
-                "dimension": {
-                    "width": 1080,
-                    "height": 1920
-                },
-                "aspect_ratio": "9:16"
-            }
-            
-            print("Sending video generation request...")
-            
+            # Upload via streaming endpoint
             async with session.post(
-                "https://api.heygen.com/v2/video/generate",
-                headers=headers,
-                json=video_payload
+                "https://api.heygen.com/v2/avatars/streaming/new_session",
+                headers={"X-API-KEY": heygen_key},
+                data=data
             ) as response:
-                print(f"Video generation response status: {response.status}")
+                print(f"Streaming upload response status: {response.status}")
                 response_text = await response.text()
-                print(f"Video generation response: {response_text}")
+                print(f"Streaming upload response: {response_text}")
                 
                 if response.status == 200:
-                    data = await response.json()
-                    video_id = data["data"]["video_id"]
-                    return {
-                        "success": True,
-                        "video_id": video_id,
-                        "message": "Video generation started!",
-                        "audio_file": audio_filename
+                    stream_data = await response.json()
+                    session_id = stream_data["data"]["session_id"]
+                    print(f"Got session_id: {session_id}")
+                    
+                    # Now generate video using session_id
+                    video_payload = {
+                        "avatar_id": avatar_id,
+                        "session_id": session_id,
+                        "dimension": {
+                            "width": 1080,
+                            "height": 1920
+                        },
+                        "aspect_ratio": "9:16"
                     }
+                    
+                    async with session.post(
+                        "https://api.heygen.com/v2/avatars/streaming/start",
+                        headers=headers,
+                        json=video_payload
+                    ) as video_response:
+                        print(f"Video generation response status: {video_response.status}")
+                        video_response_text = await video_response.text()
+                        print(f"Video generation response: {video_response_text}")
+                        
+                        if video_response.status == 200:
+                            video_data = await video_response.json()
+                            return {
+                                "success": True,
+                                "video_id": session_id,  # Use session_id for tracking
+                                "message": "Video generation started!",
+                                "audio_file": audio_filename
+                            }
+                        else:
+                            return {
+                                "success": False,
+                                "error": f"Video generation failed: {video_response_text}"
+                            }
                 else:
                     return {
                         "success": False,
-                        "error": f"Video generation failed: {response_text}"
+                        "error": f"Audio upload failed: {response_text}"
                     }
                     
     except Exception as e:
