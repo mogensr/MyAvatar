@@ -1,7 +1,4 @@
-# Serve HTML app
-@app.get("/app")
-async def serve_app():
-    return FileResponse("mobile_app.html")"""
+"""
 MyAvatar Backend - FastAPI
 Simple starter main.py
 """
