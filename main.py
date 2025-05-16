@@ -140,12 +140,12 @@ async def generate_video(audio: UploadFile = File(...)):
         async with aiohttp.ClientSession() as session:
             print("Starting HeyGen upload process...")
             
-            # Get upload URL - using v2 API
+            # Get upload URL - using v1 API (correct endpoint)
             print("Getting upload URL...")
             async with session.get(
-                "https://api.heygen.com/v2/assets/upload_url",
+                "https://api.heygen.com/v1/asset/upload_url",
                 headers=headers,
-                params={"type": "audio"}
+                params={"asset_type": "audio"}
             ) as response:
                 print(f"Upload URL response status: {response.status}")
                 response_text = await response.text()
@@ -173,7 +173,7 @@ async def generate_video(audio: UploadFile = File(...)):
             # Get asset URL
             print("Getting asset URL...")
             async with session.get(
-                f"https://api.heygen.com/v2/assets/{asset_id}",
+                f"https://api.heygen.com/v1/asset/{asset_id}",
                 headers=headers
             ) as asset_response:
                 print(f"Asset URL response status: {asset_response.status}")
