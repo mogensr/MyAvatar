@@ -140,29 +140,44 @@ async def generate_video(audio: UploadFile = File(...)):
         async with aiohttp.ClientSession() as session:
             print("Starting HeyGen upload process...")
             
-            # Read audio file into memory
-            print("Reading audio file...")
+            # Convert audio to base64 for direct JSON upload
+            print("Converting audio to base64...")
             with open(audio_path, 'rb') as audio_file:
                 audio_content = audio_file.read()
+                import base64
+                audio_base64 = base64.b64encode(audio_content).decode('utf-8')
             
-            print(f"Read {len(audio_content)} bytes from file")
+            print(f"Audio file size: {len(audio_content)} bytes")
             
-            # Modern HeyGen approach - upload directly to generative endpoint
-            print("Uploading file directly to HeyGen...")
+            # Generate video with base64 audio
+            print("Starting video generation with base64 audio...")
+            video_payload = {
+                "video_inputs": [
+                    {
+                        "character": {
+                            "type": "avatar",
+                            "avatar_id": avatar_id
+                        },
+                        "voice": {
+                            "type": "audio",
+                            "audio_data": audio_base64,
+                            "format": "webm"
+                        }
+                    }
+                ],
+                "dimension": {
+                    "width": 1080,
+                    "height": 1920
+                },
+                "aspect_ratio": "9:16"
+            }
             
-            # Create multipart form data with file content
-            data = aiohttp.FormData()
-            data.add_field('avatar_id', avatar_id)
+            print("Sending video generation request...")
             
-            # Add audio file content
-            data.add_field('audio', audio_content, filename=audio_filename, content_type='audio/webm')
-            
-            # Generate video directly with file upload
-            print("Starting video generation with direct upload...")
             async with session.post(
                 "https://api.heygen.com/v2/video/generate",
-                headers={"X-API-KEY": heygen_key},  # Remove Content-Type for form data
-                data=data
+                headers=headers,
+                json=video_payload
             ) as response:
                 print(f"Video generation response status: {response.status}")
                 response_text = await response.text()
