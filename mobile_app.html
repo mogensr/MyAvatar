@@ -286,7 +286,8 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
+        // Use relative URLs - works for both localhost and production
+        const API_BASE = window.location.origin;
         
         let mediaRecorder;
         let audioBlob;
