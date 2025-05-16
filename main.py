@@ -140,81 +140,23 @@ async def generate_video(audio: UploadFile = File(...)):
         async with aiohttp.ClientSession() as session:
             print("Starting HeyGen upload process...")
             
-            # Get upload URL - using v1 API (correct endpoint)
-            print("Getting upload URL...")
-            async with session.get(
-                "https://api.heygen.com/v1/asset/upload_url",
-                headers=headers,
-                params={"asset_type": "audio"}
-            ) as response:
-                print(f"Upload URL response status: {response.status}")
-                response_text = await response.text()
-                print(f"Upload URL response: {response_text}")
-                
-                if response.status != 200:
-                    return {"error": f"Failed to get upload URL: {response_text}"}
-                
-                upload_info = await response.json()
-                upload_url = upload_info["data"]["upload_url"]
-                asset_id = upload_info["data"]["asset_id"]
-                print(f"Got upload URL and asset_id: {asset_id}")
+            # Modern HeyGen approach - upload directly to generative endpoint
+            print("Uploading file directly to HeyGen...")
             
-            # Upload file to S3/storage
-            print("Uploading file...")
+            # Create multipart form data
+            data = aiohttp.FormData()
+            data.add_field('avatar_id', avatar_id)
+            
+            # Add audio file
             with open(audio_path, 'rb') as audio_file:
-                async with session.put(upload_url, data=audio_file) as upload_response:
-                    print(f"Upload response status: {upload_response.status}")
-                    upload_response_text = await upload_response.text()
-                    print(f"Upload response text: {upload_response_text}")
-                    
-                    if upload_response.status not in [200, 204]:
-                        return {"error": f"Failed to upload audio file. Status: {upload_response.status}"}
+                data.add_field('audio', audio_file, filename=audio_filename, content_type='audio/webm')
             
-            # Get asset URL
-            print("Getting asset URL...")
-            async with session.get(
-                f"https://api.heygen.com/v1/asset/{asset_id}",
-                headers=headers
-            ) as asset_response:
-                print(f"Asset URL response status: {asset_response.status}")
-                asset_response_text = await asset_response.text()
-                print(f"Asset URL response: {asset_response_text}")
-                
-                if asset_response.status != 200:
-                    return {"error": f"Failed to get asset URL: {asset_response_text}"}
-                
-                asset_data = await asset_response.json()
-                audio_url = asset_data["data"]["url"]
-                print(f"Got audio URL: {audio_url}")
-            
-            # Generate video
-            print("Starting video generation...")
-            video_payload = {
-                "video_inputs": [
-                    {
-                        "character": {
-                            "type": "avatar",
-                            "avatar_id": avatar_id
-                        },
-                        "voice": {
-                            "type": "audio",
-                            "audio_url": audio_url
-                        }
-                    }
-                ],
-                "dimension": {
-                    "width": 1080,
-                    "height": 1920
-                },
-                "aspect_ratio": "9:16"
-            }
-            
-            print(f"Video payload: {video_payload}")
-            
+            # Generate video directly with file upload
+            print("Starting video generation with direct upload...")
             async with session.post(
                 "https://api.heygen.com/v2/video/generate",
-                headers=headers,
-                json=video_payload
+                headers={"X-API-KEY": heygen_key},  # Remove Content-Type for form data
+                data=data
             ) as response:
                 print(f"Video generation response status: {response.status}")
                 response_text = await response.text()
