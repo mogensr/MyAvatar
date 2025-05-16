@@ -140,16 +140,22 @@ async def generate_video(audio: UploadFile = File(...)):
         async with aiohttp.ClientSession() as session:
             print("Starting HeyGen upload process...")
             
+            # Read audio file into memory
+            print("Reading audio file...")
+            with open(audio_path, 'rb') as audio_file:
+                audio_content = audio_file.read()
+            
+            print(f"Read {len(audio_content)} bytes from file")
+            
             # Modern HeyGen approach - upload directly to generative endpoint
             print("Uploading file directly to HeyGen...")
             
-            # Create multipart form data
+            # Create multipart form data with file content
             data = aiohttp.FormData()
             data.add_field('avatar_id', avatar_id)
             
-            # Add audio file
-            with open(audio_path, 'rb') as audio_file:
-                data.add_field('audio', audio_file, filename=audio_filename, content_type='audio/webm')
+            # Add audio file content
+            data.add_field('audio', audio_content, filename=audio_filename, content_type='audio/webm')
             
             # Generate video directly with file upload
             print("Starting video generation with direct upload...")
