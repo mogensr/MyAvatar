@@ -1,4 +1,7 @@
-"""
+# Serve HTML app
+@app.get("/app")
+async def serve_app():
+    return FileResponse("mobile_app.html")"""
 MyAvatar Backend - FastAPI
 Simple starter main.py
 """
@@ -31,7 +34,7 @@ app.add_middleware(
 # Serve HTML app
 @app.get("/app")
 async def serve_app():
-    return FileResponse("../mobile_app.html")
+    return FileResponse("mobile_app.html")
 
 # Simple test endpoint
 @app.get("/")
@@ -116,11 +119,11 @@ async def generate_video(audio: UploadFile = File(...)):
     avatar_id = "b5038ba7bd9b4d94ac6b5c9ea70f8d28"
     
     # Create uploads directory if not exists
-    os.makedirs("../uploads/audio", exist_ok=True)
+    os.makedirs("uploads/audio", exist_ok=True)
     
     # Save uploaded audio file
     audio_filename = f"audio_{hash(str(audio.filename))}_{audio.filename}"
-    audio_path = f"../uploads/audio/{audio_filename}"
+    audio_path = f"uploads/audio/{audio_filename}"
     
     print(f"Saving audio to: {audio_path}")
     print(f"Audio file size: {audio.size} bytes")
