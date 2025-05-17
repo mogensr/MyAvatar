@@ -27,3 +27,5 @@ Pillow==10.2.0
 # Development - Fixed version compatibility
 pytest==7.4.4
 pytest-asyncio==0.21.1
+
+cloudinary==1.36.0
