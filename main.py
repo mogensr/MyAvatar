@@ -1,6 +1,6 @@
 """
 MyAvatar Backend - FastAPI
-Clean implementation af video generation API
+Alternative implementation af video generation API med direkte Cloudinary konfiguration
 """
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,13 +22,10 @@ import cloudinary.uploader
 # Load environment variables
 load_dotenv()
 
-# Cloudinary konfiguration
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dwnu90g46"),
-    api_key=os.getenv("CLOUDINARY_API_KEY", "336129235434633"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-    secure=True
-)
+# Gemmer legitimationsoplysninger som variabler for at være sikker
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "dwnu90g46")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "336129235434633")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "2Dnp1UiQUyrXpltXttYPkoJcCg0")
 
 # Create FastAPI app
 app = FastAPI(
@@ -54,15 +51,44 @@ async def root():
 # Sundhedstjek endpoint
 @app.get("/health")
 async def health_check():
-    cloudinary_ok = bool(os.getenv("CLOUDINARY_API_SECRET"))
-    heygen_ok = bool(os.getenv("HEYGEN_API_KEY"))
-    
     return {
         "status": "healthy",
         "timestamp": time.time(),
-        "cloudinary_configured": cloudinary_ok,
-        "heygen_configured": heygen_ok
+        "cloudinary_cloud_name": CLOUDINARY_CLOUD_NAME,
+        "cloudinary_api_key": CLOUDINARY_API_KEY,
+        "cloudinary_api_secret_exists": bool(CLOUDINARY_API_SECRET),
+        "heygen_api_key_exists": bool(os.getenv("HEYGEN_API_KEY"))
     }
+
+# Test Cloudinary forbindelse
+@app.get("/test-cloudinary")
+async def test_cloudinary():
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as temp_file:
+            temp_path = temp_file.name
+            temp_file.write(b"Dette er en test")
+        
+        # Forsøg upload med eksplicitte legitimationsoplysninger
+        result = cloudinary.uploader.upload(
+            temp_path,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            resource_type="auto"
+        )
+        
+        os.unlink(temp_path)
+        
+        return {
+            "success": True,
+            "url": result["secure_url"],
+            "message": "Cloudinary test succesfuld!"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Cloudinary test fejlede: {str(e)}"
+        }
 
 # Serve HTML app
 @app.get("/app")
@@ -114,7 +140,7 @@ async def generate_video(audio: UploadFile = File(...)):
     Generer video med uploaded lydfil.
     
     1. Gemmer lydfilen midlertidigt
-    2. Uploader lydfilen til Cloudinary
+    2. Uploader lydfilen til Cloudinary med eksplicitte legitimationsoplysninger
     3. Sender URL til HeyGen API for at generere video
     """
     heygen_key = os.getenv("HEYGEN_API_KEY")
@@ -142,11 +168,16 @@ async def generate_video(audio: UploadFile = File(...)):
         
         print(f"Debug: Gemt lydfil til {temp_path}, størrelse: {len(content)} bytes")
         
-        # Upload til Cloudinary
+        # Upload til Cloudinary med EKSPLICITTE legitimationsoplysninger
         print("Debug: Uploader til Cloudinary...")
+        print(f"Debug: Cloudinary legitimationsoplysninger: {CLOUDINARY_CLOUD_NAME}, {CLOUDINARY_API_KEY}, {bool(CLOUDINARY_API_SECRET)}")
+        
         upload_result = cloudinary.uploader.upload(
             temp_path,
-            resource_type="auto",  # Vigtigt: håndterer lydfiler korrekt
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            resource_type="auto",
             folder="myavatar_audio",
             public_id=f"audio_{audio_id}"
         )
@@ -205,12 +236,6 @@ async def generate_video(audio: UploadFile = File(...)):
                         "success": False,
                         "error": f"Video generation fejlede: {response_text}"
                     }
-    except cloudinary.exceptions.Error as ce:
-        print(f"Exception i Cloudinary upload: {str(ce)}")
-        return {
-            "success": False,
-            "error": f"Cloudinary fejl: {str(ce)}"
-        }
     except Exception as e:
         print(f"Generel exception i video generation: {str(e)}")
         import traceback
