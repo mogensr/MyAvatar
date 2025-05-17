@@ -219,6 +219,34 @@
             margin-bottom: 20px;
             color: #0c5460;
             font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .avatar-switch {
+            cursor: pointer;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+        
+        .avatar-switch:hover {
+            background: #138496;
+        }
+        
+        .avatar-type {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 12px;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -227,7 +255,12 @@
         <h1>🎬 MyAvatar</h1>
         
         <div class="avatar-info">
-            <strong>Din Avatar:</strong> b5038ba7bd9b4d94ac6b5c9ea70f8d28
+            <div>
+                <strong>Din Avatar:</strong> 
+                <span id="avatarName">Standard (Siddende)</span>
+                <span class="avatar-type" id="avatarType">Siddende</span>
+            </div>
+            <button class="avatar-switch" id="avatarSwitch">Skift Avatar</button>
         </div>
         
         <div class="instructions">
@@ -294,6 +327,21 @@
         let startTime;
         let timerInterval;
         
+        // Avatar configuration
+        const avatars = [
+            {
+                id: "b5038ba7bd9b4d94ac6b5c9ea70f8d28",
+                name: "Standard (Siddende)",
+                type: "Siddende"
+            },
+            {
+                id: "ba93f97aacb84960a423b01278c8dd77",
+                name: "Alternativ (Stående)",
+                type: "Stående"
+            }
+        ];
+        let currentAvatarIndex = 0;
+        
         // DOM elements
         const recordButton = document.getElementById('recordButton');
         const timer = document.getElementById('timer');
@@ -310,12 +358,33 @@
         const downloadButton = document.getElementById('downloadButton');
         const audioFileInput = document.getElementById('audioFileInput');
         const fileUploadFallback = document.getElementById('fileUploadFallback');
+        const avatarSwitch = document.getElementById('avatarSwitch');
+        const avatarName = document.getElementById('avatarName');
+        const avatarType = document.getElementById('avatarType');
         
         // Event listeners
         recordButton.addEventListener('click', toggleRecording);
         generateButton.addEventListener('click', generateVideo);
         downloadButton.addEventListener('click', downloadVideo);
         audioFileInput.addEventListener('change', handleFileUpload);
+        avatarSwitch.addEventListener('click', switchAvatar);
+        
+        // Function to switch between avatars
+        function switchAvatar() {
+            currentAvatarIndex = (currentAvatarIndex + 1) % avatars.length;
+            const avatar = avatars[currentAvatarIndex];
+            
+            avatarName.textContent = avatar.name;
+            avatarType.textContent = avatar.type;
+            
+            // Visual feedback for avatar switch
+            avatarSwitch.classList.add('pulse');
+            setTimeout(() => {
+                avatarSwitch.classList.remove('pulse');
+            }, 500);
+            
+            showStatus(`✅ Skiftet til ${avatar.type} avatar`, 'success');
+        }
         
         // Check browser compatibility with more details
         function checkBrowserSupport() {
@@ -454,6 +523,10 @@
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.webm');
             
+            // Use the selected avatar ID
+            const selectedAvatarId = avatars[currentAvatarIndex].id;
+            formData.append('avatar_id', selectedAvatarId);
+            
             try {
                 const response = await fetch(`${API_BASE}/api/video/generate`, {
                     method: 'POST',
@@ -498,8 +571,9 @@
                         const progress = data.progress || 0;
                         
                         // Update progress
-                        progressFill.style.width = progress + '%';
-                        progressText.textContent = Math.round(progress) + '%';
+                        const displayProgress = Math.max(5, Math.round(progress * 100));
+                        progressFill.style.width = displayProgress + '%';
+                        progressText.textContent = displayProgress + '%';
                         
                         if (status === 'completed' && data.video_url) {
                             clearInterval(poll);
@@ -524,20 +598,13 @@
                             showStatus('⏱️ Timeout - prøv igen senere', 'error');
                         }
                     } else {
-                        clearInterval(poll);
-                        progressContainer.style.display = 'none';
-                        generateButton.disabled = false;
-                        showStatus('❌ Fejl ved status tjek: ' + data.error, 'error');
+                        // For robustness, don't fail just because of status check
+                        console.warn('Status check returned non-success, continuing polling');
                     }
                     
                 } catch (error) {
                     console.error('Polling error:', error);
-                    if (attempts >= maxAttempts) {
-                        clearInterval(poll);
-                        progressContainer.style.display = 'none';
-                        generateButton.disabled = false;
-                        showStatus('❌ Kunne ikke tjekke status', 'error');
-                    }
+                    // Continue polling even if individual requests fail
                 }
             }, 5000); // Check every 5 seconds
         }
