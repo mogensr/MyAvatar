@@ -120,6 +120,7 @@ async def test_heygen_real():
 @app.post("/api/video/generate")
 async def generate_video(audio: UploadFile = File(...)):
     import aiohttp
+    import tempfile
     
     heygen_key = os.getenv("HEYGEN_API_KEY")
     if not heygen_key:
@@ -128,40 +129,50 @@ async def generate_video(audio: UploadFile = File(...)):
     # Your avatar ID
     avatar_id = "b5038ba7bd9b4d94ac6b5c9ea70f8d28"
     
-    # Create uploads directory if not exists (for logs)
-    os.makedirs("uploads/audio", exist_ok=True)
-    
-    # Set up headers for HeyGen API
+    # Headers for HeyGen API requests
     headers = {
         "X-API-KEY": heygen_key,
         "Content-Type": "application/json"
     }
     
     try:
+        # Create a temporary file for the audio
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
+            temp_path = temp_file.name
+            # Read and write audio content
+            content = await audio.read()
+            temp_file.write(content)
+        
+        print(f"Saved audio to temporary file: {temp_path}")
+        print(f"Audio size: {len(content)} bytes")
+        
+        # Upload to Cloudinary
+        print("Uploading to Cloudinary...")
+        upload_result = cloudinary.uploader.upload(
+            temp_path,
+            resource_type="auto",
+            folder="myavatar_audio",
+            public_id=f"audio_{hash(audio.filename)}"
+        )
+        
+        # Get the public URL from Cloudinary
+        audio_url = upload_result["secure_url"]
+        print(f"Cloudinary upload successful! URL: {audio_url}")
+        
+        # Remove temporary file
+        os.unlink(temp_path)
+        
+        # Generate video with HeyGen API
         async with aiohttp.ClientSession() as session:
-            print("Starting HeyGen upload process...")
-            
-            # Alternative: Use text-to-speech instead of audio upload
-            # This is more reliable with current HeyGen API
-            
-            print("Using text-to-speech approach...")
-            
-            # For now, let's use a placeholder text and the user's voice
-            # In production, you'd implement speech-to-text to convert audio to text
-            placeholder_text = "Dette er en test af MyAvatar systemet. Din audio er blevet modtaget og vi genererer nu video med din avatar."
-            
-            video_payload = {
+            # Prepare payload for HeyGen video generation
+            payload = {
                 "video_inputs": [
                     {
                         "character": {
                             "type": "avatar",
                             "avatar_id": avatar_id
                         },
-                        "voice": {
-                            "type": "text",
-                            "input_text": placeholder_text,
-                            "voice_id": "en-US-JennyNeural"  # You can change this to match user's voice later
-                        }
+                        "audio_url": audio_url  # Direct audio URL format
                     }
                 ],
                 "dimension": {
@@ -171,13 +182,13 @@ async def generate_video(audio: UploadFile = File(...)):
                 "aspect_ratio": "9:16"
             }
             
-            print("Sending video generation request with text-to-speech...")
-            print(f"Payload: {video_payload}")
+            print(f"HeyGen API payload: {payload}")
             
+            # Make the API request to generate video
             async with session.post(
                 "https://api.heygen.com/v2/video/generate",
                 headers=headers,
-                json=video_payload
+                json=payload
             ) as response:
                 print(f"Video generation response status: {response.status}")
                 response_text = await response.text()
@@ -189,18 +200,16 @@ async def generate_video(audio: UploadFile = File(...)):
                     return {
                         "success": True,
                         "video_id": video_id,
-                        "message": "Video generation started! (Using text-to-speech as fallback)",
-                        "audio_file": audio_filename,
-                        "note": "Audio upload not supported yet - using text-to-speech"
+                        "message": "Video generation started!",
+                        "audio_url": audio_url
                     }
                 else:
                     return {
                         "success": False,
                         "error": f"Video generation failed: {response_text}"
                     }
-                    
     except Exception as e:
-        print(f"Exception occurred: {str(e)}")
+        print(f"Exception in video generation: {str(e)}")
         import traceback
         traceback.print_exc()
         return {
