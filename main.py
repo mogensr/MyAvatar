@@ -1,6 +1,6 @@
 """
 MyAvatar Backend - FastAPI
-Alternative implementation af video generation API med direkte Cloudinary konfiguration
+Implementation med korrekt HeyGen API payload struktur
 """
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -193,6 +193,7 @@ async def generate_video(audio: UploadFile = File(...)):
         # Generer video med HeyGen API
         async with aiohttp.ClientSession() as session:
             # Forbered payload til HeyGen video generation
+            # Inkluder et 'voice' felt, som HeyGen API kræver
             payload = {
                 "video_inputs": [
                     {
@@ -200,7 +201,10 @@ async def generate_video(audio: UploadFile = File(...)):
                             "type": "avatar",
                             "avatar_id": avatar_id
                         },
-                        "audio_url": audio_url  # Direkte audio URL format
+                        "voice": {
+                            "type": "audio_url",  # Angiver at vi bruger en ekstern audio URL
+                            "audio_url": audio_url
+                        }
                     }
                 ],
                 "dimension": {
