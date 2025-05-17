@@ -1,6 +1,6 @@
 """
 MyAvatar Backend - FastAPI
-Implementation med korrekt HeyGen API payload struktur
+Implementation med korrekt voice type værdi for HeyGen API
 """
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -193,7 +193,7 @@ async def generate_video(audio: UploadFile = File(...)):
         # Generer video med HeyGen API
         async with aiohttp.ClientSession() as session:
             # Forbered payload til HeyGen video generation
-            # Inkluder et 'voice' felt, som HeyGen API kræver
+            # Rettet 'type' til 'audio' i stedet for 'audio_url'
             payload = {
                 "video_inputs": [
                     {
@@ -202,7 +202,7 @@ async def generate_video(audio: UploadFile = File(...)):
                             "avatar_id": avatar_id
                         },
                         "voice": {
-                            "type": "audio_url",  # Angiver at vi bruger en ekstern audio URL
+                            "type": "audio",  # 'audio' er en af de gyldige værdier ('text', 'audio', 'silence')
                             "audio_url": audio_url
                         }
                     }
