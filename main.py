@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 import secrets
 import sqlite3
 from passlib.context import CryptContext
-import jwt
+from jose import jwt
 import requests
 import json
 from dotenv import load_dotenv
