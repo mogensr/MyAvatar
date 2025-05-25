@@ -35,3 +35,5 @@ Pillow==10.2.0
 pytest==7.4.4
 pytest-asyncio==0.21.1
 
+
+pydub==0.25.1
