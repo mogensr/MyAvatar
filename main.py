@@ -355,33 +355,6 @@ async def login(request: Request, username: str = Form(...), password: str = For
     response.set_cookie(key="access_token", value=access_token, httponly=True)
     return response
 
-@app.post("/client-login") 
-async def client_login(request: Request, email: str = Form(...), password: str = Form(...)):
-    """Client login from marketing landing page"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    user = cursor.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    conn.close()
-    
-    if not user or not verify_password(password, user["hashed_password"]):
-        return templates.TemplateResponse("marketing_landing.html", {
-            "request": request, 
-            "error": "Ugyldig email eller adgangskode"
-        })
-    
-    user = dict(user)
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user["username"]}, expires_delta=access_token_expires
-    )
-    
-    if user.get("is_admin", 0) == 1:
-        response = RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
-    else:
-        response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-    
-    response.set_cookie(key="access_token", value=access_token, httponly=True)
-    return response
 
     # Admin redirect
     if user.get("is_admin", 0) == 1:
