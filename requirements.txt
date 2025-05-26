@@ -1,0 +1,76 @@
+# MyAvatar Backend Requirements
+
+# FastAPI Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.1
+
+# Environment & Config
+python-dotenv==1.0.1
+pydantic==2.6.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# HTTP Client for APIs
+aiohttp==3.9.3
+httpx==0.26.0
+requests==2.31.0
+
+# Cloudinary for media uploads
+cloudinary==1.37.0
+
+# Jinja2 for templating
+jinja2==3.1.3
+
+# File handling
+Pillow==10.2.0
+
+# Development - Fixed version compatibility
+pytest==7.4.4
+pytest-asyncio==0.21.1
+# MyAvatar Backend Requirements
+
+# FastAPI Framework
+fastapi==0.109.2
+uvicorn==0.27.1
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.1
+
+# Environment & Config
+python-dotenv==1.0.1
+pydantic==2.6.1
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# HTTP Client for APIs
+aiohttp==3.9.3
+httpx==0.26.0
+requests==2.31.0
+
+# Cloudinary for media uploads
+cloudinary==1.37.0
+
+# Jinja2 for templating
+jinja2==3.1.3
+
+# File handling
+Pillow==10.2.0
+
+# Development - Fixed version compatibility
+pytest==7.4.4
+pytest-asyncio==0.21.1
+ psycopg2-binary==2.9.9
+
+
+psycopg2-binary==2.9.9 

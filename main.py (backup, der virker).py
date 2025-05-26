@@ -1,0 +1,419 @@
+"""
+MyAvatar Backend - FastAPI
+Forbedret implementation med formatvalg og robust statustjek
+"""
+from fastapi import FastAPI, File, UploadFile, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+from enum import Enum
+import os
+import tempfile
+import time
+import aiohttp
+import json
+import uuid
+from dotenv import load_dotenv
+import sys
+import traceback
+
+# Cloudinary for audio storage
+import cloudinary
+import cloudinary.uploader
+
+# Load environment variables
+load_dotenv()
+
+# Gemmer legitimationsoplysninger som variabler for at være sikker
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "dwnu90g46")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "336129235434633")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "2Dnp1UiQUyrXpltXttYPkoJcCg0")
+
+# Definér video format indstillinger
+class VideoFormat(str, Enum):
+    PORTRAIT = "portrait"
+    LANDSCAPE = "landscape"
+
+# Dimensioner baseret på videoformat
+FORMAT_DIMENSIONS = {
+    VideoFormat.PORTRAIT: {
+        "width": 1080,
+        "height": 1920,
+        "aspect_ratio": "9:16"
+    },
+    VideoFormat.LANDSCAPE: {
+        "width": 1920,
+        "height": 1080,
+        "aspect_ratio": "16:9"
+    }
+}
+
+# Create FastAPI app
+app = FastAPI(
+    title="MyAvatar API",
+    description="AI Video Generation Platform",
+    version="1.0.0"
+)
+
+# Setup CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# API rodsti
+@app.get("/")
+async def root():
+    return {"message": "MyAvatar API kører!", "version": "1.0.0"}
+
+# Sundhedstjek endpoint
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "cloudinary_cloud_name": CLOUDINARY_CLOUD_NAME,
+        "cloudinary_api_key": CLOUDINARY_API_KEY,
+        "cloudinary_api_secret_exists": bool(CLOUDINARY_API_SECRET),
+        "heygen_api_key_exists": bool(os.getenv("HEYGEN_API_KEY"))
+    }
+
+# Test Cloudinary forbindelse
+@app.get("/test-cloudinary")
+async def test_cloudinary():
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as temp_file:
+            temp_path = temp_file.name
+            temp_file.write(b"Dette er en test")
+        
+        # Forsøg upload med eksplicitte legitimationsoplysninger
+        result = cloudinary.uploader.upload(
+            temp_path,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            resource_type="auto"
+        )
+        
+        os.unlink(temp_path)
+        
+        return {
+            "success": True,
+            "url": result["secure_url"],
+            "message": "Cloudinary test succesfuld!"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Cloudinary test fejlede: {str(e)}"
+        }
+
+# Serve HTML app
+@app.get("/app")
+async def serve_app():
+    return FileResponse("mobile_app.html")
+
+# Få tilgængelige avatarer
+@app.get("/list-avatars")
+async def list_avatars():
+    """Hent en liste over tilgængelige avatarer fra HeyGen API."""
+    heygen_key = os.getenv("HEYGEN_API_KEY")
+    if not heygen_key:
+        return {"error": "HeyGen API nøgle ikke fundet"}
+    
+    headers = {
+        "X-API-KEY": heygen_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Prøv både v2 og v1 endepunkter
+            endpoints = [
+                "https://api.heygen.com/v2/avatar/list",
+                "https://api.heygen.com/v1/avatar.list"
+            ]
+            
+            for endpoint in endpoints:
+                print(f"Debug: Prøver at hente avatarer fra: {endpoint}")
+                
+                async with session.get(endpoint, headers=headers) as response:
+                    print(f"Debug: Avatar liste svar status: {response.status}")
+                    
+                    if response.status == 200:
+                        data = await response.json()
+                        return {
+                            "success": True,
+                            "endpoint_used": endpoint,
+                            "avatars": data.get("data", []),
+                            "raw_response": data
+                        }
+            
+            # Hvis ingen endepunkter lykkedes, returnér en fejl
+            return {
+                "success": False,
+                "error": "Kunne ikke hente avatar liste fra hverken v1 eller v2 API"
+            }
+    except Exception as e:
+        print(f"Exception ved avatar liste: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": f"Fejl: {str(e)}"
+        }
+
+# Test HeyGen API forbindelse
+@app.get("/test-heygen")
+async def test_heygen():
+    """Test forbindelse til HeyGen API og hent kontooplysninger."""
+    heygen_key = os.getenv("HEYGEN_API_KEY")
+    if not heygen_key:
+        return {"error": "HeyGen API nøgle ikke fundet"}
+    
+    headers = {
+        "X-API-KEY": heygen_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.heygen.com/v2/user/remaining_quota",
+                headers=headers
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return {
+                        "success": True,
+                        "message": "HeyGen API forbindelse succesfuld!",
+                        "data": data
+                    }
+                else:
+                    error_text = await response.text()
+                    return {
+                        "success": False,
+                        "error": f"HeyGen API fejl: {error_text}"
+                    }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Forbindelsesfejl: {str(e)}"
+        }
+
+# Generer video med avatar
+@app.post("/api/video/generate")
+async def generate_video(
+    audio: UploadFile = File(...), 
+    avatar_id: str = "b5038ba7bd9b4d94ac6b5c9ea70f8d28",
+    video_format: VideoFormat = VideoFormat.PORTRAIT
+):
+    """
+    Generer video med uploaded lydfil.
+    
+    - audio: Lydfil til at generere video med
+    - avatar_id: ID på avataren der skal bruges (default: "b5038ba7bd9b4d94ac6b5c9ea70f8d28")
+    - video_format: Format på videoen (portrait=9:16 eller landscape=16:9)
+    """
+    heygen_key = os.getenv("HEYGEN_API_KEY")
+    if not heygen_key:
+        return {"error": "HeyGen API nøgle ikke fundet"}
+    
+    # Headers for HeyGen API
+    headers = {
+        "X-API-KEY": heygen_key,
+        "Content-Type": "application/json"
+    }
+    
+    # Få dimensioner baseret på det valgte format
+    dimensions = FORMAT_DIMENSIONS[video_format]
+    
+    try:
+        # Opret en unik ID til at identificere denne lydfil
+        audio_id = str(uuid.uuid4())[:8]
+        
+        # Gem lydfil midlertidigt
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
+            temp_path = temp_file.name
+            content = await audio.read()
+            temp_file.write(content)
+        
+        print(f"Debug: Gemt lydfil til {temp_path}, størrelse: {len(content)} bytes")
+        
+        # Upload til Cloudinary med EKSPLICITTE legitimationsoplysninger
+        print("Debug: Uploader til Cloudinary...")
+        
+        upload_result = cloudinary.uploader.upload(
+            temp_path,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            resource_type="auto",
+            folder="myavatar_audio",
+            public_id=f"audio_{audio_id}"
+        )
+        
+        # Få den offentlige URL fra Cloudinary
+        audio_url = upload_result["secure_url"]
+        print(f"Debug: Cloudinary upload succesfuld! URL: {audio_url}")
+        
+        # Fjern midlertidig fil
+        os.unlink(temp_path)
+        print(f"Debug: Midlertidig fil fjernet")
+        
+        # Generer video med HeyGen API
+        async with aiohttp.ClientSession() as session:
+            # Forbered payload til HeyGen video generation
+            payload = {
+                "video_inputs": [
+                    {
+                        "character": {
+                            "type": "avatar",
+                            "avatar_id": avatar_id
+                        },
+                        "voice": {
+                            "type": "audio",
+                            "audio_url": audio_url
+                        }
+                    }
+                ],
+                "dimension": {
+                    "width": dimensions["width"],
+                    "height": dimensions["height"]
+                },
+                "aspect_ratio": dimensions["aspect_ratio"]
+            }
+            
+            print(f"Debug: HeyGen API payload: {payload}")
+            
+            # Udfør API-kald til at generere video
+            async with session.post(
+                "https://api.heygen.com/v2/video/generate",
+                headers=headers,
+                json=payload
+            ) as response:
+                print(f"Debug: Video generation svar status: {response.status}")
+                response_text = await response.text()
+                print(f"Debug: Video generation svar: {response_text}")
+                
+                if response.status == 200:
+                    data = await response.json()
+                    video_id = data["data"]["video_id"]
+                    return {
+                        "success": True,
+                        "video_id": video_id,
+                        "message": "Video generation startet!",
+                        "audio_url": audio_url,
+                        "video_format": video_format,
+                        "dimensions": dimensions
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Video generation fejlede: {response_text}"
+                    }
+    except Exception as e:
+        print(f"Generel exception i video generation: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "error": f"Fejl: {str(e)}"
+        }
+
+# Tjek video status
+@app.get("/api/video/status/{video_id}")
+async def check_video_status(video_id: str):
+    """
+    Tjek status for en video, der er under generering.
+    
+    Bemærk: Hvis videoen stadig genereres, kan HeyGen API returnere en fejlkode,
+    selvom videoen genereres korrekt. Dette er normalt og betyder bare, at videoen
+    stadig er under produktion.
+    """
+    heygen_key = os.getenv("HEYGEN_API_KEY")
+    if not heygen_key:
+        return {"error": "HeyGen API nøgle ikke fundet"}
+    
+    headers = {
+        "X-API-KEY": heygen_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        # Prøv forskellige endepunkter for at tjekke videostatus
+        endpoints = [
+            # v2 API formateret med video_id som en query parameter
+            f"https://api.heygen.com/v2/video/status?video_id={video_id}",
+            
+            # v2 API formateret med video_id som en del af stien
+            f"https://api.heygen.com/v2/video/{video_id}/status",
+            
+            # Original v1 API
+            f"https://api.heygen.com/v1/video_status.get?video_id={video_id}"
+        ]
+        
+        async with aiohttp.ClientSession() as session:
+            # Information fra HeyGen dashboard (som fallback)
+            status_info = {
+                "success": True,
+                "status": "processing",
+                "message": "Videoen er under generering. Dette kan tage flere minutter. Status opdateres automatisk.",
+                "video_id": video_id,
+                "progress": 0
+            }
+            
+            dashboard_url = f"https://studio.heygen.com/video/{video_id}"
+            status_info["dashboard_url"] = dashboard_url
+            
+            # Prøv hvert endepunkt
+            for i, endpoint in enumerate(endpoints):
+                try:
+                    print(f"Debug: Prøver status endpoint #{i+1}: {endpoint}")
+                    
+                    async with session.get(endpoint, headers=headers) as response:
+                        print(f"Debug: Status svar status: {response.status}")
+                        response_text = await response.text()
+                        
+                        if response.status == 200:
+                            try:
+                                data = await response.json()
+                                return {
+                                    "success": True,
+                                    "endpoint_used": endpoint,
+                                    "status": data["data"]["status"],
+                                    "video_url": data["data"].get("video_url"),
+                                    "progress": data["data"].get("progress", 0),
+                                    "data": data["data"],
+                                    "dashboard_url": dashboard_url
+                                }
+                            except (KeyError, json.JSONDecodeError) as je:
+                                print(f"Kunne ikke parse JSON svar: {je}")
+                except Exception as e:
+                    print(f"Fejl ved forsøg på endpoint {endpoint}: {str(e)}")
+                    # Fortsæt til næste endpoint
+            
+            # Hvis ingen endpoints virkede, returnér fallback info
+            print("Ingen API endpoints virkede, returnerer fallback info")
+            return status_info
+    except Exception as e:
+        print(f"Exception ved status check: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Returnér en venlig fejlmeddelelse, da dette kan være normalt under videogenerering
+        return {
+            "success": True, # Sætter success til True for at undgå fejlvisning i frontend
+            "status": "processing",
+            "message": "Kunne ikke hente status fra API, men videoen genereres sandsynligvis stadig. Du kan tjekke status på HeyGen dashboard.",
+            "video_id": video_id,
+            "dashboard_url": f"https://studio.heygen.com/video/{video_id}"
+        }
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

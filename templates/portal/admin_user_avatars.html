@@ -1,0 +1,60 @@
+<!-- templates/portal/admin_user_avatars.html -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <title>Avatar-administration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">Avatarer for {{ user.username }}</h2>
+    <form method="post" action="/admin/user/{{ user.id }}/avatars" enctype="multipart/form-data" class="mb-4">
+        <h5>➕ Tilføj ny avatar</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label for="avatar_name" class="form-label">Navn</label>
+                <input type="text" class="form-control" id="avatar_name" name="avatar_name" required>
+            </div>
+            <div class="col-md-4">
+                <label for="heygen_avatar_id" class="form-label">HeyGen ID</label>
+                <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" required>
+            </div>
+            <div class="col-md-4">
+                <label for="avatar_img" class="form-label">Avatar-billede</label>
+                <input type="file" class="form-control" id="avatar_img" name="avatar_img" accept="image/*" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success mt-3">Tilføj avatar</button>
+    </form>
+    <h5>Eksisterende avatarer</h5>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Navn</th>
+                <th>HeyGen ID</th>
+                <th>Billede</th>
+                <th>Oprettet</th>
+                <th>Handling</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for avatar in avatars %}
+            <tr>
+                <td>{{ avatar.name }}</td>
+                <td>{{ avatar.heygen_avatar_id or '' }}</td>
+                <td>{% if avatar.image_path %}<img src="{{ avatar.image_path }}" alt="Avatar" style="height:48px;">{% endif %}</td>
+                <td>{{ avatar.created_at }}</td>
+                <td>
+                    <form method="post" action="/admin/user/{{ user.id }}/avatars/delete/{{ avatar.id }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Slet avatar?')">Slet</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="/admin/users" class="btn btn-secondary mt-3">Tilbage til brugere</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!-- templates/portal/admin_dashboard.html -->
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MyAvatar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f4f6fa;
+            min-height: 100vh;
+        }
+        .admin-box {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.08);
+            max-width: 540px;
+            margin: 3rem auto;
+        }
+        .admin-action {
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-end mb-3">
+            <a href="/dashboard" class="btn btn-primary">Min profil</a>
+        </div>
+        <div class="admin-box">
+            <h2 class="text-center mb-4">🛠 Admin Dashboard</h2>
+            <div class="list-group mb-4">
+                <a href="/admin/create-user" class="list-group-item list-group-item-action admin-action">➕ Opret bruger</a>
+<a href="/admin/users" class="list-group-item list-group-item-action admin-action">👥 Se/rediger brugere</a>
+                <a href="/admin/upload-avatar" class="list-group-item list-group-item-action admin-action">🖼 Upload avatar</a>
+                <a href="/admin/manage-passwords" class="list-group-item list-group-item-action admin-action">🔑 Administrér adgangskoder</a>
+                <a href="/admin/manage-data" class="list-group-item list-group-item-action admin-action">📊 Administrér data</a>
+                <a href="#" class="list-group-item list-group-item-action admin-action disabled">🚧 Upload nye features (kommer snart)</a>
+            </div>
+            <div class="text-center">
+                <a href="/dashboard" class="btn btn-outline-secondary">Tilbage til bruger-dashboard</a>
+                <a href="/logout" class="btn btn-link ms-2">Log ud</a>
+            </div>
+        </div>
+    </div>
+    <div class="text-center">
+        <a href="/dashboard" class="btn btn-outline-secondary">Tilbage til bruger-dashboard</a>
+        <a href="/logout" class="btn btn-link ms-2">Log ud</a>
+    </div>
+</div>
+</body>
+</html>
