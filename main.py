@@ -345,32 +345,43 @@ def init_database():
             )
         ''')
     
-    # Check if we need to create default users (NO DEFAULT AVATARS)
-    cursor.execute("SELECT COUNT(*) FROM users")
+  # Check if we need to create default users (NO DEFAULT AVATARS)
+    cursor.execute("SELECT COUNT(*) as user_count FROM users")
     result = cursor.fetchone()
-    existing_users = result[0] if is_postgresql else result[0]
+    
+    # Handle different result formats between PostgreSQL and SQLite
+    if is_postgresql:
+        # PostgreSQL with RealDictCursor returns dict-like object
+        existing_users = result['user_count']
+    else:
+        # SQLite returns tuple-like object
+        existing_users = result[0]
+    
+    print(f"[DEBUG] Found {existing_users} existing users")
     
     if existing_users == 0:
         print("Creating default users...")
+        
         # Create admin user
         admin_password = get_password_hash("admin123")
+        user_password = get_password_hash("password123")
+        
         if is_postgresql:
+            # PostgreSQL syntax with %s placeholders
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
                 ("admin", "admin@myavatar.com", admin_password, 1)
             )
-            # Create test user
-            user_password = get_password_hash("password123")
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
                 ("testuser", "test@example.com", user_password, 0)
             )
         else:
+            # SQLite syntax with ? placeholders
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
                 ("admin", "admin@myavatar.com", admin_password, 1)
             )
-            user_password = get_password_hash("password123")
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
                 ("testuser", "test@example.com", user_password, 0)
