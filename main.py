@@ -1056,9 +1056,23 @@ async def admin_add_avatar(
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
     try:
-        # Upload billede til Cloudinary
-        res = cloudinary.uploader.upload(avatar_img.file, folder="avatars")
-        img_url = res.get("secure_url")
+        # Check if Cloudinary is configured
+        cloudinary_configured = bool(os.getenv("CLOUDINARY_URL") or os.getenv("CLOUDINARY_CLOUD_NAME"))
+        
+        if cloudinary_configured:
+            try:
+                # Upload billede til Cloudinary
+                res = cloudinary.uploader.upload(avatar_img.file, folder="avatars")
+                img_url = res.get("secure_url")
+                print(f"[DEBUG] Cloudinary upload success: {img_url}")
+            except Exception as cloudinary_error:
+                print(f"[ERROR] Cloudinary upload failed: {cloudinary_error}")
+                # Fallback: use placeholder image
+                img_url = "/static/images/avatar_placeholder.png"
+        else:
+            print("[WARNING] Cloudinary not configured, using placeholder image")
+            # Use placeholder if Cloudinary not configured
+            img_url = "/static/images/avatar_placeholder.png"
         
         # Save to database
         conn = get_db_connection()
@@ -1067,11 +1081,19 @@ async def admin_add_avatar(
             "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
             (user_id, avatar_name, img_url, heygen_avatar_id)
         )
+        rows_affected = cursor.rowcount
         conn.commit()
         conn.close()
         
-        return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar tilføjet", status_code=303)
+        print(f"[DEBUG] Database insert: {rows_affected} rows affected")
+        
+        if rows_affected > 0:
+            return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar tilføjet succesfuldt", status_code=303)
+        else:
+            return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Database fejl - ingen rækker påvirket", status_code=303)
+            
     except Exception as e:
+        print(f"[ERROR] Avatar creation failed: {str(e)}")
         return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Fejl: {str(e)}", status_code=303)
 
 @app.post("/admin/user/{user_id}/avatars/delete/{avatar_id}", response_class=HTMLResponse)
