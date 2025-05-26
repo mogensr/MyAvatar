@@ -1,8 +1,7 @@
 """
 MyAvatar - Merged Complete Application
-Railway-compatible with full avatar administration
+Railway-compatible with full avatar administration + PostgreSQL support
 """
-
 #####################################################################
 # IMPORTS
 #####################################################################
@@ -110,7 +109,7 @@ except Exception as e:
     print(f"⚠️ Template configuration error: {e}")
 
 #####################################################################
-# DATABASE FUNCTIONS
+# DATABASE FUNCTIONS - POSTGRESQL + SQLITE SUPPORT
 #####################################################################
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -121,88 +120,205 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_db_connection():
-    conn = sqlite3.connect("myavatar.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Get database connection - PostgreSQL on Railway, SQLite locally"""
+    database_url = os.getenv("DATABASE_URL")
+    
+    if database_url:
+        # Railway PostgreSQL connection
+        print("[INFO] Using PostgreSQL database (Railway)")
+        try:
+            import psycopg2
+            import psycopg2.extras
+            
+            conn = psycopg2.connect(database_url)
+            # PostgreSQL returns dict-like rows
+            return conn, True  # Return connection and postgresql flag
+        except ImportError:
+            print("[ERROR] psycopg2 not installed - install with: pip install psycopg2-binary")
+            raise
+    else:
+        # Local SQLite fallback
+        print("[INFO] Using SQLite database (local)")
+        conn = sqlite3.connect("myavatar.db")
+        conn.row_factory = sqlite3.Row
+        return conn, False  # Return connection and postgresql flag
+
+def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
+    """Execute database query with automatic PostgreSQL/SQLite compatibility"""
+    conn, is_postgresql = get_db_connection()
+    
+    try:
+        if is_postgresql:
+            # PostgreSQL uses %s placeholders
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            pg_query = query.replace("?", "%s")
+            cursor.execute(pg_query, params)
+        else:
+            # SQLite uses ? placeholders
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+        
+        if fetch_one:
+            result = cursor.fetchone()
+            return dict(result) if result else None
+        elif fetch_all:
+            results = cursor.fetchall()
+            return [dict(row) for row in results] if results else []
+        else:
+            # For INSERT/UPDATE/DELETE operations
+            rowcount = cursor.rowcount
+            lastrowid = getattr(cursor, 'lastrowid', None)
+            conn.commit()
+            return {"rowcount": rowcount, "lastrowid": lastrowid}
+    
+    finally:
+        conn.close()
 
 def init_database():
-    """Initialize database with all required tables and default data"""
+    """Initialize database with PostgreSQL/SQLite compatibility"""
     print("🗃️ Initializing database...")
     
-    conn = get_db_connection()
+    database_url = os.getenv("DATABASE_URL")
+    is_postgresql = bool(database_url)
+    
+    conn, _ = get_db_connection()
     cursor = conn.cursor()
     
-    # Create users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            hashed_password TEXT NOT NULL,
-            is_admin INTEGER DEFAULT 0,
-            heygen_id TEXT,
-            avatar_img_url TEXT,
-            uploaded_images TEXT,
-            phone TEXT,
-            logo_url TEXT,
-            linkedin_url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Create avatars table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS avatars (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            image_path TEXT NOT NULL,
-            heygen_avatar_id TEXT DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    
-    # Create videos table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS videos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            avatar_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            audio_path TEXT NOT NULL,
-            video_path TEXT,
-            heygen_video_id TEXT DEFAULT NULL,
-            status TEXT DEFAULT 'pending',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (avatar_id) REFERENCES avatars (id)
-        )
-    ''')
+    # PostgreSQL vs SQLite compatible table creation
+    if is_postgresql:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # PostgreSQL syntax
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                hashed_password VARCHAR(255) NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                heygen_id VARCHAR(255),
+                avatar_img_url TEXT,
+                uploaded_images TEXT,
+                phone VARCHAR(50),
+                logo_url TEXT,
+                linkedin_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS avatars (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                image_path TEXT NOT NULL,
+                heygen_avatar_id VARCHAR(255) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS videos (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                avatar_id INTEGER NOT NULL,
+                title VARCHAR(255) NOT NULL,
+                audio_path TEXT NOT NULL,
+                video_path TEXT,
+                heygen_video_id VARCHAR(255) DEFAULT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (avatar_id) REFERENCES avatars (id)
+            )
+        ''')
+    else:
+        # SQLite syntax (original)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                hashed_password TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                heygen_id TEXT,
+                avatar_img_url TEXT,
+                uploaded_images TEXT,
+                phone TEXT,
+                logo_url TEXT,
+                linkedin_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS avatars (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                image_path TEXT NOT NULL,
+                heygen_avatar_id TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS videos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                avatar_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                audio_path TEXT NOT NULL,
+                video_path TEXT,
+                heygen_video_id TEXT DEFAULT NULL,
+                status TEXT DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (avatar_id) REFERENCES avatars (id)
+            )
+        ''')
     
     # Check if we need to create default users
-    existing_users = cursor.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM users")
+    result = cursor.fetchone()
+    existing_users = result[0] if is_postgresql else result[0]
     
     if existing_users == 0:
         # Create admin user
         admin_password = get_password_hash("admin123")
-        cursor.execute(
-            "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
-            ("admin", "admin@myavatar.com", admin_password, 1)
-        )
-        
-        # Create test user
-        user_password = get_password_hash("password123")
-        cursor.execute(
-            "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
-            ("testuser", "test@example.com", user_password, 0)
-        )
-        
-        # Create default avatar for admin
-        cursor.execute(
-            "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
-            (1, "Standard Avatar", "/static/images/avatar1.png", YOUR_AVATAR_ID)
-        )
+        if is_postgresql:
+            cursor.execute(
+                "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
+                ("admin", "admin@myavatar.com", admin_password, 1)
+            )
+            # Create test user
+            user_password = get_password_hash("password123")
+            cursor.execute(
+                "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
+                ("testuser", "test@example.com", user_password, 0)
+            )
+            # Create default avatar for admin
+            cursor.execute(
+                "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (%s, %s, %s, %s)",
+                (1, "Standard Avatar", "/static/images/avatar1.png", YOUR_AVATAR_ID)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
+                ("admin", "admin@myavatar.com", admin_password, 1)
+            )
+            # Create test user
+            user_password = get_password_hash("password123")
+            cursor.execute(
+                "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
+                ("testuser", "test@example.com", user_password, 0)
+            )
+            # Create default avatar for admin
+            cursor.execute(
+                "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
+                (1, "Standard Avatar", "/static/images/avatar1.png", YOUR_AVATAR_ID)
+            )
         
         print("✅ Default users created (admin/admin123, testuser/password123)")
     else:
@@ -210,7 +326,7 @@ def init_database():
     
     conn.commit()
     conn.close()
-    print("✅ Database initialization complete")
+    print(f"✅ Database initialization complete ({'PostgreSQL' if is_postgresql else 'SQLite'})")
 
 # Initialize database on startup (Railway compatible)
 init_database()
@@ -219,10 +335,7 @@ init_database()
 # AUTHENTICATION FUNCTIONS
 #####################################################################
 def authenticate_user(username: str, password: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    user = cursor.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-    conn.close()
+    user = execute_query("SELECT * FROM users WHERE username = ?", (username,), fetch_one=True)
     
     if not user or not verify_password(password, user["hashed_password"]):
         return False
@@ -230,10 +343,7 @@ def authenticate_user(username: str, password: str):
 
 def authenticate_user_by_email(email: str, password: str):
     """Authenticate user by email (for client login)"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    user = cursor.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-    conn.close()
+    user = execute_query("SELECT * FROM users WHERE email = ?", (email,), fetch_one=True)
     
     if not user or not verify_password(password, user["hashed_password"]):
         return False
@@ -263,15 +373,8 @@ def get_current_user(request: Request):
     except:
         return None
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    user = cursor.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-    conn.close()
-    
-    if user is None:
-        return None
-    
-    return dict(user)
+    user = execute_query("SELECT * FROM users WHERE username = ?", (username,), fetch_one=True)
+    return user
 
 def is_admin(request: Request):
     user = get_current_user(request)
@@ -720,7 +823,6 @@ async def client_login(request: Request, email: str = Form(...), password: str =
             error="Ugyldig email eller adgangskode"
         ))
     
-    user = dict(user)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user["username"]}, 
@@ -758,22 +860,17 @@ async def dashboard(request: Request):
         return RedirectResponse(url="/?error=login_required", status_code=status.HTTP_302_FOUND)
     
     # Get user's avatars and videos
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    avatars = cursor.execute(
+    avatars = execute_query(
         "SELECT * FROM avatars WHERE user_id = ? ORDER BY created_at DESC",
-        (user["id"],)
-    ).fetchall()
-    avatars = [dict(avatar) for avatar in avatars]
+        (user["id"],),
+        fetch_all=True
+    )
     
-    videos = cursor.execute(
+    videos = execute_query(
         "SELECT v.*, a.name as avatar_name FROM videos v JOIN avatars a ON v.avatar_id = a.id WHERE v.user_id = ? ORDER BY v.created_at DESC",
-        (user["id"],)
-    ).fetchall()
-    videos = [dict(video) for video in videos]
-    
-    conn.close()
+        (user["id"],),
+        fetch_all=True
+    )
     
     return HTMLResponse(content=Template(DASHBOARD_HTML).render(
         request=request,
@@ -841,11 +938,7 @@ async def admin_users(request: Request):
     if not user or user.get("is_admin", 0) != 1:
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    users = cursor.execute("SELECT * FROM users ORDER BY id ASC").fetchall()
-    users = [dict(u) for u in users]
-    conn.close()
+    users = execute_query("SELECT * FROM users ORDER BY id ASC", fetch_all=True)
     
     # Try template file first, fallback to HTML
     try:
@@ -923,18 +1016,11 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
     if not admin or admin.get("is_admin", 0) != 1:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    user = cursor.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    user = execute_query("SELECT * FROM users WHERE id=?", (user_id,), fetch_one=True)
     if not user:
-        conn.close()
         return HTMLResponse("<h3>Bruger ikke fundet</h3><a href='/admin/users'>Tilbage</a>")
     
-    user = dict(user)
-    avatars = cursor.execute("SELECT * FROM avatars WHERE user_id=? ORDER BY created_at DESC", (user_id,)).fetchall()
-    avatars = [dict(a) for a in avatars]
-    conn.close()
+    avatars = execute_query("SELECT * FROM avatars WHERE user_id=? ORDER BY created_at DESC", (user_id,), fetch_all=True)
     
     # Try template first, fallback to HTML
     try:
@@ -1075,19 +1161,14 @@ async def admin_add_avatar(
             img_url = "/static/images/avatar_placeholder.png"
         
         # Save to database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
+        result = execute_query(
             "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
             (user_id, avatar_name, img_url, heygen_avatar_id)
         )
-        rows_affected = cursor.rowcount
-        conn.commit()
-        conn.close()
         
-        print(f"[DEBUG] Database insert: {rows_affected} rows affected")
+        print(f"[DEBUG] Database insert: {result['rowcount']} rows affected")
         
-        if rows_affected > 0:
+        if result['rowcount'] > 0:
             return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar tilføjet succesfuldt", status_code=303)
         else:
             return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Database fejl - ingen rækker påvirket", status_code=303)
@@ -1102,11 +1183,7 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
     if not admin or admin.get("is_admin", 0) != 1:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM avatars WHERE id=? AND user_id=?", (avatar_id, user_id))
-    conn.commit()
-    conn.close()
+    execute_query("DELETE FROM avatars WHERE id=? AND user_id=?", (avatar_id, user_id))
     
     return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar slettet", status_code=303)
 
@@ -1188,16 +1265,13 @@ async def admin_create_user(
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     
     # Check if user already exists
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    existing = cursor.execute(
+    existing = execute_query(
         "SELECT id FROM users WHERE username = ? OR email = ?", 
-        (username, email)
-    ).fetchone()
+        (username, email),
+        fetch_one=True
+    )
     
     if existing:
-        conn.close()
         return RedirectResponse(
             url="/admin/create-user?error=Brugernavn eller email allerede i brug",
             status_code=status.HTTP_302_FOUND
@@ -1205,12 +1279,10 @@ async def admin_create_user(
     
     # Create new user
     hashed_password = get_password_hash(password)
-    cursor.execute(
+    execute_query(
         "INSERT INTO users (username, email, hashed_password) VALUES (?, ?, ?)",
         (username, email, hashed_password)
     )
-    conn.commit()
-    conn.close()
     
     return RedirectResponse(
         url="/admin/create-user?success=Bruger oprettet succesfuldt",
@@ -1224,15 +1296,10 @@ async def admin_reset_password_page(request: Request, user_id: int = Path(...)):
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
     
     # Get user info
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    target_user = cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
+    target_user = execute_query("SELECT * FROM users WHERE id = ?", (user_id,), fetch_one=True)
     
     if not target_user:
         return RedirectResponse(url="/admin/users?error=Bruger ikke fundet", status_code=status.HTTP_302_FOUND)
-    
-    target_user = dict(target_user)
     
     reset_password_html = '''
     <!DOCTYPE html>
@@ -1302,18 +1369,12 @@ async def admin_reset_password(
     
     # Update password
     hashed_password = get_password_hash(new_password)
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute(
+    result = execute_query(
         "UPDATE users SET hashed_password = ? WHERE id = ?",
         (hashed_password, user_id)
     )
-    affected_rows = cursor.rowcount
-    conn.commit()
-    conn.close()
     
-    if affected_rows > 0:
+    if result['rowcount'] > 0:
         return RedirectResponse(
             url="/admin/users?success=Password blev ændret succesfuldt",
             status_code=status.HTTP_302_FOUND
@@ -1345,23 +1406,18 @@ async def create_heygen_video(
             return JSONResponse({"error": "HeyGen API nøgle ikke fundet"}, status_code=500)
 
         # Get avatar details from database
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        avatar = cursor.execute("SELECT * FROM avatars WHERE id = ? AND user_id = ?", (avatar_id, user["id"])).fetchone()
+        avatar = execute_query("SELECT * FROM avatars WHERE id = ? AND user_id = ?", (avatar_id, user["id"]), fetch_one=True)
         
         if not avatar:
-            conn.close()
             return JSONResponse({"error": "Avatar ikke fundet"}, status_code=404)
         
-        avatar_data = dict(avatar)
-        heygen_avatar_id = avatar_data.get('heygen_avatar_id')
+        heygen_avatar_id = avatar.get('heygen_avatar_id')
 
         print(f"[DEBUG] Video request by user: {user['id']} / {user.get('username')}")
         print(f"[DEBUG] Requested avatar_id: {avatar_id}")
         print(f"[DEBUG] Using heygen_avatar_id: {heygen_avatar_id}")
         
         if not heygen_avatar_id:
-            conn.close()
             return JSONResponse({"error": "Manglende HeyGen avatar ID"}, status_code=500)
         
         # Upload audio to Cloudinary
@@ -1380,13 +1436,11 @@ async def create_heygen_video(
             return JSONResponse({"error": f"Cloudinary upload fejlede: {str(e)}"}, status_code=500)
 
         # Save to database
-        cursor.execute(
+        result = execute_query(
             "INSERT INTO videos (user_id, avatar_id, title, audio_path, status) VALUES (?, ?, ?, ?, ?)",
             (user["id"], avatar_id, title, audio_url, "processing")
         )
-        video_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        video_id = result['lastrowid']
 
         # Call HeyGen API with Cloudinary audio URL
         if HEYGEN_HANDLER_AVAILABLE:
@@ -1433,11 +1487,7 @@ async def get_users(request: Request):
     if not user or user.get("is_admin", 0) != 1:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    users = cursor.execute("SELECT id, username, email, is_admin, created_at FROM users").fetchall()
-    users = [dict(u) for u in users]
-    conn.close()
+    users = execute_query("SELECT id, username, email, is_admin, created_at FROM users", fetch_all=True)
     
     return {"users": users}
 
