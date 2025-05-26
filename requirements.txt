@@ -1,4 +1,6 @@
 # MyAvatar Backend Requirements
+# PostgreSQL support - FIRST!
+psycopg2-binary==2.9.9
 
 # FastAPI Framework
 fastapi==0.109.2
@@ -34,6 +36,3 @@ Pillow==10.2.0
 # Development - Fixed version compatibility
 pytest==7.4.4
 pytest-asyncio==0.21.1
-
-
-pydub==0.25.1
