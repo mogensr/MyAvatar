@@ -1,6 +1,6 @@
 """
-MyAvatar - Merged Complete Application
-Railway-compatible with full avatar administration + PostgreSQL support
+MyAvatar - Complete Application
+Railway-compatible with PostgreSQL + improved recording interface
 """
 #####################################################################
 # IMPORTS
@@ -131,7 +131,6 @@ def get_db_connection():
             import psycopg2.extras
             
             conn = psycopg2.connect(database_url)
-            # PostgreSQL returns dict-like rows
             return conn, True  # Return connection and postgresql flag
         except ImportError:
             print("[ERROR] psycopg2 not installed - install with: pip install psycopg2-binary")
@@ -149,6 +148,7 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
     
     try:
         if is_postgresql:
+            import psycopg2.extras
             # PostgreSQL uses %s placeholders
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             pg_query = query.replace("?", "%s")
@@ -186,6 +186,7 @@ def init_database():
     
     # PostgreSQL vs SQLite compatible table creation
     if is_postgresql:
+        import psycopg2.extras
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         # PostgreSQL syntax
         cursor.execute('''
@@ -575,7 +576,7 @@ MARKETING_HTML = '''
 </html>
 '''
 
-# Dashboard with Avatar Recording
+# Dashboard with IMPROVED Avatar Recording
 DASHBOARD_HTML = '''
 <!DOCTYPE html>
 <html>
@@ -592,10 +593,73 @@ DASHBOARD_HTML = '''
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        .recorder-container { text-align: center; margin: 20px 0; }
-        .record-btn { background: #dc2626; color: white; border: none; border-radius: 50%; width: 80px; height: 80px; font-size: 16px; cursor: pointer; margin: 10px; }
-        .record-btn:hover { background: #b91c1c; }
-        .record-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .recorder-container { text-align: center; margin: 20px 0; position: relative; }
+        
+        /* Recording Button Styles */
+        .record-btn { 
+            background: #dc2626; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            width: 80px; 
+            height: 80px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            margin: 10px; 
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .record-btn:hover { background: #b91c1c; transform: scale(1.05); }
+        .record-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        
+        /* Recording State */
+        .record-btn.recording { 
+            background: #16a34a; 
+            animation: pulse 1.5s infinite;
+        }
+        .record-btn.recording:hover { background: #15803d; }
+        
+        /* Pulse Animation */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+        
+        /* Recording Indicator */
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            color: #16a34a;
+            font-weight: bold;
+        }
+        .recording-indicator.active {
+            display: flex;
+        }
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: #dc2626;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        /* Timer */
+        .recording-timer {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            color: #16a34a;
+            margin-left: 10px;
+        }
+        
         .audio-preview { width: 100%; margin: 20px 0; }
         .status-message { margin: 15px 0; padding: 10px; border-radius: 5px; }
         .status-message.success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
@@ -606,6 +670,8 @@ DASHBOARD_HTML = '''
         window.mediaRecorder = null;
         window.audioChunks = [];
         window.isRecording = false;
+        window.recordingTimer = null;
+        window.recordingTime = 0;
         
         function initializeRecorder() {
             navigator.mediaDevices.getUserMedia({audio: true})
@@ -623,28 +689,70 @@ DASHBOARD_HTML = '''
                         audioPreview.src = audioUrl;
                         audioPreview.style.display = 'block';
                         document.getElementById('heygen-submit-btn').disabled = false;
+                        showStatusMessage('✅ Optagelse fuldført! Du kan nu afspille eller sende til HeyGen.', 'success');
                     };
                     
                     document.getElementById('record-btn').disabled = false;
                 })
                 .catch(error => {
                     console.error('Fejl ved adgang til mikrofon:', error);
-                    showStatusMessage('Kunne ikke få adgang til mikrofonen.', 'error');
+                    showStatusMessage('❌ Kunne ikke få adgang til mikrofonen.', 'error');
                 });
         }
         
         function toggleRecording() {
+            const recordBtn = document.getElementById('record-btn');
+            const recordingIndicator = document.getElementById('recording-indicator');
+            
             if (!window.isRecording) {
+                // Start recording
                 window.audioChunks = [];
                 window.mediaRecorder.start();
                 window.isRecording = true;
-                document.getElementById('record-btn').textContent = 'Stop';
-                showStatusMessage('Optagelse i gang...', 'info');
+                window.recordingTime = 0;
+                
+                // Update button appearance
+                recordBtn.textContent = 'Stop';
+                recordBtn.classList.add('recording');
+                
+                // Show recording indicator
+                recordingIndicator.classList.add('active');
+                
+                // Start timer
+                startTimer();
+                
+                showStatusMessage('🔴 Optagelse i gang... Klik Stop når du er færdig.', 'info');
             } else {
+                // Stop recording
                 window.mediaRecorder.stop();
                 window.isRecording = false;
-                document.getElementById('record-btn').textContent = 'Optag';
-                showStatusMessage('Optagelse fuldført!', 'success');
+                
+                // Reset button appearance
+                recordBtn.textContent = 'Optag';
+                recordBtn.classList.remove('recording');
+                
+                // Hide recording indicator
+                recordingIndicator.classList.remove('active');
+                
+                // Stop timer
+                stopTimer();
+            }
+        }
+        
+        function startTimer() {
+            const timerElement = document.getElementById('recording-timer');
+            window.recordingTimer = setInterval(() => {
+                window.recordingTime++;
+                const minutes = Math.floor(window.recordingTime / 60);
+                const seconds = window.recordingTime % 60;
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function stopTimer() {
+            if (window.recordingTimer) {
+                clearInterval(window.recordingTimer);
+                window.recordingTimer = null;
             }
         }
         
@@ -660,18 +768,18 @@ DASHBOARD_HTML = '''
             const avatarId = document.getElementById('heygen-avatar-select').value;
             
             if (!title) {
-                showStatusMessage('Indtast venligst en titel', 'error');
+                showStatusMessage('❌ Indtast venligst en titel', 'error');
                 return;
             }
             
             if (!avatarId) {
-                showStatusMessage('Vælg venligst en avatar', 'error');
+                showStatusMessage('❌ Vælg venligst en avatar', 'error');
                 return;
             }
             
             const audioElement = document.getElementById('audio-preview');
             if (!audioElement.src) {
-                showStatusMessage('Optag venligst lyd først', 'error');
+                showStatusMessage('❌ Optag venligst lyd først', 'error');
                 return;
             }
             
@@ -683,7 +791,7 @@ DASHBOARD_HTML = '''
                 .then(res => res.blob())
                 .then(audioBlob => {
                     formData.append('audio', audioBlob, 'recording.wav');
-                    showStatusMessage('Sender til HeyGen...', 'info');
+                    showStatusMessage('🚀 Sender til HeyGen...', 'info');
                     document.getElementById('heygen-submit-btn').disabled = true;
                     
                     fetch('/api/heygen', {
@@ -693,14 +801,14 @@ DASHBOARD_HTML = '''
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            showStatusMessage('Video generering startet!', 'success');
+                            showStatusMessage('✅ Video generering startet!', 'success');
                         } else {
-                            showStatusMessage('Fejl: ' + data.error, 'error');
+                            showStatusMessage('❌ Fejl: ' + data.error, 'error');
                         }
                         document.getElementById('heygen-submit-btn').disabled = false;
                     })
                     .catch(error => {
-                        showStatusMessage('Der opstod en fejl: ' + error.message, 'error');
+                        showStatusMessage('❌ Der opstod en fejl: ' + error.message, 'error');
                         document.getElementById('heygen-submit-btn').disabled = false;
                     });
                 });
@@ -751,6 +859,14 @@ DASHBOARD_HTML = '''
             
             <div class="recorder-container">
                 <button id="record-btn" class="record-btn" onclick="toggleRecording()" disabled>Optag</button>
+                
+                <!-- Recording Indicator -->
+                <div id="recording-indicator" class="recording-indicator">
+                    <div class="recording-dot"></div>
+                    <span>OPTAGER</span>
+                    <span id="recording-timer" class="recording-timer">00:00</span>
+                </div>
+                
                 <audio id="audio-preview" class="audio-preview" controls style="display:none;"></audio>
                 <div id="status-message" class="status-message info" style="display:none;"></div>
                 <button id="heygen-submit-btn" class="btn" onclick="submitToHeyGen()" disabled>Send til HeyGen</button>
@@ -890,47 +1006,38 @@ async def admin_dashboard(request: Request):
     if not user or user.get("is_admin", 0) != 1:
         return RedirectResponse(url="/?error=admin_required", status_code=status.HTTP_302_FOUND)
     
-    # Try to use template file first, fallback to HTML string
-    try:
-        return templates.TemplateResponse("admin_dashboard.html", {"request": request})
-    except:
-        # Fallback admin dashboard
-        admin_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Admin Dashboard</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; }
-                .btn:hover { background: #3730a3; }
-                .btn-danger { background: #dc2626; }
-                .btn-danger:hover { background: #b91c1c; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background: #f8f9fa; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>Admin Dashboard</h1>
-                <div>
-                    <a href="/dashboard" class="btn">Dashboard</a>
-                    <a href="/logout" class="btn">Log Ud</a>
-                </div>
+    # Fallback admin dashboard
+    admin_html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Admin Dashboard</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+            .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; }
+            .btn:hover { background: #3730a3; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <div>
+                <a href="/dashboard" class="btn">Dashboard</a>
+                <a href="/logout" class="btn">Log Ud</a>
             </div>
-            
-            <div class="card">
-                <h2>Hurtig Navigation</h2>
-                <a href="/admin/users" class="btn">Administrer Brugere</a>
-                <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
-            </div>
-        </body>
-        </html>
-        '''
-        return HTMLResponse(content=admin_html)
+        </div>
+        
+        <div class="card">
+            <h2>Hurtig Navigation</h2>
+            <a href="/admin/users" class="btn">Administrer Brugere</a>
+            <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
+        </div>
+    </body>
+    </html>
+    '''
+    return HTMLResponse(content=admin_html)
 
 @app.get("/admin/users", response_class=HTMLResponse)
 async def admin_users(request: Request):
@@ -940,75 +1047,70 @@ async def admin_users(request: Request):
     
     users = execute_query("SELECT * FROM users ORDER BY id ASC", fetch_all=True)
     
-    # Try template file first, fallback to HTML
-    try:
-        return templates.TemplateResponse("admin_users.html", {"request": request, "users": users})
-    except:
-        users_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Administrer Brugere</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; font-size: 14px; }
-                .btn:hover { background: #3730a3; }
-                .btn-danger { background: #dc2626; }
-                .btn-danger:hover { background: #b91c1c; }
-                .btn-success { background: #16a34a; }
-                .btn-success:hover { background: #15803d; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background: #f8f9fa; font-weight: bold; }
-                tr:hover { background: #f8f9fa; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>Administrer Brugere</h1>
-                <div>
-                    <a href="/admin" class="btn">Tilbage til Admin</a>
-                    <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
-                </div>
+    users_html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Administrer Brugere</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+            .btn { background: #4f46e5; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; font-size: 14px; }
+            .btn:hover { background: #3730a3; }
+            .btn-danger { background: #dc2626; }
+            .btn-danger:hover { background: #b91c1c; }
+            .btn-success { background: #16a34a; }
+            .btn-success:hover { background: #15803d; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f8f9fa; font-weight: bold; }
+            tr:hover { background: #f8f9fa; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Administrer Brugere</h1>
+            <div>
+                <a href="/admin" class="btn">Tilbage til Admin</a>
+                <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
             </div>
-            
-            <div class="card">
-                <h2>Brugere</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Brugernavn</th>
-                            <th>Email</th>
-                            <th>Admin</th>
-                            <th>Oprettet</th>
-                            <th>Handlinger</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ "Ja" if user.is_admin else "Nej" }}</td>
-                            <td>{{ user.created_at }}</td>
-                            <td>
-                                <a href="/admin/user/{{ user.id }}/avatars" class="btn">Avatars</a>
-                                <a href="/admin/edit-user/{{ user.id }}" class="btn">Rediger</a>
-                                <a href="/admin/reset-password/{{ user.id }}" class="btn btn-danger">Reset Password</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </body>
-        </html>
-        '''
-        return HTMLResponse(content=Template(users_html).render(request=request, users=users))
+        </div>
+        
+        <div class="card">
+            <h2>Brugere</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Brugernavn</th>
+                        <th>Email</th>
+                        <th>Admin</th>
+                        <th>Oprettet</th>
+                        <th>Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ "Ja" if user.is_admin else "Nej" }}</td>
+                        <td>{{ user.created_at }}</td>
+                        <td>
+                            <a href="/admin/user/{{ user.id }}/avatars" class="btn">Avatars</a>
+                            <a href="/admin/reset-password/{{ user.id }}" class="btn btn-danger">Reset Password</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </body>
+    </html>
+    '''
+    return HTMLResponse(content=Template(users_html).render(request=request, users=users))
 
 @app.get("/admin/user/{user_id}/avatars", response_class=HTMLResponse)
 async def admin_user_avatars(request: Request, user_id: int = Path(...)):
@@ -1022,112 +1124,108 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
     
     avatars = execute_query("SELECT * FROM avatars WHERE user_id=? ORDER BY created_at DESC", (user_id,), fetch_all=True)
     
-    # Try template first, fallback to HTML
-    try:
-        return templates.TemplateResponse("admin_user_avatars.html", {"request": request, "user": user, "avatars": avatars})
-    except:
-        avatar_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>{{ user.username }} - Avatars</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
-                .btn:hover { background: #3730a3; }
-                .btn-success { background: #16a34a; }
-                .btn-success:hover { background: #15803d; }
-                .btn-danger { background: #dc2626; }
-                .btn-danger:hover { background: #b91c1c; }
-                .form-group { margin-bottom: 15px; }
-                label { display: block; margin-bottom: 5px; font-weight: bold; }
-                input[type="text"], input[type="file"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background: #f8f9fa; }
-                .avatar-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
-                .success { background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-                .error { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>{{ user.username }} - Avatar Administration</h1>
-                <div>
-                    <a href="/admin/users" class="btn">Tilbage til Brugere</a>
+    avatar_html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{{ user.username }} - Avatars</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+            .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+            .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+            .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
+            .btn:hover { background: #3730a3; }
+            .btn-success { background: #16a34a; }
+            .btn-success:hover { background: #15803d; }
+            .btn-danger { background: #dc2626; }
+            .btn-danger:hover { background: #b91c1c; }
+            .form-group { margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input[type="text"], input[type="file"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background: #f8f9fa; }
+            .avatar-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; }
+            .success { background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+            .error { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>{{ user.username }} - Avatar Administration</h1>
+            <div>
+                <a href="/admin/users" class="btn">Tilbage til Brugere</a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Tilføj Ny Avatar</h2>
+            <form method="post" action="/admin/user/{{ user.id }}/avatars" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="avatar_name">Avatar Navn:</label>
+                    <input type="text" id="avatar_name" name="avatar_name" required placeholder="fx. Business Avatar">
                 </div>
-            </div>
-            
-            <div class="card">
-                <h2>Tilføj Ny Avatar</h2>
-                <form method="post" action="/admin/user/{{ user.id }}/avatars" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="avatar_name">Avatar Navn:</label>
-                        <input type="text" id="avatar_name" name="avatar_name" required placeholder="fx. Business Avatar">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="heygen_avatar_id">HeyGen Avatar ID:</label>
-                        <input type="text" id="heygen_avatar_id" name="heygen_avatar_id" required placeholder="fx. b5038ba7bd9b4d94ac6b5c9ea70f8d28">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="avatar_img">Avatar Billede:</label>
-                        <input type="file" id="avatar_img" name="avatar_img" accept="image/*" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-success">Tilføj Avatar</button>
-                </form>
-            </div>
-            
-            {% if avatars %}
-            <div class="card">
-                <h2>Eksisterende Avatars</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Billede</th>
-                            <th>Navn</th>
-                            <th>HeyGen ID</th>
-                            <th>Oprettet</th>
-                            <th>Handlinger</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for avatar in avatars %}
-                        <tr>
-                            <td>
-                                {% if avatar.image_path %}
-                                <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" class="avatar-img">
-                                {% else %}
-                                <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">Ingen billede</div>
-                                {% endif %}
-                            </td>
-                            <td>{{ avatar.name }}</td>
-                            <td>{{ avatar.heygen_avatar_id }}</td>
-                            <td>{{ avatar.created_at }}</td>
-                            <td>
-                                <form method="post" action="/admin/user/{{ user.id }}/avatars/delete/{{ avatar.id }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Er du sikker på at du vil slette denne avatar?')">Slet</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="card">
-                <h2>Ingen Avatars</h2>
-                <p>{{ user.username }} har ingen avatars endnu. Brug formularen ovenfor til at tilføje den første avatar.</p>
-            </div>
-            {% endif %}
-        </body>
-        </html>
-        '''
-        return HTMLResponse(content=Template(avatar_html).render(request=request, user=user, avatars=avatars))
+                
+                <div class="form-group">
+                    <label for="heygen_avatar_id">HeyGen Avatar ID:</label>
+                    <input type="text" id="heygen_avatar_id" name="heygen_avatar_id" required placeholder="fx. b5038ba7bd9b4d94ac6b5c9ea70f8d28">
+                </div>
+                
+                <div class="form-group">
+                    <label for="avatar_img">Avatar Billede:</label>
+                    <input type="file" id="avatar_img" name="avatar_img" accept="image/*" required>
+                </div>
+                
+                <button type="submit" class="btn btn-success">Tilføj Avatar</button>
+            </form>
+        </div>
+        
+        {% if avatars %}
+        <div class="card">
+            <h2>Eksisterende Avatars</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Billede</th>
+                        <th>Navn</th>
+                        <th>HeyGen ID</th>
+                        <th>Oprettet</th>
+                        <th>Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for avatar in avatars %}
+                    <tr>
+                        <td>
+                            {% if avatar.image_path %}
+                            <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" class="avatar-img">
+                            {% else %}
+                            <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">Ingen billede</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ avatar.name }}</td>
+                        <td>{{ avatar.heygen_avatar_id }}</td>
+                        <td>{{ avatar.created_at }}</td>
+                        <td>
+                            <form method="post" action="/admin/user/{{ user.id }}/avatars/delete/{{ avatar.id }}" style="display: inline;">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Er du sikker på at du vil slette denne avatar?')">Slet</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="card">
+            <h2>Ingen Avatars</h2>
+            <p>{{ user.username }} har ingen avatars endnu. Brug formularen ovenfor til at tilføje den første avatar.</p>
+        </div>
+        {% endif %}
+    </body>
+    </html>
+    '''
+    return HTMLResponse(content=Template(avatar_html).render(request=request, user=user, avatars=avatars))
 
 @app.post("/admin/user/{user_id}/avatars", response_class=HTMLResponse)
 async def admin_add_avatar(
@@ -1187,7 +1285,6 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
     
     return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar slettet", status_code=303)
 
-# Continue with the rest of admin routes...
 @app.get("/admin/create-user", response_class=HTMLResponse)
 async def admin_create_user_page(request: Request):
     user = get_current_user(request)
@@ -1504,6 +1601,7 @@ async def startup_event():
     print(f"✅ Base URL: {BASE_URL}")
     print(f"✅ Avatar Management: ✓ Available")
     print(f"✅ Cloudinary: ✓ Configured")
+    print(f"✅ Recording Interface: ✓ Enhanced")
 
 #####################################################################
 # MAIN ENTRY POINT
@@ -1518,5 +1616,6 @@ if __name__ == "__main__":
     print("🔗 Local: http://localhost:8000")
     print("🔑 Admin: admin@myavatar.com / admin123")
     print("👤 User: test@example.com / password123")
+    print("🎙️ Enhanced recording interface with visual feedback")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
