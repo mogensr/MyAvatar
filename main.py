@@ -24,6 +24,13 @@ from jose import jwt
 import requests
 import json
 from dotenv import load_dotenv
+# PostgreSQL support
+try:
+    import psycopg2
+    import psycopg2.extras
+    POSTGRESQL_AVAILABLE = True
+except ImportError:
+    POSTGRESQL_AVAILABLE = False
 
 # Load environment variables
 load_dotenv()
@@ -189,12 +196,10 @@ def get_db_connection():
     """Get database connection - PostgreSQL on Railway, SQLite locally"""
     database_url = os.getenv("DATABASE_URL")
     
-    if database_url:
+    if database_url and POSTGRESQL_AVAILABLE:
         # Railway PostgreSQL connection
         print("[INFO] Using PostgreSQL database (Railway)")
         try:
-            import psycopg2
-            import psycopg2.extras
             
             conn = psycopg2.connect(database_url)
             return conn, True
