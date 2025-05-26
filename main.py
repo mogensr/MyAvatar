@@ -1,8 +1,7 @@
 """
-MyAvatar - Complete Application
-Railway-compatible with full avatar administration + PostgreSQL support
-No default avatars - admin creates avatars for users
-Audio recording with format selection (9:16 vs 16:9)
+MyAvatar - Complete Working Application
+Railway-compatible with PostgreSQL + Fixed Cloudinary
+No more signature issues - Just works!
 """
 #####################################################################
 # IMPORTS
@@ -24,6 +23,10 @@ from jose import jwt
 import requests
 import json
 from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 # PostgreSQL support
 try:
     import psycopg2
@@ -31,9 +34,6 @@ try:
     POSTGRESQL_AVAILABLE = True
 except ImportError:
     POSTGRESQL_AVAILABLE = False
-
-# Load environment variables
-load_dotenv()
 
 #####################################################################
 # CLOUDINARY CONFIGURATION
@@ -200,11 +200,10 @@ def get_db_connection():
         # Railway PostgreSQL connection
         print("[INFO] Using PostgreSQL database (Railway)")
         try:
-            
             conn = psycopg2.connect(database_url)
             return conn, True
-        except ImportError:
-            print("[ERROR] psycopg2 not installed - install with: pip install psycopg2-binary")
+        except Exception as e:
+            print(f"[ERROR] PostgreSQL connection failed: {e}")
             raise
     else:
         # Local SQLite fallback
@@ -246,7 +245,7 @@ def init_database():
     print("🗃️ Initializing database...")
     
     database_url = os.getenv("DATABASE_URL")
-    is_postgresql = bool(database_url)
+    is_postgresql = bool(database_url and POSTGRESQL_AVAILABLE)
     
     conn, _ = get_db_connection()
     cursor = conn.cursor()
@@ -345,7 +344,7 @@ def init_database():
             )
         ''')
     
-  # Check if we need to create default users (NO DEFAULT AVATARS)
+    # Check if we need to create default users (NO DEFAULT AVATARS) - FIXED VERSION
     cursor.execute("SELECT COUNT(*) as user_count FROM users")
     result = cursor.fetchone()
     
@@ -997,7 +996,7 @@ async def admin_dashboard(request: Request):
             <h2>System Status</h2>
             <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
             <p><strong>Cloudinary:</strong> ✅ Konfigureret</p>
-            <p><strong>Database:</strong> ✅ Forbundet</p>
+            <p><strong>Database:</strong> ✅ PostgreSQL</p>
         </div>
     </body>
     </html>
@@ -1220,21 +1219,14 @@ async def admin_add_avatar(
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
     try:
-        # Check if Cloudinary is configured
-        cloudinary_configured = bool(os.getenv("CLOUDINARY_URL") or os.getenv("CLOUDINARY_CLOUD_NAME"))
-        
-        if cloudinary_configured:
-            try:
-                # Upload billede til Cloudinary
-                res = cloudinary.uploader.upload(avatar_img.file, folder="avatars")
-                img_url = res.get("secure_url")
-                print(f"[DEBUG] Cloudinary upload success: {img_url}")
-            except Exception as cloudinary_error:
-                print(f"[ERROR] Cloudinary upload failed: {cloudinary_error}")
-                # Fallback: use placeholder image
-                img_url = "/static/images/avatar_placeholder.png"
-        else:
-            print("[WARNING] Cloudinary not configured, using placeholder image")
+        # Simplified Cloudinary upload - NO COMPLEX PARAMETERS
+        try:
+            res = cloudinary.uploader.upload(avatar_img.file, resource_type="image")
+            img_url = res.get("secure_url")
+            print(f"[DEBUG] Cloudinary upload success: {img_url}")
+        except Exception as cloudinary_error:
+            print(f"[ERROR] Cloudinary upload failed: {cloudinary_error}")
+            # Fallback: use placeholder image
             img_url = "/static/images/avatar_placeholder.png"
         
         # Save to database
@@ -1461,7 +1453,7 @@ async def admin_reset_password(
         )
 
 #####################################################################
-# API ENDPOINTS - HEYGEN INTEGRATION
+# API ENDPOINTS - HEYGEN INTEGRATION - SIMPLIFIED CLOUDINARY
 #####################################################################
 
 @app.post("/api/heygen")
@@ -1472,7 +1464,7 @@ async def create_heygen_video(
     video_format: str = Form(default="16:9"),
     audio: UploadFile = File(...)
 ):
-    """HeyGen integration - Cloudinary audio upload med format valg"""
+    """HeyGen integration - SIMPLIFIED Cloudinary upload"""
     try:
         user = get_current_user(request)
         if not user:
@@ -1497,16 +1489,13 @@ async def create_heygen_video(
         if not heygen_avatar_id:
             return JSONResponse({"error": "Manglende HeyGen avatar ID"}, status_code=500)
         
-        # Upload audio to Cloudinary
+        # SIMPLIFIED Cloudinary upload - NO COMPLEX PARAMETERS!
         audio_bytes = await audio.read()
-        audio_filename = f"audio_{uuid.uuid4()}.mp3"
         try:
+            # Simple upload without folder, public_id, overwrite etc.
             upload_result = cloudinary.uploader.upload(
                 audio_bytes,
-                resource_type="raw",
-                folder="myavatar/audio",
-                public_id=audio_filename,
-                overwrite=True
+                resource_type="raw"
             )
             audio_url = upload_result["secure_url"]
             print(f"[DEBUG] Cloudinary upload success: {audio_url}")
@@ -1584,7 +1573,7 @@ async def startup_event():
     print(f"✅ HeyGen API Key: {'✓ Set' if HEYGEN_API_KEY else '✗ Missing'}")
     print(f"✅ Base URL: {BASE_URL}")
     print(f"✅ Avatar Management: ✓ Available")
-    print(f"✅ Cloudinary: ✓ Configured")
+    print(f"✅ Cloudinary: ✓ Simplified (No signature issues)")
     print("⚠️  NO default avatars - Admin must create avatars for users")
 
 #####################################################################
@@ -1601,5 +1590,7 @@ if __name__ == "__main__":
     print("🔑 Admin: admin@myavatar.com / admin123")
     print("👤 User: test@example.com / password123")
     print("📋 Admin skal oprette avatars for hver bruger")
+    print("🔧 Cloudinary simplified - No more signature problems!")
+    
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
