@@ -1761,7 +1761,7 @@ async def create_heygen_video(
         }, status_code=500)
 
 #####################################################################
-# ENHANCED HEYGEN WEBHOOK HANDLER
+# ENHANCED HEYGEN WEBHOOK HANDLER - UPDATED WITH YOUR FIX
 #####################################################################
 
 async def download_video_from_heygen(video_url: str, video_id: int) -> str:
@@ -1896,7 +1896,7 @@ async def heygen_webhook_handler(request: Request):
 # API ENDPOINTS - SYSTEM MONITORING
 #####################################################################
 
-{{ ... }}
+@app.get("/api/health")
 async def health_check():
     try:
         users_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
