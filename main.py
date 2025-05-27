@@ -159,11 +159,9 @@ HEYGEN_BASE_URL = "https://api.heygen.com"
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 # Cloudinary Configuration
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET")
-)
+# Cloudinary Configuration - automatically reads CLOUDINARY_URL
+cloudinary.config()
+
 
 print(f"[INFO] Environment loaded. HeyGen API Key: {HEYGEN_API_KEY[:10] if HEYGEN_API_KEY else 'NOT_FOUND'}...")
 print(f"[INFO] BASE_URL loaded: {BASE_URL}")
