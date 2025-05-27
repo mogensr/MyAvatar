@@ -25,7 +25,7 @@ httpx==0.26.0
 requests==2.31.0
 
 # Cloudinary for media uploads
-cloudinary==1.37.0
+cloudinary==1.36.0
 
 # Jinja2 for templating
 jinja2==3.1.3
