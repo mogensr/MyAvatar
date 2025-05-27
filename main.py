@@ -1,6 +1,6 @@
 """
 MyAvatar - Complete Working Application
-Railway-compatible with PostgreSQL + NO CLOUDINARY + Visual Record Feedback
+Railway-compatible with PostgreSQL + NO CLOUDINARY + Visual Record Feedback + CASCADE DELETE
 Fixed all signature issues - Just works!
 """
 #####################################################################
@@ -1170,6 +1170,8 @@ async def admin_users(request: Request):
             th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
             th { background: #f8f9fa; font-weight: bold; }
             tr:hover { background: #f8f9fa; }
+            .success { background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+            .error { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
         </style>
     </head>
     <body>
@@ -1180,6 +1182,14 @@ async def admin_users(request: Request):
                 <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
             </div>
         </div>
+        
+        {% if success %}
+        <div class="success">{{ success }}</div>
+        {% endif %}
+        
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
         
         <div class="card">
             <h2>Brugere</h2>
@@ -1214,7 +1224,12 @@ async def admin_users(request: Request):
     </body>
     </html>
     '''
-    return HTMLResponse(content=Template(users_html).render(request=request, users=users))
+    return HTMLResponse(content=Template(users_html).render(
+        request=request, 
+        users=users,
+        success=request.query_params.get("success"),
+        error=request.query_params.get("error")
+    ))
 
 @app.get("/admin/user/{user_id}/avatars", response_class=HTMLResponse)
 async def admin_user_avatars(request: Request, user_id: int = Path(...)):
@@ -1402,8 +1417,9 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
         
         # Step 1: Delete all videos that reference this avatar
         videos_deleted = execute_query(
-            "DELETE FROM videos WHERE avatar_id=? RETURNING id", 
-            (avatar_id,)
+            "DELETE FROM videos WHERE avatar_id=?", 
+            (avatar_id,),
+            fetch_all=True
         )
         
         if videos_deleted:
@@ -1414,11 +1430,11 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
         
         # Step 2: Delete the avatar itself
         avatar_deleted = execute_query(
-            "DELETE FROM avatars WHERE id=? AND user_id=? RETURNING id", 
+            "DELETE FROM avatars WHERE id=? AND user_id=?", 
             (avatar_id, user_id)
         )
         
-        if avatar_deleted:
+        if avatar_deleted['rowcount'] > 0:
             print(f"✅ Avatar {avatar_id} deleted successfully")
             success_msg = f"Avatar slettet succesfuldt"
             if videos_deleted:
@@ -1441,42 +1457,6 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
             url=f"/admin/user/{user_id}/avatars?error=Kunne ikke slette avatar", 
             status_code=303
         )
-
-
-@app.get("/admin/user/{user_id}/avatars/edit/{avatar_id}", response_class=HTMLResponse)
-async def admin_edit_avatar_page(request: Request, user_id: int = Path(...), avatar_id: int = Path(...)):
-    """Edit avatar page"""
-    admin = get_current_user(request)
-    if not admin or admin.get("is_admin", 0) != 1:
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
-    
-    # Get user and avatar info
-    user = execute_query("SELECT * FROM users WHERE id=?", (user_id,), fetch_one=True)
-    avatar = execute_query("SELECT * FROM avatars WHERE id=? AND user_id=?", (avatar_id, user_id), fetch_one=True)
-    
-    if not user or not avatar:
-        return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Avatar ikke fundet", status_code=status.HTTP_302_FOUND)
-    
-    edit_avatar_html = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Rediger Avatar</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-            .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-            .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-            .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
-            .btn:hover { background: #3730a3; }
-            .btn-success { background: #16a34a; }
-            .btn-success:hover { background: #15803d; }
-            .btn-secondary { background: #6b7280; }
-            .btn-secondary:hover { background: #4b5563; }
-            .form-group { margin-bottom: 15px; }
-            label { display: block; margin-bottom: 5px; font-weight: bold; }
-            input[type="text"], input[type="file"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-            .current-image { margin: 10px 0; }
-            .avatar-img { width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; }
 
 @app.get("/admin/create-user", response_class=HTMLResponse)
 async def admin_create_user_page(request: Request):
@@ -1819,5 +1799,7 @@ if __name__ == "__main__":
     print("📋 Admin skal oprette avatars for hver bruger")
     print("🎯 NO Cloudinary - bruger lokal fil storage!")
     print("🎬 Forbedret record funktion med visuel feedback!")
+    print("🗑️ CASCADE DELETE - sletter automatisk relaterede videoer!")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    
