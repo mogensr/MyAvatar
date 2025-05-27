@@ -1392,13 +1392,56 @@ async def admin_add_avatar(
 
 @app.post("/admin/user/{user_id}/avatars/delete/{avatar_id}", response_class=HTMLResponse)
 async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar_id: int = Path(...)):
+    # Admin authentication check
     admin = get_current_user(request)
     if not admin or admin.get("is_admin", 0) != 1:
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
-    execute_query("DELETE FROM avatars WHERE id=? AND user_id=?", (avatar_id, user_id))
-    
-    return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar slettet", status_code=303)
+    try:
+        print(f"🗑️ Starting cascade delete for avatar {avatar_id} (user {user_id})")
+        
+        # Step 1: Delete all videos that reference this avatar
+        videos_deleted = execute_query(
+            "DELETE FROM videos WHERE avatar_id=? RETURNING id", 
+            (avatar_id,)
+        )
+        
+        if videos_deleted:
+            video_count = len(videos_deleted)
+            print(f"✅ Deleted {video_count} video(s) referencing avatar {avatar_id}")
+        else:
+            print(f"ℹ️ No videos found for avatar {avatar_id}")
+        
+        # Step 2: Delete the avatar itself
+        avatar_deleted = execute_query(
+            "DELETE FROM avatars WHERE id=? AND user_id=? RETURNING id", 
+            (avatar_id, user_id)
+        )
+        
+        if avatar_deleted:
+            print(f"✅ Avatar {avatar_id} deleted successfully")
+            success_msg = f"Avatar slettet succesfuldt"
+            if videos_deleted:
+                success_msg += f" (inkl. {len(videos_deleted)} relaterede video(er))"
+        else:
+            print(f"⚠️ Avatar {avatar_id} not found or access denied")
+            return RedirectResponse(
+                url=f"/admin/user/{user_id}/avatars?error=Avatar ikke fundet", 
+                status_code=303
+            )
+        
+        return RedirectResponse(
+            url=f"/admin/user/{user_id}/avatars?success={success_msg}", 
+            status_code=303
+        )
+        
+    except Exception as e:
+        print(f"❌ Error during cascade delete: {e}")
+        return RedirectResponse(
+            url=f"/admin/user/{user_id}/avatars?error=Kunne ikke slette avatar", 
+            status_code=303
+        )
+
 
 @app.get("/admin/user/{user_id}/avatars/edit/{avatar_id}", response_class=HTMLResponse)
 async def admin_edit_avatar_page(request: Request, user_id: int = Path(...), avatar_id: int = Path(...)):
@@ -1434,61 +1477,29 @@ async def admin_edit_avatar_page(request: Request, user_id: int = Path(...), ava
             input[type="text"], input[type="file"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
             .current-image { margin: 10px 0; }
             .avatar-img { width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; }
+
+@app.get("/admin/create-user", response_class=HTMLResponse)
+async def admin_create_user_page(request: Request):
+    user = get_current_user(request)
+    if not user or user.get("is_admin", 0) != 1:
+        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    
+    create_user_html = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Opret Bruger</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+            .card { background: white; padding: 20px; border-radius: 8px; max-width: 500px; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .form-group { margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            .btn { background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+            .btn:hover { background: #3730a3; }
             .success { background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
             .error { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-            .info-box { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #4f46e5; }
         </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>✏️ Rediger Avatar: {{ avatar.name }}</h1>
-            <div>
-                <a href="/admin/user/{{ user.id }}/avatars" class="btn">Tilbage til Avatars</a>
-            </div>
-        </div>
-        
-        {% if success %}
-        <div class="success">{{ success }}</div>
-        {% endif %}
-        
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-        
-        <div class="info-box">
-            <strong>Bruger:</strong> {{ user.username }} ({{ user.email }})<br>
-            <strong>Avatar oprettet:</strong> {{ avatar.created_at }}
-        </div>
-        
-        <div class="card">
-            <h2>🔧 Rediger Avatar Detaljer</h2>
-            
-            <div class="current-image">
-                <strong>Nuværende billede:</strong><br>
-                {% if avatar.image_path %}
-                <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" class="avatar-img">
-                <br><small>URL: {{ avatar.image_path }}</small>
-                {% else %}
-                <div style="width: 120px; height: 120px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 2px solid #e5e7eb;">
-                    Ingen billede
-                </div>
-                {% endif %}
-            </div>
-            
-            <form method="post" action="/admin/user/{{ user.id }}/avatars/edit/{{ avatar.id }}" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label for="avatar_name">Avatar Navn:</label>
-                    <input type="text" id="avatar_name" name="avatar_name" value="{{ avatar.name }}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="heygen_avatar_id">HeyGen Avatar ID:</label>
-                    <input type="text" id="heygen_avatar_id" name="heygen_avatar_id" value="{{ avatar.heygen_avatar_id }}" required>
-                    <small style="color: #6b7280;">Find dette ID i din HeyGen konto under Avatars</small>
-                </div>
-                
-                <div class="form-group">
-
     </head>
     <body>
         <div class="card">
