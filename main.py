@@ -2066,6 +2066,21 @@ async def get_users(request: Request):
     
     return {"users": users}
 
+# CLEANUP ENDPOINT FOR BROKEN AVATARS
+@app.get("/admin/quickclean")
+async def quick_clean(request: Request):
+    admin = get_current_user(request)
+    if not admin or admin.get("is_admin", 0) != 1:
+        return HTMLResponse("Access denied")
+    
+    # Delete videos first (foreign key constraint)
+    execute_query("DELETE FROM videos WHERE avatar_id IN (1,4,5,6,7)")
+    
+    # Delete broken avatars
+    result = execute_query("DELETE FROM avatars WHERE id IN (1,4,5,6,7)")
+    
+    return HTMLResponse(f"<h2>✅ Cleanup Done!</h2><p>Deleted {result['rowcount']} broken avatars</p><a href='/admin/user/3/avatars'>Back to Avatars</a>")
+
 #####################################################################
 # STARTUP EVENT
 #####################################################################
@@ -2078,9 +2093,9 @@ async def startup_event():
     print(f"✅ HeyGen API Key: {'✓ Set' if HEYGEN_API_KEY else '✗ Missing'}")
     print(f"✅ Base URL: {BASE_URL}")
     print(f"✅ Avatar Management: ✓ Available")
-    print(f"✅ Storage: Local files (Railway)")
+    print(f"✅ Storage: Cloudinary CDN")
     print(f"✅ Webhook Endpoint: {BASE_URL}/api/heygen/webhook")
-    print("⚠️  NO default avatars - Admin must create avatars for users")
+    print("✅ Cloudinary integration enabled with local fallback")
     
     # Test HeyGen connection
     if HEYGEN_API_KEY:
@@ -2096,9 +2111,13 @@ if __name__ == "__main__":
     print("🔑 Admin: admin@myavatar.com / admin123")
     print("👤 User: test@example.com / password123")
     print("📋 Admin skal oprette avatars for hver bruger")
-    print("🎯 NO Cloudinary - bruger lokal fil storage!")
+    print("🎯 ✅ Cloudinary - cloud storage med local fallback!")
     print("🎬 Record funktionalitet med visuel feedback!")
     print("🗑️ CASCADE DELETE - sletter automatisk relaterede videoer!")
     print("🔄 HeyGen WEBHOOK - automatisk video retur system!")
+    print("🧹 CLEANUP - /admin/quickclean endpoint tilgængelig!")
+    
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
