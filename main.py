@@ -545,84 +545,17 @@ async def upload_avatar_to_cloudinary(image_file: UploadFile, user_id: int) -> s
 async def upload_avatar_locally(image_file: UploadFile, user_id: int) -> str:
     try:
         log_info(f"Using local fallback upload for user {user_id}", "Storage")
-        
         await image_file.seek(0)
-        
         img_filename = f"user_{user_id}_avatar_{uuid.uuid4().hex}.{image_file.filename.split('.')[-1]}"
         img_path = f"static/uploads/images/{img_filename}"
-        
-        img_bytes = await image_file.read()
         with open(img_path, "wb") as f:
-            f.write(img_bytes)
-        
-        public_url = f"{BASE_URL}/{img_path}"
-        log_info(f"Local upload success: {public_url}", "Storage")
-        return public_url
-        
+            f.write(await image_file.read())
+        log_info(f"Avatar uploaded locally: {img_path}", "Storage")
+        return f"/static/uploads/images/{img_filename}"
     except Exception as e:
-        log_error(f"Local upload failed for user {user_id}", "Storage", e)
+        log_error(f"Local avatar upload failed for user {user_id}", "Storage", e)
         return None
 
-#####################################################################
-# HTML TEMPLATES
-#####################################################################
-
-MARKETING_HTML = '''
-<!DOCTYPE html>
-<html lang="da">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyAvatar.dk - AI Avatar Videoer</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: #333; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        <div class="card">
-            <h2>➕ Opret Ny Bruger</h2>
-            
-            {% if success %}
-            <div class="success">{{ success }}</div>
-            {% endif %}
-            
-            {% if error %}
-            <div class="error">{{ error }}</div>
-            {% endif %}
-            
-            <form method="post" action="/admin/create-user">
-                <div class="form-group">
-                    <label for="username">Brugernavn:</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Adgangskode:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                
-                <button type="submit" class="btn">Opret Bruger</button>
-                <a href="/admin/users" class="btn" style="background: #6b7280; margin-left: 10px;">Tilbage</a>
-            </form>
-        </div>
-    </body>
-    </html>
-    '''
-    
-    return HTMLResponse(content=Template(create_user_html).render(
-        request=request,
-        success=request.query_params.get("success"),
-        error=request.query_params.get("error")
-    ))
-
-@app.post("/admin/create-user", response_class=HTMLResponse)
-async def admin_create_user(request: Request, username: str = Form(...), email: str = Form(...), password: str = Form(...)):
-    try:
-        user = get_current_user(request)
         if not user or user.get("is_admin", 0) != 1:
             return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
         
@@ -1366,7 +1299,7 @@ async def quick_clean(request: Request):
         log_warning(f"TOTAL RESET completed: {videos_result['rowcount']} videos, {avatars_result['rowcount']} avatars deleted", "Admin")
         
         return HTMLResponse(f"""
-        <h2>🧹 TOTAL RESET COMPLETE!</h2>
+        <h2>TOTAL RESET COMPLETE!</h2>
         <p>Deleted {videos_result['rowcount']} videos and {avatars_result['rowcount']} avatars</p>
         <a href='/admin/users'>Start Fresh - Create Avatars</a><br>
         <a href='/admin'>Back to Admin Panel</a>
@@ -1393,24 +1326,24 @@ async def startup_event():
     if HEYGEN_API_KEY:
         test_heygen_connection()
     
-    log_info("🚀 MyAvatar application startup complete", "System")
+    log_info("MyAvatar application startup complete", "System")
 
 #####################################################################
 # MAIN ENTRY POINT
 #####################################################################
 
 if __name__ == "__main__":
-    print("🌟 Starting MyAvatar server...")
-    print("🔗 Local: http://localhost:8000")
-    print("🔑 Admin: admin@myavatar.com / admin123")
-    print("👤 User: test@example.com / password123")
-    print("📋 Admin skal oprette avatars for hver bruger")
-    print("🎯 ✅ Cloudinary - cloud storage med local fallback!")
-    print("🎬 Record funktionalitet med visuel feedback!")
-    print("🗑️ CASCADE DELETE - sletter automatisk relaterede videoer!")
-    print("🔄 HeyGen WEBHOOK - automatisk video retur system!")
-    print("🧹 CLEANUP - /admin/quickclean endpoint tilgængelig!")
-    print("📊 ENHANCED LOGGING - /admin/logs for debugging!")
-    print("🔍 ERROR TRACKING - comprehensive system monitoring!")
+    print("Starting MyAvatar server...")
+    print("Local: http://localhost:8000")
+    print("Admin: admin@myavatar.com / admin123")
+    print("User: test@example.com / password123")
+    print("Admin skal oprette avatars for hver bruger")
+    print("Cloudinary - cloud storage med local fallback!")
+    print("Record funktionalitet med visuel feedback!")
+    print("CASCADE DELETE - sletter automatisk relaterede videoer!")
+    print("HeyGen WEBHOOK - automatisk video retur system!")
+    print("CLEANUP - /admin/quickclean endpoint tilgængelig!")
+    print("ENHANCED LOGGING - /admin/logs for debugging!")
+    print("ERROR TRACKING - comprehensive system monitoring!")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
