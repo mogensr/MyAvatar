@@ -632,6 +632,9 @@ MARKETING_HTML = '''
 
 # Dashboard with IMPROVED Record Button + Visual Feedback
 DASHBOARD_HTML = '''
+# Erstat DASHBOARD_HTML variablen i din main.py med denne:
+
+DASHBOARD_HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -641,8 +644,12 @@ DASHBOARD_HTML = '''
         .header { background: #333; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: none; cursor: pointer; }
+        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: none; cursor: pointer; font-size: 14px; }
         .btn:hover { background: #3730a3; }
+        .btn-success { background: #16a34a; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
         .user-info { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -725,6 +732,175 @@ DASHBOARD_HTML = '''
         
         .recording-timer.active {
             display: block;
+        }
+        
+        /* VIDEO GRID & CARDS */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .video-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .video-thumbnail {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            position: relative;
+        }
+        
+        .video-info {
+            padding: 15px;
+        }
+        
+        .video-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #1f2937;
+        }
+        
+        .video-meta {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+        
+        .video-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .status-completed { background: #dcfce7; color: #16a34a; }
+        .status-processing { background: #fef3c7; color: #d97706; }
+        .status-failed { background: #fee2e2; color: #dc2626; }
+        .status-pending { background: #e0e7ff; color: #4338ca; }
+        
+        .video-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        /* VIDEO MODAL/POPUP */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            position: relative;
+            animation: modalSlideIn 0.3s ease;
+        }
+        
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .close {
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            opacity: 0.7;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .video-player {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+            background: #000;
+        }
+        
+        .video-details {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .powered-by {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6b7280;
         }
     </style>
     <script>
@@ -883,6 +1059,10 @@ DASHBOARD_HTML = '''
                     .then(data => {
                         if (data.success) {
                             showStatusMessage(`✅ Video generering startet! Format: ${data.format || videoFormat} (${data.dimensions || ''})`, 'success');
+                            // Refresh video list after a delay
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
                         } else {
                             showStatusMessage('❌ Fejl: ' + data.error, 'error');
                         }
@@ -895,8 +1075,137 @@ DASHBOARD_HTML = '''
                 });
         }
         
+        // VIDEO MODAL FUNCTIONS
+        function openVideoModal(videoId) {
+            const modal = document.getElementById('videoModal');
+            const modalTitle = document.getElementById('modalVideoTitle');
+            const modalBody = document.getElementById('modalVideoBody');
+            
+            // Show loading
+            modalTitle.innerHTML = 'Indlæser video... <span class="loading-spinner"></span>';
+            modalBody.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading-spinner"></div><p>Henter video information...</p></div>';
+            
+            modal.style.display = 'block';
+            
+            // Fetch video info
+            fetch(`/api/videos/${videoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    modalTitle.textContent = data.title;
+                    
+                    let content = '';
+                    
+                    if (data.status === 'completed' && data.video_path) {
+                        // Show video player
+                        content = `
+                            <video class="video-player" controls>
+                                <source src="${data.video_path}" type="video/mp4">
+                                Din browser understøtter ikke video afspilning.
+                            </video>
+                            <div class="video-details">
+                                <p><strong>Avatar:</strong> ${data.avatar_name}</p>
+                                <p><strong>Status:</strong> <span class="video-status status-completed">Færdig</span></p>
+                                <p><strong>Oprettet:</strong> ${new Date(data.created_at).toLocaleString('da-DK')}</p>
+                                <div style="margin-top: 15px;">
+                                    <button class="btn btn-success" onclick="downloadVideo(${data.id})">📥 Download Video</button>
+                                    <button class="btn" onclick="copyVideoLink('${data.video_path}')">🔗 Kopier Link</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Show status info
+                        const statusClass = `status-${data.status}`;
+                        const statusText = {
+                            'processing': 'Behandles...',
+                            'pending': 'Afventer',
+                            'failed': 'Fejlet',
+                            'error': 'Fejl'
+                        }[data.status] || data.status;
+                        
+                        content = `
+                            <div style="text-align: center; padding: 40px;">
+                                <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+                                <h3>Video er ikke færdig endnu</h3>
+                                <p><span class="video-status ${statusClass}">${statusText}</span></p>
+                                <div class="video-details">
+                                    <p><strong>Avatar:</strong> ${data.avatar_name}</p>
+                                    <p><strong>Oprettet:</strong> ${new Date(data.created_at).toLocaleString('da-DK')}</p>
+                                    <p style="margin-top: 15px; color: #6b7280;">Videoen vil automatisk blive tilgængelig når HeyGen er færdig med behandlingen.</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    modalBody.innerHTML = content + '<div class="powered-by">Powered by HeyGen</div>';
+                })
+                .catch(error => {
+                    modalTitle.textContent = 'Fejl';
+                    modalBody.innerHTML = `<div style="text-align: center; padding: 40px; color: #dc2626;"><p>❌ ${error.message}</p></div>`;
+                });
+        }
+        
+        function closeVideoModal() {
+            document.getElementById('videoModal').style.display = 'none';
+        }
+        
+        function downloadVideo(videoId) {
+            fetch(`/api/videos/${videoId}/download`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Fejl: ' + data.error);
+                        return;
+                    }
+                    
+                    // Create download link
+                    const a = document.createElement('a');
+                    a.href = data.download_url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                })
+                .catch(error => {
+                    alert('Download fejlede: ' + error.message);
+                });
+        }
+        
+        function copyVideoLink(videoUrl) {
+            navigator.clipboard.writeText(videoUrl).then(() => {
+                alert('Video link kopieret til udklipsholder!');
+            }).catch(err => {
+                console.error('Kunne ikke kopiere link:', err);
+                alert('Kunne ikke kopiere link. Prøv igen.');
+            });
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('videoModal');
+            if (event.target == modal) {
+                closeVideoModal();
+            }
+        }
+        
+        // AUTO-REFRESH for video status updates
+        function startVideoStatusPolling() {
+            setInterval(() => {
+                // Check for any processing videos and refresh their status
+                const processingElements = document.querySelectorAll('.status-processing, .status-pending');
+                if (processingElements.length > 0) {
+                    // Refresh page to update video statuses
+                    location.reload();
+                }
+            }, 30000); // Check every 30 seconds
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             initializeRecorder();
+            startVideoStatusPolling();
         });
     </script>
 </head>
@@ -992,21 +1301,63 @@ DASHBOARD_HTML = '''
         {% if videos %}
         <div class="card">
             <h2>🎥 Dine Videoer</h2>
-            <ul>
+            <div class="video-grid">
             {% for video in videos %}
-                <li style="margin-bottom: 10px;">
-                    <strong>{{ video.title }}</strong><br>
-                    Avatar: {{ video.avatar_name }}<br>
-                    Status: {{ video.status }}<br>
-                    Oprettet: {{ video.created_at }}
-                </li>
+                <div class="video-card">
+                    <div class="video-thumbnail">
+                        {% if video.status == 'completed' %}
+                        ▶️
+                        {% elif video.status == 'processing' %}
+                        ⏳
+                        {% elif video.status == 'failed' %}
+                        ❌
+                        {% else %}
+                        ⏸️
+                        {% endif %}
+                    </div>
+                    <div class="video-info">
+                        <div class="video-title">{{ video.title }}</div>
+                        <div class="video-meta">
+                            Avatar: {{ video.avatar_name }}<br>
+                            {{ video.created_at }}
+                        </div>
+                        <span class="video-status status-{{ video.status }}">
+                            {% if video.status == 'completed' %}Færdig
+                            {% elif video.status == 'processing' %}Behandles
+                            {% elif video.status == 'failed' %}Fejlet
+                            {% elif video.status == 'pending' %}Afventer
+                            {% else %}{{ video.status }}
+                            {% endif %}
+                        </span>
+                        <div class="video-actions">
+                            <button class="btn" onclick="openVideoModal({{ video.id }})">👁️ Se Video</button>
+                            {% if video.status == 'completed' and video.video_path %}
+                            <button class="btn btn-success" onclick="downloadVideo({{ video.id }})">📥 Download</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             {% endfor %}
-            </ul>
+            </div>
         </div>
         {% endif %}
     </div>
+    
+    <!-- VIDEO MODAL -->
+    <div id="videoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalVideoTitle" class="modal-title">Video</h2>
+                <span class="close" onclick="closeVideoModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalVideoBody">
+                <!-- Video content will be loaded here -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
+'''
 '''
 
 #####################################################################
@@ -1767,6 +2118,201 @@ async def get_users(request: Request):
     users = execute_query("SELECT id, username, email, is_admin, created_at FROM users", fetch_all=True)
     
     return {"users": users}
+
+# Tilføj disse funktioner til din main.py (efter API ENDPOINTS sektionen)
+
+#####################################################################
+# HEYGEN WEBHOOK + VIDEO MANAGEMENT SYSTEM
+#####################################################################
+
+import requests
+from urllib.parse import urlparse
+import shutil
+
+@app.post("/api/heygen/webhook")
+async def heygen_webhook_handler(request: Request):
+    """
+    HeyGen webhook handler - modtager beskeder når videoer er færdige
+    """
+    try:
+        # Get webhook data fra HeyGen
+        webhook_data = await request.json()
+        print(f"🎬 HeyGen Webhook received: {json.dumps(webhook_data, indent=2)}")
+        
+        # Extract video info
+        video_id = webhook_data.get("video_id")
+        status = webhook_data.get("status", "").lower()
+        video_url = webhook_data.get("video_url", "")
+        
+        if not video_id:
+            print("❌ No video_id in webhook data")
+            return JSONResponse({"error": "Missing video_id"}, status_code=400)
+        
+        # Find video i database via heygen_video_id
+        video_record = execute_query(
+            "SELECT * FROM videos WHERE heygen_video_id = ?", 
+            (video_id,), 
+            fetch_one=True
+        )
+        
+        if not video_record:
+            print(f"❌ Video record not found for HeyGen ID: {video_id}")
+            return JSONResponse({"error": "Video record not found"}, status_code=404)
+        
+        print(f"✅ Found video record: {video_record['id']} - {video_record['title']}")
+        
+        # Process baseret på status
+        if status == "completed" or status == "success":
+            if video_url:
+                # Download video fra HeyGen og gem lokalt
+                local_path = await download_video_from_heygen(video_url, video_record['id'])
+                
+                if local_path:
+                    # Opdater database med lokal path og status
+                    execute_query(
+                        "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
+                        (local_path, "completed", video_record['id'])
+                    )
+                    print(f"✅ Video {video_record['id']} downloaded and saved: {local_path}")
+                else:
+                    # Fejl ved download - sæt status til error
+                    execute_query(
+                        "UPDATE videos SET status = ? WHERE id = ?",
+                        ("error", video_record['id'])
+                    )
+                    print(f"❌ Failed to download video {video_record['id']}")
+            else:
+                print(f"⚠️ No video_url provided in webhook for {video_id}")
+                
+        elif status == "failed" or status == "error":
+            # Opdater status til failed
+            execute_query(
+                "UPDATE videos SET status = ? WHERE id = ?",
+                ("failed", video_record['id'])
+            )
+            print(f"❌ Video {video_record['id']} failed in HeyGen")
+        
+        else:
+            # Andre status (processing, etc.)
+            execute_query(
+                "UPDATE videos SET status = ? WHERE id = ?",
+                (status, video_record['id'])
+            )
+            print(f"ℹ️ Video {video_record['id']} status updated to: {status}")
+        
+        return JSONResponse({"success": True, "message": "Webhook processed"})
+    
+    except Exception as e:
+        print(f"❌ Webhook error: {str(e)}")
+        return JSONResponse({"error": f"Webhook processing failed: {str(e)}"}, status_code=500)
+
+async def download_video_from_heygen(video_url: str, video_id: int) -> str:
+    """
+    Download video fra HeyGen URL og gem lokalt på Railway
+    Returns local file path eller None hvis fejl
+    """
+    try:
+        print(f"📥 Downloading video from: {video_url}")
+        
+        # Create video directory hvis den ikke findes
+        os.makedirs("static/uploads/videos", exist_ok=True)
+        
+        # Generate unique filename
+        video_filename = f"video_{video_id}_{uuid.uuid4().hex}.mp4"
+        local_path = f"static/uploads/videos/{video_filename}"
+        
+        # Download video med requests og streaming
+        response = requests.get(video_url, stream=True)
+        response.raise_for_status()
+        
+        # Save file
+        with open(local_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        # Generate public URL for serving
+        public_url = f"{BASE_URL}/{local_path}"
+        
+        print(f"✅ Video downloaded successfully: {public_url}")
+        return public_url
+        
+    except Exception as e:
+        print(f"❌ Video download failed: {str(e)}")
+        return None
+
+@app.get("/api/videos/{video_id}")
+async def get_video_info(video_id: int, request: Request):
+    """
+    Get video information (for AJAX calls fra frontend)
+    """
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Ikke autoriseret"}, status_code=401)
+    
+    video = execute_query(
+        "SELECT v.*, a.name as avatar_name FROM videos v JOIN avatars a ON v.avatar_id = a.id WHERE v.id = ? AND v.user_id = ?",
+        (video_id, user["id"]),
+        fetch_one=True
+    )
+    
+    if not video:
+        return JSONResponse({"error": "Video ikke fundet"}, status_code=404)
+    
+    return JSONResponse({
+        "id": video["id"],
+        "title": video["title"],
+        "status": video["status"],
+        "avatar_name": video["avatar_name"],
+        "video_path": video["video_path"],
+        "created_at": video["created_at"],
+        "heygen_video_id": video["heygen_video_id"]
+    })
+
+@app.get("/api/videos/{video_id}/download")
+async def download_video_endpoint(video_id: int, request: Request):
+    """
+    Direct download endpoint for videoer
+    """
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Ikke autoriseret"}, status_code=401)
+    
+    video = execute_query(
+        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
+        (video_id, user["id"]),
+        fetch_one=True
+    )
+    
+    if not video:
+        return JSONResponse({"error": "Video ikke fundet"}, status_code=404)
+    
+    if video["status"] != "completed" or not video["video_path"]:
+        return JSONResponse({"error": "Video ikke færdig endnu"}, status_code=400)
+    
+    # Return video URL for download
+    return JSONResponse({
+        "download_url": video["video_path"],
+        "filename": f"{video['title']}.mp4"
+    })
+
+@app.get("/api/user/videos")
+async def get_user_videos(request: Request):
+    """
+    Get all videos for current user (for dashboard updates)
+    """
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Ikke autoriseret"}, status_code=401)
+    
+    videos = execute_query(
+        "SELECT v.*, a.name as avatar_name FROM videos v JOIN avatars a ON v.avatar_id = a.id WHERE v.user_id = ? ORDER BY v.created_at DESC",
+        (user["id"],),
+        fetch_all=True
+    )
+    
+    return JSONResponse({"videos": videos})
+
+
 
 #####################################################################
 # STARTUP EVENT
