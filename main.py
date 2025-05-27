@@ -26,6 +26,11 @@ from dotenv import load_dotenv
 import shutil
 from urllib.parse import urlparse
 
+# Cloudinary imports for avatar storage
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
 # Load environment variables
 load_dotenv()
 
@@ -35,6 +40,7 @@ try:
     import psycopg2.extras
     POSTGRESQL_AVAILABLE = True
 except ImportError:
+    POSTGRESQL_AVAILABLE = False
     POSTGRESQL_AVAILABLE = False
 
 #####################################################################
@@ -141,7 +147,7 @@ print("✅ HeyGen API handler loaded successfully (HTTP implementation)")
 #####################################################################
 # CONFIGURATION
 #####################################################################
-SECRET_KEY = "your_secret_key_here_change_in_production"
+SECRET_KEY = os.getenv("SECRET_KEY", "your_secret_key_here_change_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -152,7 +158,16 @@ HEYGEN_BASE_URL = "https://api.heygen.com"
 # Base URL - Railway will set this correctly
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
+# Cloudinary Configuration
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
+
 print(f"[INFO] Environment loaded. HeyGen API Key: {HEYGEN_API_KEY[:10] if HEYGEN_API_KEY else 'NOT_FOUND'}...")
+print(f"[INFO] BASE_URL loaded: {BASE_URL}")
+print(f"[INFO] Cloudinary configured: {os.getenv('CLOUDINARY_CLOUD_NAME', 'NOT_FOUND')}")
 print(f"[INFO] BASE_URL loaded: {BASE_URL}")
 
 #####################################################################
@@ -455,6 +470,62 @@ def get_current_user(request: Request):
 def is_admin(request: Request):
     user = get_current_user(request)
     return user and user.get("is_admin", 0) == 1
+
+#####################################################################
+# CLOUDINARY UPLOAD FUNCTIONS
+#####################################################################
+
+async def upload_avatar_to_cloudinary(image_file: UploadFile, user_id: int) -> str:
+    """Upload avatar image to Cloudinary and return secure URL"""
+    try:
+        # Read image bytes
+        image_bytes = await image_file.read()
+        
+        # Generate unique public_id with user info
+        public_id = f"user_{user_id}_avatar_{uuid.uuid4().hex}"
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            image_bytes,
+            folder="myavatar/avatars",  # Organize i folders
+            public_id=public_id,
+            overwrite=True,
+            resource_type="image",
+            transformation=[
+                {'width': 400, 'height': 400, 'crop': 'fill'},  # Resize til consistent størrelse
+                {'quality': 'auto', 'fetch_format': 'auto'}     # Optimize automatically
+            ]
+        )
+        
+        print(f"✅ Cloudinary upload success: {result['secure_url']}")
+        return result['secure_url']
+        
+    except Exception as e:
+        print(f"❌ Cloudinary upload error: {e}")
+        # Fallback til local storage hvis Cloudinary fejler
+        return await upload_avatar_locally(image_file, user_id)
+
+async def upload_avatar_locally(image_file: UploadFile, user_id: int) -> str:
+    """Fallback local upload hvis Cloudinary fejler"""
+    try:
+        # Reset file pointer
+        await image_file.seek(0)
+        
+        # Generate filename
+        img_filename = f"user_{user_id}_avatar_{uuid.uuid4().hex}.{image_file.filename.split('.')[-1]}"
+        img_path = f"static/uploads/images/{img_filename}"
+        
+        # Read and save file
+        img_bytes = await image_file.read()
+        with open(img_path, "wb") as f:
+            f.write(img_bytes)
+        
+        # Return full URL
+        return f"{BASE_URL}/{img_path}"
+        
+    except Exception as e:
+        print(f"❌ Local upload error: {e}")
+        return None
 
 #####################################################################
 # HTML TEMPLATES
@@ -1127,7 +1198,6 @@ async def dashboard(request: Request):
 #####################################################################
 # ROUTES - ADMIN DASHBOARD WITH AVATAR MANAGEMENT
 #####################################################################
-
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
     user = get_current_user(request)
@@ -1168,10 +1238,10 @@ async def admin_dashboard(request: Request):
         <div class="card">
             <h2>📊 System Status</h2>
             <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
-            <p><strong>Storage:</strong> ✅ Lokal (Railway)</p>
+            <p><strong>Storage:</strong> ✅ Cloudinary CDN</p>
             <p><strong>Database:</strong> ✅ PostgreSQL</p>
             <p><strong>Webhook:</strong> ✅ /api/heygen/webhook</p>
-            <p><strong>Cloudinary:</strong> ❌ Deaktiveret (bruger lokal storage)</p>
+            <p><strong>Cloudinary:</strong> ✅ Aktiveret (cloud storage)</p>
         </div>
     </body>
     </html>
@@ -1409,21 +1479,20 @@ async def admin_add_avatar(
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
     try:
-        # LOCAL FILE UPLOAD - NO CLOUDINARY
-        img_bytes = await avatar_img.read()
+        print(f"🎯 Creating avatar for user {user_id}: {avatar_name}")
         
-        # Save image locally
-        img_filename = f"avatar_{uuid.uuid4().hex}.{avatar_img.filename.split('.')[-1]}"
-        img_path = f"static/uploads/images/{img_filename}"
+        # Upload image to Cloudinary (with local fallback)
+        img_url = await upload_avatar_to_cloudinary(avatar_img, user_id)
         
-        with open(img_path, "wb") as f:
-            f.write(img_bytes)
+        if not img_url:
+            return RedirectResponse(
+                url=f"/admin/user/{user_id}/avatars?error=Billede upload fejlede", 
+                status_code=303
+            )
         
-        # Use Railway URL for serving
-        img_url = f"{BASE_URL}/{img_path}"
-        print(f"[DEBUG] Avatar image saved locally: {img_url}")
+        print(f"[DEBUG] Avatar image URL: {img_url}")
         
-        # Save to database
+        # Save to database with 'image_path' column (matching existing schema)
         result = execute_query(
             "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
             (user_id, avatar_name, img_url, heygen_avatar_id)
@@ -1432,13 +1501,22 @@ async def admin_add_avatar(
         print(f"[DEBUG] Database insert: {result['rowcount']} rows affected")
         
         if result['rowcount'] > 0:
-            return RedirectResponse(url=f"/admin/user/{user_id}/avatars?success=Avatar tilføjet succesfuldt", status_code=303)
+            return RedirectResponse(
+                url=f"/admin/user/{user_id}/avatars?success=Avatar tilføjet succesfuldt (Cloudinary)", 
+                status_code=303
+            )
         else:
-            return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Database fejl", status_code=303)
+            return RedirectResponse(
+                url=f"/admin/user/{user_id}/avatars?error=Database fejl", 
+                status_code=303
+            )
             
     except Exception as e:
         print(f"[ERROR] Avatar creation failed: {str(e)}")
-        return RedirectResponse(url=f"/admin/user/{user_id}/avatars?error=Fejl: {str(e)}", status_code=303)
+        return RedirectResponse(
+            url=f"/admin/user/{user_id}/avatars?error=Fejl: {str(e)}", 
+            status_code=303
+        )
 
 @app.post("/admin/user/{user_id}/avatars/delete/{avatar_id}", response_class=HTMLResponse)
 async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar_id: int = Path(...)):
