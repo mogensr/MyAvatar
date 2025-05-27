@@ -2071,13 +2071,13 @@ async def quick_clean(request: Request):
     if not admin or admin.get("is_admin", 0) != 1:
         return HTMLResponse("Access denied")
     
-    # Delete videos first (foreign key constraint)
-    execute_query("DELETE FROM videos WHERE avatar_id IN (1,4,5,6,7)")
+    # TOTAL RESET - Delete ALL videos first
+    videos_result = execute_query("DELETE FROM videos")
     
-    # Delete broken avatars
-    result = execute_query("DELETE FROM avatars WHERE id IN (1,4,5,6,7)")
+    # Delete ALL avatars
+    avatars_result = execute_query("DELETE FROM avatars")
     
-    return HTMLResponse(f"<h2>✅ Cleanup Done!</h2><p>Deleted {result['rowcount']} broken avatars</p><a href='/admin/user/3/avatars'>Back to Avatars</a>")
+    return HTMLResponse(f"<h2>🧹 TOTAL RESET COMPLETE!</h2><p>Deleted {videos_result['rowcount']} videos and {avatars_result['rowcount']} avatars</p><a href='/admin/user/3/avatars'>Start Fresh</a>")
 
 #####################################################################
 # STARTUP EVENT
