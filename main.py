@@ -1789,31 +1789,47 @@ async def download_video_from_heygen(video_url: str, video_id: int) -> str:
 
 @app.post("/api/heygen/webhook")
 async def heygen_webhook_handler(request: Request):
+    """Enhanced HeyGen webhook handler - FIXED for HeyGen's actual format"""
     try:
         webhook_data = await request.json()
         log_info(f"HeyGen Webhook received: {json.dumps(webhook_data, indent=2)}", "Webhook")
+        
+        # Extract video info - HeyGen sends data in "event_data" structure
+        event_data = webhook_data.get("event_data", {})
+        event_type = webhook_data.get("event_type", "")
         
         video_id = (
             webhook_data.get("video_id") or 
             webhook_data.get("id") or 
             webhook_data.get("data", {}).get("video_id") or
-            webhook_data.get("data", {}).get("id")
+            webhook_data.get("data", {}).get("id") or
+            event_data.get("video_id")  # ← FIXED: HeyGen puts it here!
         )
         
-        status = webhook_data.get("status", "").lower()
+        # Derive status from event_type
+        if "success" in event_type.lower():
+            status = "completed"
+        elif "fail" in event_type.lower() or "error" in event_type.lower():
+            status = "failed"
+        else:
+            status = webhook_data.get("status", "processing").lower()
+        
         video_url = (
             webhook_data.get("video_url") or 
             webhook_data.get("url") or
             webhook_data.get("data", {}).get("video_url") or
-            webhook_data.get("data", {}).get("url")
+            webhook_data.get("data", {}).get("url") or
+            event_data.get("url")  # ← FIXED: HeyGen puts it here!
         )
         
-        log_info(f"Extracted: video_id={video_id}, status={status}, video_url={video_url}", "Webhook")
+        log_info(f"Extracted: video_id={video_id}, status={status}, video_url={video_url}, event_type={event_type}", "Webhook")
         
         if not video_id:
             log_error(f"No video_id found in webhook data. Available keys: {list(webhook_data.keys())}", "Webhook")
+            log_error(f"Event data keys: {list(event_data.keys())}", "Webhook")
             return JSONResponse({"error": "Missing video_id", "received_keys": list(webhook_data.keys())}, status_code=400)
         
+        # Find video in database via heygen_video_id
         video_record = execute_query(
             "SELECT * FROM videos WHERE heygen_video_id = ?", 
             (video_id,), 
@@ -1826,17 +1842,20 @@ async def heygen_webhook_handler(request: Request):
         
         log_info(f"Found video record: {video_record['id']} - {video_record['title']}", "Webhook")
         
-        if status in ["completed", "success", "finished"]:
+        if status == "completed":
             if video_url:
+                # Download video from HeyGen and save locally
                 local_path = await download_video_from_heygen(video_url, video_record['id'])
                 
                 if local_path:
+                    # Update database with local path and status
                     execute_query(
                         "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
                         (local_path, "completed", video_record['id'])
                     )
                     log_info(f"Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
                 else:
+                    # Error during download - set status to error
                     execute_query(
                         "UPDATE videos SET status = ? WHERE id = ?",
                         ("error", video_record['id'])
@@ -1845,7 +1864,8 @@ async def heygen_webhook_handler(request: Request):
             else:
                 log_warning(f"No video_url provided in webhook for {video_id}", "Webhook")
                 
-        elif status in ["failed", "error"]:
+        elif status == "failed":
+            # Update status to failed
             execute_query(
                 "UPDATE videos SET status = ? WHERE id = ?",
                 ("failed", video_record['id'])
@@ -1853,13 +1873,20 @@ async def heygen_webhook_handler(request: Request):
             log_error(f"Video {video_record['id']} failed in HeyGen", "Webhook")
         
         else:
+            # Other status (processing, etc.)
             execute_query(
                 "UPDATE videos SET status = ? WHERE id = ?",
                 (status, video_record['id'])
             )
             log_info(f"Video {video_record['id']} status updated to: {status}", "Webhook")
         
-        return JSONResponse({"success": True, "message": "Webhook processed", "video_id": video_id})
+        return JSONResponse({
+            "success": True, 
+            "message": "Webhook processed", 
+            "video_id": video_id,
+            "event_type": event_type,
+            "status": status
+        })
     
     except Exception as e:
         log_error("Webhook processing failed", "Webhook", e)
@@ -1869,7 +1896,7 @@ async def heygen_webhook_handler(request: Request):
 # API ENDPOINTS - SYSTEM MONITORING
 #####################################################################
 
-@app.get("/api/health")
+{{ ... }}
 async def health_check():
     try:
         users_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
