@@ -1,7 +1,7 @@
 """
 MyAvatar - Complete Working Application
-Railway-compatible with PostgreSQL + Fixed Cloudinary
-No more signature issues - Just works!
+Railway-compatible with PostgreSQL + NO CLOUDINARY + Visual Record Feedback
+Fixed all signature issues - Just works!
 """
 #####################################################################
 # IMPORTS
@@ -34,22 +34,6 @@ try:
     POSTGRESQL_AVAILABLE = True
 except ImportError:
     POSTGRESQL_AVAILABLE = False
-
-#####################################################################
-# CLOUDINARY CONFIGURATION
-#####################################################################
-import cloudinary
-import cloudinary.uploader
-
-# Prefer CLOUDINARY_URL if present, otherwise use explicit credentials
-if os.getenv("CLOUDINARY_URL"):
-    cloudinary.config()
-else:
-    cloudinary.config(
-        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-        api_key=os.getenv("CLOUDINARY_API_KEY"),
-        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-    )
 
 #####################################################################
 # HEYGEN API HANDLER - DIRECT HTTP IMPLEMENTATION
@@ -96,11 +80,17 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
     }
     
     try:
+        print(f"🚀 Sending request to HeyGen API...")
+        print(f"📄 Payload: {json.dumps(payload, indent=2)}")
+        
         response = requests.post(
             "https://api.heygen.com/v2/video/generate",
             headers=headers,
             json=payload
         )
+        
+        print(f"📤 HeyGen Response Status: {response.status_code}")
+        print(f"📤 HeyGen Response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
@@ -123,6 +113,26 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
             "error": f"HeyGen API request failed: {str(e)}"
         }
 
+def test_heygen_connection():
+    """Quick test of HeyGen API connection"""
+    heygen_key = os.getenv("HEYGEN_API_KEY", "")
+    if not heygen_key:
+        print("❌ HEYGEN_API_KEY not found")
+        return
+    
+    print(f"🔑 Testing HeyGen API with key: {heygen_key[:10]}...")
+    
+    # Test med en dummy audio URL (dette vil fejle pga. invalid avatar, men vi tester connection)
+    test_result = create_video_from_audio_file(
+        api_key=heygen_key,
+        avatar_id="test_avatar_id", # Dette vil fejle, men vi tester connection
+        audio_url="https://www.soundjay.com/misc/bell-ringing-05.wav", # Dummy URL
+        video_format="16:9"
+    )
+    
+    print(f"🎯 HeyGen Connection Test Result: {test_result}")
+    return test_result
+
 HEYGEN_HANDLER_AVAILABLE = True
 print("✅ HeyGen API handler loaded successfully (HTTP implementation)")
 
@@ -133,7 +143,7 @@ SECRET_KEY = "your_secret_key_here_change_in_production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# HeyGen Configuration - NO DEFAULT AVATAR
+# HeyGen Configuration
 HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY", "")
 HEYGEN_BASE_URL = "https://api.heygen.com"
 
@@ -157,17 +167,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create necessary directories
+os.makedirs("static/uploads/audio", exist_ok=True)
+os.makedirs("static/uploads/images", exist_ok=True)
+os.makedirs("static/images", exist_ok=True)
+
 # Static files - Railway compatible
 try:
-    app.mount("/static", StaticFiles(directory="public/static"), name="static")
-    print("✅ Static files mounted: public/static")
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    print("✅ Static files mounted: static")
 except Exception as e:
     print(f"⚠️ Static files error: {e}")
-    try:
-        app.mount("/static", StaticFiles(directory="static"), name="static")
-        print("✅ Static files mounted: static (fallback)")
-    except:
-        print("❌ No static directory found")
 
 # Templates - Multi-directory support
 templates = Jinja2Templates(directory="templates")
@@ -344,16 +354,14 @@ def init_database():
             )
         ''')
     
-    # Check if we need to create default users (NO DEFAULT AVATARS) - FIXED VERSION
+    # Check if we need to create default users
     cursor.execute("SELECT COUNT(*) as user_count FROM users")
     result = cursor.fetchone()
     
     # Handle different result formats between PostgreSQL and SQLite
     if is_postgresql:
-        # PostgreSQL with RealDictCursor returns dict-like object
         existing_users = result['user_count']
     else:
-        # SQLite returns tuple-like object
         existing_users = result[0]
     
     print(f"[DEBUG] Found {existing_users} existing users")
@@ -366,7 +374,6 @@ def init_database():
         user_password = get_password_hash("password123")
         
         if is_postgresql:
-            # PostgreSQL syntax with %s placeholders
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
                 ("admin", "admin@myavatar.com", admin_password, 1)
@@ -376,7 +383,6 @@ def init_database():
                 ("testuser", "test@example.com", user_password, 0)
             )
         else:
-            # SQLite syntax with ? placeholders
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
                 ("admin", "admin@myavatar.com", admin_password, 1)
@@ -624,7 +630,7 @@ MARKETING_HTML = '''
 </html>
 '''
 
-# Dashboard with Format Selection
+# Dashboard with IMPROVED Record Button + Visual Feedback
 DASHBOARD_HTML = '''
 <!DOCTYPE html>
 <html>
@@ -642,20 +648,91 @@ DASHBOARD_HTML = '''
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         .recorder-container { text-align: center; margin: 20px 0; }
-        .record-btn { background: #dc2626; color: white; border: none; border-radius: 50%; width: 80px; height: 80px; font-size: 16px; cursor: pointer; margin: 10px; }
-        .record-btn:hover { background: #b91c1c; }
-        .record-btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* IMPROVED RECORD BUTTON WITH ANIMATIONS */
+        .record-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+        }
+        
+        .record-btn:hover {
+            background: #b91c1c;
+            transform: scale(1.05);
+        }
+        
+        .record-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* RECORDING STATE - Pulsing animation */
+        .record-btn.recording {
+            background: #ef4444;
+            animation: pulse-record 1.5s infinite;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        }
+        
+        @keyframes pulse-record {
+            0% { transform: scale(1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+            50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+        }
+        
+        /* RECORDING INDICATOR */
+        .recording-indicator {
+            display: none;
+            color: #dc2626;
+            font-weight: bold;
+            margin: 10px 0;
+            animation: blink 1s infinite;
+        }
+        
+        .recording-indicator.active {
+            display: block;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
         .audio-preview { width: 100%; margin: 20px 0; }
         .status-message { margin: 15px 0; padding: 10px; border-radius: 5px; }
         .status-message.success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
         .status-message.error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
         .status-message.info { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
         .format-info { background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 0.9em; color: #6b7280; margin-top: 5px; }
+        
+        /* RECORDING TIMER */
+        .recording-timer {
+            display: none;
+            font-size: 1.5em;
+            color: #dc2626;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .recording-timer.active {
+            display: block;
+        }
     </style>
     <script>
         window.mediaRecorder = null;
         window.audioChunks = [];
         window.isRecording = false;
+        window.recordingTimer = null;
+        window.recordingStartTime = null;
         
         function initializeRecorder() {
             navigator.mediaDevices.getUserMedia({audio: true})
@@ -673,29 +750,84 @@ DASHBOARD_HTML = '''
                         audioPreview.src = audioUrl;
                         audioPreview.style.display = 'block';
                         document.getElementById('heygen-submit-btn').disabled = false;
+                        
+                        // Reset visual state
+                        resetRecordingState();
+                        showStatusMessage('Optagelse fuldført! 🎉', 'success');
                     };
                     
                     document.getElementById('record-btn').disabled = false;
+                    showStatusMessage('Mikrofon klar - klik for at optage! 🎤', 'info');
                 })
                 .catch(error => {
                     console.error('Fejl ved adgang til mikrofon:', error);
-                    showStatusMessage('Kunne ikke få adgang til mikrofonen.', 'error');
+                    showStatusMessage('Kunne ikke få adgang til mikrofonen. Tjek tilladelser.', 'error');
                 });
         }
         
         function toggleRecording() {
             if (!window.isRecording) {
-                window.audioChunks = [];
-                window.mediaRecorder.start();
-                window.isRecording = true;
-                document.getElementById('record-btn').textContent = 'Stop';
-                showStatusMessage('Optagelse i gang...', 'info');
+                startRecording();
             } else {
-                window.mediaRecorder.stop();
-                window.isRecording = false;
-                document.getElementById('record-btn').textContent = 'Optag';
-                showStatusMessage('Optagelse fuldført!', 'success');
+                stopRecording();
             }
+        }
+        
+        function startRecording() {
+            window.audioChunks = [];
+            window.mediaRecorder.start();
+            window.isRecording = true;
+            window.recordingStartTime = Date.now();
+            
+            // Update UI
+            const recordBtn = document.getElementById('record-btn');
+            const indicator = document.getElementById('recording-indicator');
+            const timer = document.getElementById('recording-timer');
+            
+            recordBtn.textContent = 'Stop';
+            recordBtn.classList.add('recording');
+            indicator.classList.add('active');
+            timer.classList.add('active');
+            
+            // Start timer
+            window.recordingTimer = setInterval(updateTimer, 100);
+            
+            showStatusMessage('🔴 Optagelse i gang... Klik Stop når du er færdig', 'info');
+        }
+        
+        function stopRecording() {
+            window.mediaRecorder.stop();
+            window.isRecording = false;
+            
+            // Clear timer
+            if (window.recordingTimer) {
+                clearInterval(window.recordingTimer);
+                window.recordingTimer = null;
+            }
+        }
+        
+        function resetRecordingState() {
+            const recordBtn = document.getElementById('record-btn');
+            const indicator = document.getElementById('recording-indicator');
+            const timer = document.getElementById('recording-timer');
+            
+            recordBtn.textContent = 'Optag';
+            recordBtn.classList.remove('recording');
+            indicator.classList.remove('active');
+            timer.classList.remove('active');
+            timer.textContent = '00:00';
+        }
+        
+        function updateTimer() {
+            if (!window.recordingStartTime) return;
+            
+            const elapsed = Date.now() - window.recordingStartTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            const timerDisplay = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            document.getElementById('recording-timer').textContent = timerDisplay;
         }
         
         function showStatusMessage(message, type) {
@@ -711,23 +843,23 @@ DASHBOARD_HTML = '''
             const videoFormat = document.getElementById('heygen-format-select').value;
             
             if (!title) {
-                showStatusMessage('Indtast venligst en titel', 'error');
+                showStatusMessage('❌ Indtast venligst en titel', 'error');
                 return;
             }
             
             if (!avatarId) {
-                showStatusMessage('Vælg venligst en avatar', 'error');
+                showStatusMessage('❌ Vælg venligst en avatar', 'error');
                 return;
             }
             
             if (!videoFormat) {
-                showStatusMessage('Vælg venligst et video format', 'error');
+                showStatusMessage('❌ Vælg venligst et video format', 'error');
                 return;
             }
             
             const audioElement = document.getElementById('audio-preview');
             if (!audioElement.src) {
-                showStatusMessage('Optag venligst lyd først', 'error');
+                showStatusMessage('❌ Optag venligst lyd først', 'error');
                 return;
             }
             
@@ -740,7 +872,7 @@ DASHBOARD_HTML = '''
                 .then(res => res.blob())
                 .then(audioBlob => {
                     formData.append('audio', audioBlob, 'recording.wav');
-                    showStatusMessage(`Sender til HeyGen (${videoFormat})...`, 'info');
+                    showStatusMessage(`🚀 Sender til HeyGen (${videoFormat})... Dette kan tage et øjeblik`, 'info');
                     document.getElementById('heygen-submit-btn').disabled = true;
                     
                     fetch('/api/heygen', {
@@ -750,14 +882,14 @@ DASHBOARD_HTML = '''
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            showStatusMessage(`Video generering startet! Format: ${data.format || videoFormat} (${data.dimensions || ''})`, 'success');
+                            showStatusMessage(`✅ Video generering startet! Format: ${data.format || videoFormat} (${data.dimensions || ''})`, 'success');
                         } else {
-                            showStatusMessage('Fejl: ' + data.error, 'error');
+                            showStatusMessage('❌ Fejl: ' + data.error, 'error');
                         }
                         document.getElementById('heygen-submit-btn').disabled = false;
                     })
                     .catch(error => {
-                        showStatusMessage('Der opstod en fejl: ' + error.message, 'error');
+                        showStatusMessage('❌ Der opstod en fejl: ' + error.message, 'error');
                         document.getElementById('heygen-submit-btn').disabled = false;
                     });
                 });
@@ -790,7 +922,7 @@ DASHBOARD_HTML = '''
         
         {% if avatars %}
         <div class="card">
-            <h2>Optag Avatar Video</h2>
+            <h2>🎬 Optag Avatar Video</h2>
             
             <div class="form-group">
                 <label for="heygen-title">Video Titel:</label>
@@ -820,14 +952,21 @@ DASHBOARD_HTML = '''
             
             <div class="recorder-container">
                 <button id="record-btn" class="record-btn" onclick="toggleRecording()" disabled>Optag</button>
+                
+                <div id="recording-indicator" class="recording-indicator">
+                    🔴 OPTAGER - Tal klart og tydeligt
+                </div>
+                
+                <div id="recording-timer" class="recording-timer">00:00</div>
+                
                 <audio id="audio-preview" class="audio-preview" controls style="display:none;"></audio>
                 <div id="status-message" class="status-message info" style="display:none;"></div>
-                <button id="heygen-submit-btn" class="btn" onclick="submitToHeyGen()" disabled>Send til HeyGen</button>
+                <button id="heygen-submit-btn" class="btn" onclick="submitToHeyGen()" disabled>🚀 Send til HeyGen</button>
             </div>
         </div>
         
         <div class="card">
-            <h2>Dine Avatars</h2>
+            <h2>🎭 Dine Avatars</h2>
             <ul>
             {% for avatar in avatars %}
                 <li style="margin-bottom: 15px;">
@@ -842,7 +981,7 @@ DASHBOARD_HTML = '''
         </div>
         {% else %}
         <div class="card">
-            <h2>Ingen Avatars</h2>
+            <h2>❌ Ingen Avatars</h2>
             <p>Du har ingen avatars endnu. Kontakt admin for at få oprettet avatars til din konto.</p>
             {% if is_admin %}
             <p><a href="/admin" class="btn">Gå til Admin Panel for at tilføje avatars</a></p>
@@ -852,7 +991,7 @@ DASHBOARD_HTML = '''
         
         {% if videos %}
         <div class="card">
-            <h2>Dine Videoer</h2>
+            <h2>🎥 Dine Videoer</h2>
             <ul>
             {% for video in videos %}
                 <li style="margin-bottom: 10px;">
@@ -978,7 +1117,7 @@ async def admin_dashboard(request: Request):
     </head>
     <body>
         <div class="header">
-            <h1>Admin Dashboard</h1>
+            <h1>🔧 Admin Dashboard</h1>
             <div>
                 <a href="/dashboard" class="btn">Dashboard</a>
                 <a href="/logout" class="btn">Log Ud</a>
@@ -986,17 +1125,18 @@ async def admin_dashboard(request: Request):
         </div>
         
         <div class="card">
-            <h2>Avatar Administration</h2>
+            <h2>👥 Avatar Administration</h2>
             <p>Administrer avatars for alle brugere i systemet.</p>
             <a href="/admin/users" class="btn">Administrer Brugere & Avatars</a>
             <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
         </div>
         
         <div class="card">
-            <h2>System Status</h2>
+            <h2>📊 System Status</h2>
             <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
-            <p><strong>Cloudinary:</strong> ✅ Konfigureret</p>
+            <p><strong>Storage:</strong> ✅ Lokal (Railway)</p>
             <p><strong>Database:</strong> ✅ PostgreSQL</p>
+            <p><strong>Cloudinary:</strong> ❌ Deaktiveret (bruger lokal storage)</p>
         </div>
     </body>
     </html>
@@ -1034,7 +1174,7 @@ async def admin_users(request: Request):
     </head>
     <body>
         <div class="header">
-            <h1>Administrer Brugere</h1>
+            <h1>👥 Administrer Brugere</h1>
             <div>
                 <a href="/admin" class="btn">Tilbage til Admin</a>
                 <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
@@ -1116,7 +1256,7 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
     </head>
     <body>
         <div class="header">
-            <h1>{{ user.username }} - Avatar Administration</h1>
+            <h1>🎭 {{ user.username }} - Avatar Administration</h1>
             <div>
                 <a href="/admin/users" class="btn">Tilbage til Brugere</a>
             </div>
@@ -1131,7 +1271,7 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
         {% endif %}
         
         <div class="card">
-            <h2>Tilføj Ny Avatar</h2>
+            <h2>➕ Tilføj Ny Avatar</h2>
             <form method="post" action="/admin/user/{{ user.id }}/avatars" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="avatar_name">Avatar Navn:</label>
@@ -1155,7 +1295,7 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
         
         {% if avatars %}
         <div class="card">
-            <h2>Eksisterende Avatars</h2>
+            <h2>🎭 Eksisterende Avatars</h2>
             <table>
                 <thead>
                     <tr>
@@ -1191,7 +1331,7 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
         </div>
         {% else %}
         <div class="card">
-            <h2>Ingen Avatars</h2>
+            <h2>❌ Ingen Avatars</h2>
             <p>{{ user.username }} har ingen avatars endnu. Brug formularen ovenfor til at tilføje den første avatar.</p>
         </div>
         {% endif %}
@@ -1219,15 +1359,19 @@ async def admin_add_avatar(
         return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
     
     try:
-        # Simplified Cloudinary upload - NO COMPLEX PARAMETERS
-        try:
-            res = cloudinary.uploader.upload(avatar_img.file, resource_type="image")
-            img_url = res.get("secure_url")
-            print(f"[DEBUG] Cloudinary upload success: {img_url}")
-        except Exception as cloudinary_error:
-            print(f"[ERROR] Cloudinary upload failed: {cloudinary_error}")
-            # Fallback: use placeholder image
-            img_url = "/static/images/avatar_placeholder.png"
+        # LOCAL FILE UPLOAD - NO CLOUDINARY
+        img_bytes = await avatar_img.read()
+        
+        # Save image locally
+        img_filename = f"avatar_{uuid.uuid4().hex}.{avatar_img.filename.split('.')[-1]}"
+        img_path = f"static/uploads/images/{img_filename}"
+        
+        with open(img_path, "wb") as f:
+            f.write(img_bytes)
+        
+        # Use Railway URL for serving
+        img_url = f"{BASE_URL}/{img_path}"
+        print(f"[DEBUG] Avatar image saved locally: {img_url}")
         
         # Save to database
         result = execute_query(
@@ -1281,7 +1425,7 @@ async def admin_create_user_page(request: Request):
     </head>
     <body>
         <div class="card">
-            <h2>Opret Ny Bruger</h2>
+            <h2>➕ Opret Ny Bruger</h2>
             
             {% if success %}
             <div class="success">{{ success }}</div>
@@ -1386,7 +1530,7 @@ async def admin_reset_password_page(request: Request, user_id: int = Path(...)):
     </head>
     <body>
         <div class="card">
-            <h2>Reset Password</h2>
+            <h2>🔐 Reset Password</h2>
             
             <div class="user-info">
                 <strong>Bruger:</strong> {{ user.username }}<br>
@@ -1453,7 +1597,7 @@ async def admin_reset_password(
         )
 
 #####################################################################
-# API ENDPOINTS - HEYGEN INTEGRATION - SIMPLIFIED CLOUDINARY
+# API ENDPOINTS - HEYGEN INTEGRATION - LOCAL FILE STORAGE
 #####################################################################
 
 @app.post("/api/heygen")
@@ -1464,7 +1608,7 @@ async def create_heygen_video(
     video_format: str = Form(default="16:9"),
     audio: UploadFile = File(...)
 ):
-    """HeyGen integration - SIMPLIFIED Cloudinary upload"""
+    """HeyGen integration - LOCAL file storage (NO CLOUDINARY)"""
     try:
         user = get_current_user(request)
         if not user:
@@ -1489,19 +1633,23 @@ async def create_heygen_video(
         if not heygen_avatar_id:
             return JSONResponse({"error": "Manglende HeyGen avatar ID"}, status_code=500)
         
-        # SIMPLIFIED Cloudinary upload - NO COMPLEX PARAMETERS!
+        # LOCAL FILE UPLOAD - Railway serves static files publicly
         audio_bytes = await audio.read()
         try:
-            # Simple upload without folder, public_id, overwrite etc.
-            upload_result = cloudinary.uploader.upload(
-                audio_bytes,
-                resource_type="raw"
-            )
-            audio_url = upload_result["secure_url"]
-            print(f"[DEBUG] Cloudinary upload success: {audio_url}")
+            # Gem filen lokalt med unikt navn
+            audio_filename = f"audio_{uuid.uuid4().hex}.wav"
+            audio_path = f"static/uploads/audio/{audio_filename}"
+            
+            with open(audio_path, "wb") as f:
+                f.write(audio_bytes)
+            
+            # Railway URL som HeyGen kan tilgå
+            audio_url = f"{BASE_URL}/static/uploads/audio/{audio_filename}"
+            print(f"[DEBUG] Local file saved and accessible at: {audio_url}")
+            
         except Exception as e:
-            print(f"[ERROR] Cloudinary upload failed: {str(e)}")
-            return JSONResponse({"error": f"Cloudinary upload fejlede: {str(e)}"}, status_code=500)
+            print(f"[ERROR] Local file save failed: {str(e)}")
+            return JSONResponse({"error": f"Fil upload fejlede: {str(e)}"}, status_code=500)
 
         # Save to database
         result = execute_query(
@@ -1510,7 +1658,7 @@ async def create_heygen_video(
         )
         video_id = result['lastrowid']
 
-        # Call HeyGen API with Cloudinary audio URL and format
+        # Call HeyGen API with local audio URL and format
         print("🚀 Using HeyGen API (HTTP implementation)")
         heygen_result = create_video_from_audio_file(
             api_key=HEYGEN_API_KEY,
@@ -1547,7 +1695,8 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "heygen_available": bool(HEYGEN_API_KEY),
         "handler_available": HEYGEN_HANDLER_AVAILABLE,
-        "base_url": BASE_URL
+        "base_url": BASE_URL,
+        "storage": "local_files"
     }
 
 @app.get("/api/users")
@@ -1573,24 +1722,24 @@ async def startup_event():
     print(f"✅ HeyGen API Key: {'✓ Set' if HEYGEN_API_KEY else '✗ Missing'}")
     print(f"✅ Base URL: {BASE_URL}")
     print(f"✅ Avatar Management: ✓ Available")
-    print(f"✅ Cloudinary: ✓ Simplified (No signature issues)")
+    print(f"✅ Storage: Local files (NO Cloudinary)")
     print("⚠️  NO default avatars - Admin must create avatars for users")
+    
+    # Test HeyGen connection
+    if HEYGEN_API_KEY:
+        test_heygen_connection()
 
 #####################################################################
 # MAIN ENTRY POINT
 #####################################################################
 
 if __name__ == "__main__":
-    # Create necessary directories
-    os.makedirs("static/uploads", exist_ok=True)
-    os.makedirs("static/images", exist_ok=True)
-    
     print("🌟 Starting MyAvatar server...")
     print("🔗 Local: http://localhost:8000")
     print("🔑 Admin: admin@myavatar.com / admin123")
     print("👤 User: test@example.com / password123")
     print("📋 Admin skal oprette avatars for hver bruger")
-    print("🔧 Cloudinary simplified - No more signature problems!")
-    
+    print("🎯 NO Cloudinary - bruger lokal fil storage!")
+    print("🎬 Forbedret record funktion med visuel feedback!")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
