@@ -1320,6 +1320,71 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
                 </form>
             </div>
         '''
+        
+        # Now add the avatars display section
+        if avatars:
+            avatar_html += '''
+            <div class="card">
+                <h2>🎭 Eksisterende Avatars</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Billede</th>
+                            <th>Navn</th>
+                            <th>HeyGen ID</th>
+                            <th>Oprettet</th>
+                            <th>Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            '''
+            
+            for avatar in avatars:
+                avatar_html += f'''
+                        <tr>
+                            <td>
+                '''
+                if avatar.get('image_path'):
+                    avatar_html += f'<img src="{avatar["image_path"]}" alt="{avatar["name"]}" class="avatar-img">'
+                else:
+                    avatar_html += '<div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">Ingen billede</div>'
+                
+                avatar_html += f'''
+                            </td>
+                            <td>{avatar['name']}</td>
+                            <td>{avatar['heygen_avatar_id']}</td>
+                            <td>{avatar['created_at']}</td>
+                            <td>
+                                <form method="post" action="/admin/user/{user['id']}/avatars/delete/{avatar['id']}" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Er du sikker på at du vil slette denne avatar?')">Slet</button>
+                                </form>
+                            </td>
+                        </tr>
+                '''
+            
+            avatar_html += '''
+                    </tbody>
+                </table>
+            </div>
+            '''
+        else:
+            avatar_html += f'''
+            <div class="card">
+                <h2>❌ Ingen Avatars</h2>
+                <p>{user['username']} har ingen avatars endnu. Brug formularen ovenfor til at tilføje den første avatar.</p>
+            </div>
+            '''
+        
+        avatar_html += '''
+        </body>
+        </html>
+        '''
+        
+        return HTMLResponse(content=avatar_html)
+        
+    except Exception as e:
+        log_error(f"Admin user avatars failed for user {user_id}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=avatar_load_failed", status_code=status.HTTP_302_FOUND)
 
 if avatars:
             avatar_html += '''
@@ -1379,7 +1444,7 @@ if avatars:
         </html>
         '''
         
-        return HTMLResponse(content=avatar_html)
+     return HTMLResponse(content=avatar_html)
         
     except Exception as e:
         log_error(f"Admin avatar management failed for user {user_id}", "Admin", e)
