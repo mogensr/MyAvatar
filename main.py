@@ -45,7 +45,6 @@ try:
     POSTGRESQL_AVAILABLE = True
 except ImportError:
     POSTGRESQL_AVAILABLE = False
-
 #####################################################################
 # ENHANCED LOGGING SYSTEM
 #####################################################################
@@ -148,6 +147,7 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
         )
         
         log_info(f"HeyGen Response Status: {response.status_code}", "HeyGen")
+        log_info(f"HeyGen Full Response: {response.text}", "HeyGen")  # NEW: Log full response
         
         if response.status_code == 200:
             result = response.json()
@@ -299,7 +299,6 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
     except Exception as e:
         log_error(f"Database query failed: {query}", "Database", e)
         raise
-
 def init_database():
     log_info("Initializing database...", "Database")
     
@@ -400,8 +399,8 @@ def init_database():
                 FOREIGN KEY (avatar_id) REFERENCES avatars (id)
             )
         ''')
-    
-    cursor.execute("SELECT COUNT(*) as user_count FROM users")
+
+cursor.execute("SELECT COUNT(*) as user_count FROM users")
     result = cursor.fetchone()
     
     if is_postgresql:
@@ -632,7 +631,6 @@ MARKETING_HTML = '''
 </body>
 </html>
 '''
-
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html>
@@ -711,8 +709,8 @@ DASHBOARD_HTML = """
                     showStatusMessage('Kunne ikke få adgang til mikrofonen. Tjek tilladelser.', 'error');
                 });
         }
-        
-        function toggleRecording() {
+
+function toggleRecording() {
             if (!window.isRecording) {
                 startRecording();
             } else {
@@ -841,8 +839,8 @@ DASHBOARD_HTML = """
                     });
                 });
         }
-        
-        function downloadVideo(videoId) {
+
+function downloadVideo(videoId) {
             window.open('/api/videos/' + videoId + '/download', '_blank');
         }
         
@@ -1060,7 +1058,8 @@ async def dashboard(request: Request):
         ))
     except Exception as e:
         log_error("Dashboard load failed", "Dashboard", e)
-        return RedirectResponse(url="/?error=dashboard_error", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url="/?error=dashboard_error", status_code=status.HTTP_302_FOUND) 
+
 
 #####################################################################
 # ROUTES - ADMIN DASHBOARD 
@@ -1106,6 +1105,13 @@ async def admin_dashboard(request: Request):
                 <p>Administrer avatars for alle brugere i systemet.</p>
                 <a href="/admin/users" class="btn">Administrer Brugere & Avatars</a>
                 <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
+            </div>
+            
+            <div class="card">
+                <h2>🐛 Debug Tools</h2>
+                <p>Tools for debugging the HeyGen integration issue.</p>
+                <a href="/debug/recent-videos" class="btn btn-success">Check Recent Videos</a>
+                <a href="/debug/check-db" class="btn btn-success">Simple DB Check</a>
             </div>
             
             <div class="card">
@@ -1314,8 +1320,8 @@ async def admin_user_avatars(request: Request, user_id: int = Path(...)):
                 </form>
             </div>
         '''
-        
-        if avatars:
+
+if avatars:
             avatar_html += '''
             <div class="card">
                 <h2>🎭 Eksisterende Avatars</h2>
@@ -1567,6 +1573,72 @@ async def admin_logs(request: Request):
         return HTMLResponse("<h1>Error loading logs</h1><a href='/admin'>Back to Admin</a>")
 
 #####################################################################
+# DEBUG ENDPOINTS - NEW ADDITIONS FOR HEYGEN TROUBLESHOOTING
+#####################################################################
+
+@app.get("/debug/recent-videos")
+async def debug_recent_videos(request: Request):
+    """Debug endpoint to check what's actually in your PostgreSQL database"""
+    try:
+        # Check if user is admin for security
+        user = get_current_user(request)
+        if not user or user.get("is_admin", 0) != 1:
+            return JSONResponse({"error": "Admin access required"}, status_code=403)
+        
+        # Get recent videos with all important fields
+        videos = execute_query("""
+            SELECT id, heygen_video_id, status, title, user_id, avatar_id, created_at 
+            FROM videos 
+            ORDER BY created_at DESC 
+            LIMIT 10
+        """, fetch_all=True)
+        
+        result = []
+        for video in videos:
+            result.append({
+                "id": video["id"],
+                "heygen_video_id": video["heygen_video_id"],  # This is the key field!
+                "status": video["status"],
+                "title": video["title"][:50] if video["title"] else None,  # First 50 chars
+                "user_id": video["user_id"],
+                "avatar_id": video["avatar_id"],
+                "created_at": str(video["created_at"])
+            })
+        
+        return JSONResponse({
+            "total_videos": len(result),
+            "videos": result,
+            "database_type": "PostgreSQL on Railway",
+            "note": "This shows the most recent 10 videos and their HeyGen IDs"
+        })
+    except Exception as e:
+        log_error("Debug endpoint failed", "Debug", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/debug/check-db")
+async def check_db_simple(request: Request):
+    """Simple debug check for recent videos"""
+    try:
+        user = get_current_user(request)
+        if not user or user.get("is_admin", 0) != 1:
+            return JSONResponse({"error": "Admin access required"}, status_code=403)
+            
+        videos = execute_query(
+            "SELECT id, heygen_video_id, status, title FROM videos ORDER BY created_at DESC LIMIT 5", 
+            fetch_all=True
+        )
+        
+        return JSONResponse([{
+            "id": v["id"], 
+            "heygen_id": v["heygen_video_id"],
+            "status": v["status"],
+            "title": v["title"]
+        } for v in videos])
+    except Exception as e:
+        log_error("Simple debug check failed", "Debug", e)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+#####################################################################
 # ENHANCED AVATAR MANAGEMENT
 #####################################################################
 
@@ -1673,7 +1745,7 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
         )
 
 #####################################################################
-# API ENDPOINTS - HEYGEN INTEGRATION
+# API ENDPOINTS - HEYGEN INTEGRATION WITH ENHANCED LOGGING
 #####################################################################
 
 @app.post("/api/heygen")
@@ -1702,8 +1774,9 @@ async def create_heygen_video(
         
         heygen_avatar_id = avatar.get('heygen_avatar_id')
 
-        log_info(f"Video request by user: {user['username']} using avatar: {avatar['name']}", "HeyGen")
-        log_info(f"Video format: {video_format}, Title: {title}", "HeyGen")
+        log_info(f"[ENHANCED] Video request by user: {user['username']} using avatar: {avatar['name']}", "HeyGen")
+        log_info(f"[ENHANCED] Video format: {video_format}, Title: {title}", "HeyGen")
+        log_info(f"[ENHANCED] Using HeyGen Avatar ID: {heygen_avatar_id}", "HeyGen")
         
         if not heygen_avatar_id:
             log_error(f"Missing HeyGen avatar ID for avatar {avatar_id}", "HeyGen")
@@ -1719,22 +1792,22 @@ async def create_heygen_video(
                 f.write(audio_bytes)
             
             audio_url = f"{BASE_URL}/static/uploads/audio/{audio_filename}"
-            log_info(f"Audio file saved and accessible at: {audio_url}", "HeyGen")
+            log_info(f"[ENHANCED] Audio file saved and accessible at: {audio_url}", "HeyGen")
             
         except Exception as e:
             log_error("Local audio file save failed", "HeyGen", e)
             return JSONResponse({"error": f"Fil upload fejlede: {str(e)}"}, status_code=500)
 
-        # Save to database
+        # Save to database FIRST - This creates the record that webhook will look for
         result = execute_query(
             "INSERT INTO videos (user_id, avatar_id, title, audio_path, status) VALUES (?, ?, ?, ?, ?)",
             (user["id"], avatar_id, title, audio_url, "processing")
         )
         video_id = result['lastrowid']
+        log_info(f"[ENHANCED] Video record created with database ID: {video_id}", "HeyGen")
 
-        log_info(f"Video record created with ID: {video_id}", "HeyGen")
-
-        # Call HeyGen API
+# Call HeyGen API with comprehensive logging
+        log_info("[ENHANCED] Calling HeyGen API to create video...", "HeyGen")
         heygen_result = create_video_from_audio_file(
             api_key=HEYGEN_API_KEY,
             avatar_id=heygen_avatar_id,
@@ -1742,26 +1815,54 @@ async def create_heygen_video(
             video_format=video_format
         )
         
+        # CRITICAL: Log the HeyGen response and what we're storing
+        log_info(f"[ENHANCED] HeyGen API Response: {json.dumps(heygen_result, indent=2)}", "HeyGen")
+        
         if heygen_result["success"]:
+            heygen_video_id = heygen_result.get("video_id")
+            log_info(f"[ENHANCED] HeyGen video ID received: {heygen_video_id}", "HeyGen")
+            
+            if not heygen_video_id:
+                log_error("[ENHANCED] HeyGen returned success but no video_id!", "HeyGen")
+                return JSONResponse({
+                    "success": False,
+                    "error": "HeyGen returned success but no video ID"
+                }, status_code=500)
+            
+            # Update the database record with HeyGen video ID
+            log_info(f"[ENHANCED] Updating database record {video_id} with HeyGen ID: {heygen_video_id}", "HeyGen")
             execute_query(
                 "UPDATE videos SET heygen_video_id = ?, status = ? WHERE id = ?",
-                (heygen_result.get("video_id"), "processing", video_id)
+                (heygen_video_id, "processing", video_id)
             )
-            log_info(f"HeyGen video generation started: {heygen_result.get('video_id')}", "HeyGen")
+            log_info(f"[ENHANCED] Database update completed for video {video_id}", "HeyGen")
+            
+            # Verify the update worked
+            updated_video = execute_query(
+                "SELECT id, heygen_video_id, status FROM videos WHERE id = ?", 
+                (video_id,), 
+                fetch_one=True
+            )
+            
+            if updated_video:
+                log_info(f"[ENHANCED] Verification SUCCESS - Database now shows: ID={updated_video['id']}, HeyGen_ID={updated_video['heygen_video_id']}, Status={updated_video['status']}", "HeyGen")
+            else:
+                log_error(f"[ENHANCED] Verification FAILED - Could not find video record {video_id} after update", "HeyGen")
+            
         else:
-            log_error(f"HeyGen API failed: {heygen_result.get('error')}", "HeyGen")
+            log_error(f"[ENHANCED] HeyGen API failed: {heygen_result.get('error')}", "HeyGen")
         
         return JSONResponse(heygen_result)
 
     except Exception as e:
-        log_error("Unexpected error in HeyGen video creation", "HeyGen", e)
+        log_error("[ENHANCED] Unexpected error in HeyGen video creation", "HeyGen", e)
         return JSONResponse({
             "success": False,
             "error": f"Uventet fejl: {str(e)}"
         }, status_code=500)
 
 #####################################################################
-# ENHANCED HEYGEN WEBHOOK HANDLER - UPDATED WITH YOUR FIX
+# ENHANCED HEYGEN WEBHOOK HANDLER - FIXED FOR HEYGEN'S ACTUAL FORMAT
 #####################################################################
 
 async def download_video_from_heygen(video_url: str, video_id: int) -> str:
@@ -1787,17 +1888,23 @@ async def download_video_from_heygen(video_url: str, video_id: int) -> str:
         log_error(f"Video download failed for video {video_id}", "Webhook", e)
         return None
 
+
 @app.post("/api/heygen/webhook")
 async def heygen_webhook_handler(request: Request):
-    """Enhanced HeyGen webhook handler - FIXED for HeyGen's actual format"""
+    """Enhanced HeyGen webhook handler with comprehensive logging - FIXED for HeyGen's actual format"""
     try:
         webhook_data = await request.json()
-        log_info(f"HeyGen Webhook received: {json.dumps(webhook_data, indent=2)}", "Webhook")
+        log_info(f"[Webhook] Full payload received: {json.dumps(webhook_data, indent=2)}", "Webhook")
         
-        # Extract video info - HeyGen sends data in "event_data" structure
+        # Extract video info - HeyGen sends data in nested "event_data" structure
         event_data = webhook_data.get("event_data", {})
         event_type = webhook_data.get("event_type", "")
         
+        log_info(f"[Webhook] Event type: {event_type}", "Webhook")
+        log_info(f"[Webhook] Event data keys: {list(event_data.keys())}", "Webhook")
+        log_info(f"[Webhook] Root payload keys: {list(webhook_data.keys())}", "Webhook")
+        
+        # Multiple ways to find video_id (HeyGen's format varies) - FIXED VERSION
         video_id = (
             webhook_data.get("video_id") or 
             webhook_data.get("id") or 
@@ -1805,6 +1912,8 @@ async def heygen_webhook_handler(request: Request):
             webhook_data.get("data", {}).get("id") or
             event_data.get("video_id")  # ← FIXED: HeyGen puts it here!
         )
+        
+        log_info(f"[Webhook] Extracted video_id: {video_id}", "Webhook")
         
         # Derive status from event_type
         if "success" in event_type.lower():
@@ -1814,6 +1923,7 @@ async def heygen_webhook_handler(request: Request):
         else:
             status = webhook_data.get("status", "processing").lower()
         
+        # Extract video URL - FIXED VERSION
         video_url = (
             webhook_data.get("video_url") or 
             webhook_data.get("url") or
@@ -1822,12 +1932,19 @@ async def heygen_webhook_handler(request: Request):
             event_data.get("url")  # ← FIXED: HeyGen puts it here!
         )
         
-        log_info(f"Extracted: video_id={video_id}, status={status}, video_url={video_url}, event_type={event_type}", "Webhook")
+        log_info(f"[Webhook] Extracted values - video_id: {video_id}, status: {status}, video_url: {video_url}", "Webhook")
         
         if not video_id:
-            log_error(f"No video_id found in webhook data. Available keys: {list(webhook_data.keys())}", "Webhook")
-            log_error(f"Event data keys: {list(event_data.keys())}", "Webhook")
-            return JSONResponse({"error": "Missing video_id", "received_keys": list(webhook_data.keys())}, status_code=400)
+            log_error(f"[Webhook] No video_id found in webhook data", "Webhook")
+            log_error(f"[Webhook] Available root keys: {list(webhook_data.keys())}", "Webhook")
+            log_error(f"[Webhook] Available event_data keys: {list(event_data.keys())}", "Webhook")
+            return JSONResponse({
+                "error": "Missing video_id", 
+                "received_keys": list(webhook_data.keys()),
+                "event_data_keys": list(event_data.keys())
+            }, status_code=400)
+        
+        log_info(f"[Webhook] Looking for video with HeyGen ID: {video_id}", "Webhook")
         
         # Find video in database via heygen_video_id
         video_record = execute_query(
@@ -1837,14 +1954,28 @@ async def heygen_webhook_handler(request: Request):
         )
         
         if not video_record:
-            log_error(f"Video record not found for HeyGen ID: {video_id}", "Webhook")
-            return JSONResponse({"error": "Video record not found", "heygen_id": video_id}, status_code=404)
+            log_error(f"[Webhook] Video record not found for HeyGen ID: {video_id}", "Webhook")
+            
+            # DEBUG: Show what videos DO exist
+            existing_videos = execute_query(
+                "SELECT id, heygen_video_id, title, status FROM videos ORDER BY created_at DESC LIMIT 10", 
+                fetch_all=True
+            )
+            existing_ids = [v["heygen_video_id"] for v in existing_videos if v["heygen_video_id"]]
+            log_error(f"[Webhook] Existing HeyGen IDs in database: {existing_ids}", "Webhook")
+            
+            return JSONResponse({
+                "error": "Video record not found", 
+                "heygen_id": video_id,
+                "existing_heygen_ids": existing_ids
+            }, status_code=404)
         
-        log_info(f"Found video record: {video_record['id']} - {video_record['title']}", "Webhook")
-        
-        if status == "completed":
+        log_info(f"[Webhook] Found video record: {video_record['id']} - {video_record['title']}", "Webhook")
+
+if status == "completed":
             if video_url:
                 # Download video from HeyGen and save locally
+                log_info(f"[Webhook] Video completed, downloading from: {video_url}", "Webhook")
                 local_path = await download_video_from_heygen(video_url, video_record['id'])
                 
                 if local_path:
@@ -1853,16 +1984,21 @@ async def heygen_webhook_handler(request: Request):
                         "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
                         (local_path, "completed", video_record['id'])
                     )
-                    log_info(f"Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
+                    log_info(f"[Webhook] Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
                 else:
                     # Error during download - set status to error
                     execute_query(
                         "UPDATE videos SET status = ? WHERE id = ?",
                         ("error", video_record['id'])
                     )
-                    log_error(f"Failed to download video {video_record['id']}", "Webhook")
+                    log_error(f"[Webhook] Failed to download video {video_record['id']}", "Webhook")
             else:
-                log_warning(f"No video_url provided in webhook for {video_id}", "Webhook")
+                log_warning(f"[Webhook] No video_url provided in webhook for {video_id}", "Webhook")
+                # Still mark as completed even without URL
+                execute_query(
+                    "UPDATE videos SET status = ? WHERE id = ?",
+                    ("completed", video_record['id'])
+                )
                 
         elif status == "failed":
             # Update status to failed
@@ -1870,7 +2006,7 @@ async def heygen_webhook_handler(request: Request):
                 "UPDATE videos SET status = ? WHERE id = ?",
                 ("failed", video_record['id'])
             )
-            log_error(f"Video {video_record['id']} failed in HeyGen", "Webhook")
+            log_error(f"[Webhook] Video {video_record['id']} failed in HeyGen", "Webhook")
         
         else:
             # Other status (processing, etc.)
@@ -1878,18 +2014,19 @@ async def heygen_webhook_handler(request: Request):
                 "UPDATE videos SET status = ? WHERE id = ?",
                 (status, video_record['id'])
             )
-            log_info(f"Video {video_record['id']} status updated to: {status}", "Webhook")
+            log_info(f"[Webhook] Video {video_record['id']} status updated to: {status}", "Webhook")
         
         return JSONResponse({
             "success": True, 
-            "message": "Webhook processed", 
+            "message": "Webhook processed successfully", 
             "video_id": video_id,
             "event_type": event_type,
-            "status": status
+            "status": status,
+            "database_record_id": video_record['id']
         })
     
     except Exception as e:
-        log_error("Webhook processing failed", "Webhook", e)
+        log_error("[Webhook] Webhook processing failed", "Webhook", e)
         return JSONResponse({"error": f"Webhook processing failed: {str(e)}"}, status_code=500)
 
 #####################################################################
@@ -1912,7 +2049,11 @@ async def health_check():
             "users_count": users_count.get('count', 0) if users_count else 0,
             "storage": "cloudinary_with_local_fallback",
             "webhook_endpoint": f"{BASE_URL}/api/heygen/webhook",
-            "logging": "enhanced_tracking_enabled"
+            "logging": "enhanced_tracking_enabled",
+            "debug_endpoints": [
+                f"{BASE_URL}/debug/recent-videos",
+                f"{BASE_URL}/debug/check-db"
+            ]
         }
     except Exception as e:
         log_error("Health check failed", "System", e)
@@ -2009,6 +2150,7 @@ async def quick_clean(request: Request):
         log_error("Admin quickclean failed", "Admin", e)
         return HTMLResponse("<h1>Error during cleanup</h1><a href='/admin'>Back to Admin</a>")
 
+
 #####################################################################
 # APPLICATION STARTUP EVENT
 #####################################################################
@@ -2023,11 +2165,12 @@ async def startup_event():
     log_info("Storage: Cloudinary CDN with local fallback", "System")
     log_info(f"Webhook Endpoint: {BASE_URL}/api/heygen/webhook", "System")
     log_info("Enhanced logging system enabled", "System")
+    log_info("Debug endpoints available: /debug/recent-videos and /debug/check-db", "System")
     
     if HEYGEN_API_KEY:
         test_heygen_connection()
     
-    log_info("🚀 MyAvatar application startup complete", "System")
+    log_info("🚀 MyAvatar application startup complete - READY FOR HEYGEN DEBUGGING!", "System")
 
 #####################################################################
 # MAIN ENTRY POINT
@@ -2046,5 +2189,15 @@ if __name__ == "__main__":
     print("🧹 CLEANUP - /admin/quickclean endpoint tilgængelig!")
     print("📊 ENHANCED LOGGING - /admin/logs for debugging!")
     print("🔍 ERROR TRACKING - comprehensive system monitoring!")
+    print("🐛 DEBUG ENDPOINTS - /debug/recent-videos & /debug/check-db!")
+    print("🔧 WEBHOOK FIXED - Now correctly extracts from event_data!")
+    print("📝 ENHANCED VIDEO CREATION - Comprehensive logging added!")
+    print("")
+    print("🔥 READY TO DEBUG THE HEYGEN INTEGRATION ISSUE!")
+    print("🎯 After creating a video, check /debug/recent-videos to see what's stored")
+    print("📡 Webhook will now correctly find videos by HeyGen ID")
     
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
