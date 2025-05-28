@@ -1416,15 +1416,15 @@ async def dashboard(request: Request):
             </div>
         </body>
         </html>
-        ''')
-        
-        return HTMLResponse(content=dashboard_html).render(
+        '''))
+        rendered_html = dashboard_html.render(
             request=request,
             user=user,
             avatars=avatars,
             videos=videos,
             is_admin=user.get("is_admin", 0) == 1
         )
+        return HTMLResponse(content=rendered_html)
     except Exception as e:
         log_error("Dashboard load failed", "Dashboard", e)
         return RedirectResponse(url="/?error=dashboard_error", status_code=status.HTTP_302_FOUND)
