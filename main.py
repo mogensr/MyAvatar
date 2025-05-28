@@ -1404,7 +1404,7 @@ async def dashboard(request: Request):
             <p>Du har ingen videoer endnu.</p>
         </div>
         {% endif %}
-
+        '''))
 
 #####################################################################
 # ROUTES - ADMIN DASHBOARD 
