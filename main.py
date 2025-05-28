@@ -996,9 +996,12 @@ async def landing_page(request: Request):
 @app.post("/client-login")
 async def client_login(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
+        print(f"LOGIN DEBUG: email={email}, password={password}")
         user = authenticate_user_by_email(email, password)
+        print(f"LOGIN DEBUG: user returned: {user}")
         
         if not user:
+            print("LOGIN DEBUG: No user found or password mismatch.")
             return HTMLResponse(content=Template(MARKETING_HTML).render(
                 request=request, 
                 user=None,
