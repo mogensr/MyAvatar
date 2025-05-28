@@ -984,8 +984,11 @@ MARKETING_HTML = '''
 
 @app.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
+    # Always pass 'user' to the template to avoid UndefinedError
+    user = get_current_user(request) if 'get_current_user' in globals() else None
     return HTMLResponse(content=Template(MARKETING_HTML).render(
         request=request,
+        user=user,
         error=request.query_params.get("error"),
         success=request.query_params.get("success")
     ))
