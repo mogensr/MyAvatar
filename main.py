@@ -1001,6 +1001,7 @@ async def client_login(request: Request, email: str = Form(...), password: str =
         if not user:
             return HTMLResponse(content=Template(MARKETING_HTML).render(
                 request=request, 
+                user=None,
                 error="Ugyldig email eller adgangskode"
             ))
         
@@ -1021,6 +1022,7 @@ async def client_login(request: Request, email: str = Form(...), password: str =
         log_error("Client login failed", "Auth", e)
         return HTMLResponse(content=Template(MARKETING_HTML).render(
             request=request, 
+            user=None,
             error="Login fejl - prøv igen"
         ))
 
