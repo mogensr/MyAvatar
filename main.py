@@ -1919,61 +1919,42 @@ async def heygen_webhook_handler(request: Request):
         
         log_info(f"[Webhook] Found video record: {video_record['id']} - {video_record['title']}", "Webhook")
 if status == "completed":
-    if video_url:
-        # Download video from HeyGen and save locally
-        log_info(f"[Webhook] Video completed, downloading from: {video_url}", "Webhook")
-        local_path = await download_video_from_heygen(video_url, video_record['id'])
-        
-        if local_path:
-            # Update database with local path and status
-            execute_query(
-                "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
-                (local_path, "completed", video_record['id'])
-            )
-            log_info(f"[Webhook] Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
+    try:
+        if video_url:
+            # Download video from HeyGen and save locally
+            log_info(f"[Webhook] Video completed, downloading from: {video_url}", "Webhook")
+            local_path = await download_video_from_heygen(video_url, video_record['id'])
+            
+            if local_path:
+                # Update database with local path and status
+                execute_query(
+                    "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
+                    (local_path, "completed", video_record['id'])
+                )
+                log_info(f"[Webhook] Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
+            else:
+                # Error during download - set status to error
+                execute_query(
+                    "UPDATE videos SET status = ? WHERE id = ?",
+                    ("error", video_record['id'])
+                )
+                log_error(f"[Webhook] Failed to download video {video_record['id']}", "Webhook")
         else:
-            # Error during download - set status to error
+            log_warning(f"[Webhook] No video_url provided in webhook for {video_id}", "Webhook")
+            # Still mark as completed even without URL
             execute_query(
                 "UPDATE videos SET status = ? WHERE id = ?",
-                ("error", video_record['id'])
+                ("completed", video_record['id'])
             )
-            log_error(f"[Webhook] Failed to download video {video_record['id']}", "Webhook")
-    else:
-        log_warning(f"[Webhook] No video_url provided in webhook for {video_id}", "Webhook")
-        # Still mark as completed even without URL
+    except Exception as e:
+        # Exception handling
+        log_error(f"[Webhook] Error processing video {video_record['id']}: {str(e)}", "Webhook")
         execute_query(
             "UPDATE videos SET status = ? WHERE id = ?",
-            ("completed", video_record['id'])
+            ("error", video_record['id'])
         )
-        
-elif status == "failed":
-    # Update status to failed
-    execute_query(
-        "UPDATE videos SET status = ? WHERE id = ?",
-        ("failed", video_record['id'])
-    )
-    log_error(f"[Webhook] Video {video_record['id']} failed in HeyGen", "Webhook")
+        log_error(f"[Webhook] Failed to process video {video_record['id']}", "Webhook")
 
-else:
-    # Other status (processing, etc.)
-    execute_query(
-        "UPDATE videos SET status = ? WHERE id = ?",
-        (status, video_record['id'])
-    )
-    log_info(f"[Webhook] Video {video_record['id']} status updated to: {status}", "Webhook")
-
-return JSONResponse({
-    "success": True, 
-    "message": "Webhook processed successfully", 
-    "video_id": video_id,
-    "event_type": event_type,
-    "status": status,
-    "database_record_id": video_record['id']
-})
-
-except Exception as e:
-    log_error("[Webhook] Webhook processing failed", "Webhook", e)
-    return JSONResponse({"error": f"Webhook processing failed: {str(e)}"}, status_code=500)
 
 #####################################################################
 # API ENDPOINTS - SYSTEM MONITORING
