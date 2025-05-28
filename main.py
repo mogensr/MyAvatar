@@ -29,6 +29,7 @@ from urllib.parse import urlparse
 import logging
 from collections import deque
 import traceback
+import textwrap
 
 # Cloudinary imports for avatar storage
 import cloudinary
@@ -962,7 +963,7 @@ MARKETING_HTML = '''
     </div>
 </body>
 </html>
-"""
+'''
 
 #####################################################################
 # ROUTES - AUTHENTICATION
@@ -1043,16 +1044,391 @@ async def dashboard(request: Request):
         
         log_info(f"Dashboard accessed by user: {user['username']}", "Dashboard")
         
-        return HTMLResponse(content=Template(DASHBOARD_HTML).render(
+        dashboard_html = Template(textwrap.dedent('''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MyAvatar Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+        .header { background: #333; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: none; cursor: pointer; transition: transform 0.2s ease; }
+        .btn:hover { background: #3730a3; }
+        .user-info { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .recorder-container { text-align: center; margin: 20px 0; }
+        .record-btn { background: #dc2626; color: white; border: none; border-radius: 50%; width: 80px; height: 80px; font-size: 16px; cursor: pointer; margin: 10px; transition: all 0.3s ease; }
+        .record-btn:hover { background: #b91c1c; transform: scale(1.05); }
+        .record-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .record-btn.recording { background: #ef4444; animation: pulse-record 1.5s infinite; }
+        @keyframes pulse-record { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .recording-indicator { display: none; color: #dc2626; font-weight: bold; margin: 10px 0; animation: blink 1s infinite; }
+        .recording-indicator.active { display: block; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0.3; } }
+        .audio-preview { width: 100%; margin: 20px 0; }
+        .status-message { margin: 15px 0; padding: 10px; border-radius: 5px; }
+        .status-message.success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+        .status-message.error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .status-message.info { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .recording-timer { display: none; font-size: 1.5em; color: #dc2626; font-weight: bold; margin: 10px 0; }
+        .recording-timer.active { display: block; }
+        .video-list { margin-top: 20px; }
+        .video-item { padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .video-info h4 { margin: 0 0 5px 0; }
+        .video-info p { margin: 0; color: #666; font-size: 14px; }
+        .video-status { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-completed { background: #dcfce7; color: #16a34a; }
+        .status-processing { background: #fef3c7; color: #d97706; }
+        .status-pending { background: #dbeafe; color: #1d4ed8; }
+        .status-failed { background: #fee2e2; color: #dc2626; }
+    </style>
+    <script>
+        window.mediaRecorder = null;
+        window.audioChunks = [];
+        window.isRecording = false;
+        window.recordingTimer = null;
+        window.recordingStartTime = null;
+        
+        function initializeRecorder() {
+            navigator.mediaDevices.getUserMedia({audio: true})
+                .then(stream => {
+                    window.mediaRecorder = new MediaRecorder(stream);
+                    
+                    window.mediaRecorder.ondataavailable = event => {
+                        window.audioChunks.push(event.data);
+                    };
+                    
+                    window.mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(window.audioChunks, {type: 'audio/wav'});
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audioPreview = document.getElementById('audio-preview');
+                        audioPreview.src = audioUrl;
+                        audioPreview.style.display = 'block';
+                        document.getElementById('heygen-submit-btn').disabled = false;
+                        
+                        resetRecordingState();
+                        showStatusMessage('Optagelse fuldført! 🎉', 'success');
+                    };
+                    
+                    document.getElementById('record-btn').disabled = false;
+                    showStatusMessage('Mikrofon klar - klik for at optage! 🎤', 'info');
+                })
+                .catch(error => {
+                    console.error('Fejl ved adgang til mikrofon:', error);
+                    showStatusMessage('Kunne ikke få adgang til mikrofonen. Tjek tilladelser.', 'error');
+                });
+        }
+        
+        function toggleRecording() {
+            if (!window.isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+        
+        function startRecording() {
+            window.audioChunks = [];
+            window.mediaRecorder.start();
+            window.isRecording = true;
+            window.recordingStartTime = Date.now();
+            
+            const recordBtn = document.getElementById('record-btn');
+            const indicator = document.getElementById('recording-indicator');
+            const timer = document.getElementById('recording-timer');
+            
+            recordBtn.textContent = 'Stop';
+            recordBtn.classList.add('recording');
+            indicator.classList.add('active');
+            timer.classList.add('active');
+            
+            window.recordingTimer = setInterval(updateTimer, 100);
+            
+            showStatusMessage('🔴 Optagelse i gang... Klik Stop når du er færdig', 'info');
+        }
+        
+        function stopRecording() {
+            window.mediaRecorder.stop();
+            window.isRecording = false;
+            
+            if (window.recordingTimer) {
+                clearInterval(window.recordingTimer);
+                window.recordingTimer = null;
+            }
+        }
+        
+        function resetRecordingState() {
+            const recordBtn = document.getElementById('record-btn');
+            const indicator = document.getElementById('recording-indicator');
+            const timer = document.getElementById('recording-timer');
+            
+            recordBtn.textContent = 'Optag';
+            recordBtn.classList.remove('recording');
+            indicator.classList.remove('active');
+            timer.classList.remove('active');
+            timer.textContent = '00:00';
+        }
+        
+        function updateTimer() {
+            if (!window.recordingStartTime) return;
+            
+            const elapsed = Date.now() - window.recordingStartTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            const timerDisplay = minutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
+            document.getElementById('recording-timer').textContent = timerDisplay;
+        }
+        
+        function showStatusMessage(message, type) {
+            const statusElement = document.getElementById('status-message');
+            statusElement.textContent = message;
+            statusElement.className = 'status-message ' + type;
+            statusElement.style.display = 'block';
+        }
+        
+        function submitToHeyGen() {
+            const title = document.getElementById('heygen-title').value;
+            const avatarId = document.getElementById('heygen-avatar-select').value;
+            const videoFormat = document.getElementById('heygen-format-select').value;
+            
+            if (!title) {
+                showStatusMessage('❌ Indtast venligst en titel', 'error');
+                return;
+            }
+            
+            if (!avatarId) {
+                showStatusMessage('❌ Vælg venligst en avatar', 'error');
+                return;
+            }
+            
+            if (!videoFormat) {
+                showStatusMessage('❌ Vælg venligst et video format', 'error');
+                return;
+            }
+            
+            const audioElement = document.getElementById('audio-preview');
+            if (!audioElement.src) {
+                showStatusMessage('❌ Optag venligst lyd første', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('avatar_id', avatarId);
+            formData.append('video_format', videoFormat);
+            
+            fetch(audioElement.src)
+                .then(res => res.blob())
+                .then(audioBlob => {
+                    formData.append('audio', audioBlob, 'recording.wav');
+                    showStatusMessage('🚀 Sender til HeyGen (' + videoFormat + ')... Dette kan tage et øjeblik', 'info');
+                    document.getElementById('heygen-submit-btn').disabled = true;
+                    
+                    fetch('/api/heygen', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showStatusMessage('✅ Video generering startet! Format: ' + (data.format || videoFormat) + ' (' + (data.dimensions || '') + ')', 'success');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 2000);
+                        } else {
+                            showStatusMessage('❌ Fejl: ' + data.error, 'error');
+                        }
+                        document.getElementById('heygen-submit-btn').disabled = false;
+                    })
+                    .catch(error => {
+                        showStatusMessage('❌ Der opstod en fejl: ' + error.message, 'error');
+                        document.getElementById('heygen-submit-btn').disabled = false;
+                    });
+                });
+        }
+        
+        function downloadVideo(videoId) {
+            window.open('/api/videos/' + videoId + '/download', '_blank');
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeRecorder();
+        });
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1>MyAvatar Dashboard</h1>
+        <div>
+            {% if is_admin %}
+            <a href="/admin" class="btn" style="margin-right: 10px;">Admin Panel</a>
+            <a href="/admin/logs" class="btn" style="margin-right: 10px;">System Logs</a>
+            {% endif %}
+            <a href="/logout" class="btn">Log Ud</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="user-info">
+            <h3>Velkommen, {{ user.username }}!</h3>
+            <p>Email: {{ user.email }}</p>
+            {% if user.is_admin %}
+            <p><strong>Administrator</strong></p>
+            {% endif %}
+        </div>
+        
+        {% if avatars %}
+        <div class="card">
+            <h2>🎬 Optag Avatar Video</h2>
+            
+            <div class="form-group">
+                <label for="heygen-title">Video Titel:</label>
+                <input type="text" id="heygen-title" name="title" required placeholder="Min Video Titel">
+            </div>
+            
+            <div class="form-group">
+                <label for="heygen-avatar-select">Vælg Avatar:</label>
+                <select id="heygen-avatar-select" name="avatar_id" required>
+                    <option value="">Vælg en avatar</option>
+                    {% for avatar in avatars %}
+                    <option value="{{ avatar.id }}">{{ avatar.name }} (ID: {{ avatar.heygen_avatar_id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="heygen-format-select">Video Format:</label>
+                <select id="heygen-format-select" name="video_format" required>
+                    <option value="16:9">16:9 Landscape (Business/YouTube) - 1280x720</option>
+                    <option value="9:16">9:16 Portrait (Social Media/TikTok) - 720x1280</option>
+                </select>
+            </div>
+            
+            <div class="recorder-container">
+                <button id="record-btn" class="record-btn" onclick="toggleRecording()" disabled>Optag</button>
+                
+                <div id="recording-indicator" class="recording-indicator">
+                    🔴 OPTAGER - Tal klart og tydeligt
+                </div>
+                
+                <div id="recording-timer" class="recording-timer">00:00</div>
+                
+                <audio id="audio-preview" class="audio-preview" controls style="display:none;"></audio>
+                <div id="status-message" class="status-message info" style="display:none;"></div>
+                <button id="heygen-submit-btn" class="btn" onclick="submitToHeyGen()" disabled>🚀 Send til HeyGen</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🎭 Dine Avatars</h2>
+            <ul>
+            {% for avatar in avatars %}
+                <li style="margin-bottom: 15px;">
+                    <strong>{{ avatar.name }}</strong><br>
+                    HeyGen ID: {{ avatar.heygen_avatar_id }}<br>
+                    {% if avatar.image_path %}
+                    <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; margin: 5px 0;">
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="card">
+            <h2>❌ Ingen Avatars</h2>
+            <p>Du har ingen avatars endnu. Kontakt admin for at få oprettet avatars til din konto.</p>
+            {% if is_admin %}
+            <p><a href="/admin" class="btn">Gå til Admin Panel for at tilføje avatars</a></p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if videos %}
+        <div class="card">
+            <h2>🎥 Dine Videoer</h2>
+            <div class="video-list">
+            {% for video in videos %}
+                <div class="video-item">
+                    <div class="video-info">
+                        <h4>{{ video.title }}</h4>
+                        <p>Avatar: {{ video.avatar_name }} | Oprettet: {{ video.created_at }}</p>
+                        <span class="video-status status-{{ video.status }}">
+                            {% if video.status == 'completed' %}Færdig
+                            {% elif video.status == 'processing' %}Behandles
+                            {% elif video.status == 'failed' %}Fejlet
+                            {% elif video.status == 'pending' %}Afventer
+                            {% else %}{{ video.status }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="video-actions">
+                        {% if video.status == 'completed' and video.video_path %}
+                        <a href="{{ video.video_path }}" target="_blank" class="btn">▶️ Afspil</a>
+                        <button class="btn" onclick="downloadVideo({{ video.id }})">📥 Download</button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="card">
+                    <h2>❌ Ingen Avatars</h2>
+                    <p>Du har ingen avatars endnu. Kontakt admin for at få oprettet avatars til din konto.</p>
+                    {% if is_admin %}
+                    <p><a href="/admin" class="btn">Gå til Admin Panel for at tilføje avatars</a></p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if videos %}
+                <div class="card">
+                    <h2>🎥 Dine Videoer</h2>
+                    <div class="video-list">
+                    {% for video in videos %}
+                        <div class="video-item">
+                            <div class="video-info">
+                                <h4>{{ video.title }}</h4>
+                                <p>Avatar: {{ video.avatar_name }} | Oprettet: {{ video.created_at }}</p>
+                                <span class="video-status status-{{ video.status }}">
+                                    {% if video.status == 'completed' %}Færdig
+                                    {% elif video.status == 'processing' %}Behandles
+                                    {% elif video.status == 'failed' %}Fejlet
+                                    {% elif video.status == 'pending' %}Afventer
+                                    {% else %}{{ video.status }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="video-actions">
+                                {% if video.status == 'completed' and video.video_path %}
+                                <a href="{{ video.video_path }}" target="_blank" class="btn">▶️ Afspil</a>
+                                <button class="btn" onclick="downloadVideo({{ video.id }})">📥 Download</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </body>
+        </html>
+        ''')
+        
+        return HTMLResponse(content=dashboard_html).render(
             request=request,
             user=user,
             avatars=avatars,
             videos=videos,
             is_admin=user.get("is_admin", 0) == 1
-        ))
+        )
     except Exception as e:
         log_error("Dashboard load failed", "Dashboard", e)
         return RedirectResponse(url="/?error=dashboard_error", status_code=status.HTTP_302_FOUND)
+
 
 #####################################################################
 # ROUTES - ADMIN DASHBOARD 
@@ -1066,58 +1442,58 @@ async def admin_dashboard(request: Request):
         
         log_info(f"Admin dashboard accessed by: {user['username']}", "Admin")
         
-        admin_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Admin Dashboard</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
-                .btn:hover { background: #3730a3; }
-                .btn-danger { background: #dc2626; }
-                .btn-danger:hover { background: #b91c1c; }
-                .btn-success { background: #16a34a; }
-                .btn-success:hover { background: #15803d; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>🔧 Admin Dashboard</h1>
-                <div>
-                    <a href="/dashboard" class="btn">Dashboard</a>
-                    <a href="/admin/logs" class="btn btn-success">System Logs</a>
-                    <a href="/logout" class="btn">Log Ud</a>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>👥 Avatar Administration</h2>
-                <p>Administrer avatars for alle brugere i systemet.</p>
-                <a href="/admin/users" class="btn">Administrer Brugere & Avatars</a>
-                <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
-            </div>
-            
-            <div class="card">
-                <h2>📊 System Status</h2>
-                <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
-                <p><strong>Storage:</strong> ✅ Cloudinary CDN</p>
-                <p><strong>Database:</strong> ✅ PostgreSQL</p>
-                <p><strong>Webhook:</strong> ✅ /api/heygen/webhook</p>
-                <p><strong>Logging:</strong> ✅ Enhanced Error Tracking</p>
-            </div>
-            
-            <div class="card">
-                <h2>🧹 System Maintenance</h2>
-                <p>Tools for system maintenance and troubleshooting.</p>
-                <a href="/admin/quickclean" class="btn btn-danger">Total Reset (Delete All)</a>
-                <a href="/admin/logs" class="btn btn-success">View System Logs</a>
-            </div>
-        </body>
-        </html>
-        '''
+        admin_html = textwrap.dedent('''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
+        .btn:hover { background: #3730a3; }
+        .btn-danger { background: #dc2626; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-success { background: #16a34a; }
+        .btn-success:hover { background: #15803d; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Admin Dashboard</h1>
+        <div>
+            <a href="/dashboard" class="btn">Dashboard</a>
+            <a href="/admin/logs" class="btn btn-success">System Logs</a>
+            <a href="/logout" class="btn">Log Ud</a>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>👥 Avatar Administration</h2>
+        <p>Administrer avatars for alle brugere i systemet.</p>
+        <a href="/admin/users" class="btn">Administrer Brugere & Avatars</a>
+        <a href="/admin/create-user" class="btn">Opret Ny Bruger</a>
+    </div>
+    
+    <div class="card">
+        <h2>📊 System Status</h2>
+        <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
+        <p><strong>Storage:</strong> ✅ Cloudinary CDN</p>
+        <p><strong>Database:</strong> ✅ PostgreSQL</p>
+        <p><strong>Webhook:</strong> ✅ /api/heygen/webhook</p>
+        <p><strong>Logging:</strong> ✅ Enhanced Error Tracking</p>
+    </div>
+    
+    <div class="card">
+        <h2>🧹 System Maintenance</h2>
+        <p>Tools for system maintenance and troubleshooting.</p>
+        <a href="/admin/quickclean" class="btn btn-danger">Total Reset (Delete All)</a>
+        <a href="/admin/logs" class="btn btn-success">View System Logs</a>
+    </div>
+</body>
+</html>
+''')
         return HTMLResponse(content=admin_html)
     except Exception as e:
         log_error("Admin dashboard failed", "Admin", e)
@@ -1133,38 +1509,82 @@ async def admin_users(request: Request):
         users = execute_query("SELECT * FROM users ORDER BY id ASC", fetch_all=True)
         log_info(f"Admin viewing {len(users)} users", "Admin")
         
-        users_html = '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Administrer Brugere</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; font-size: 14px; }
-                .btn:hover { background: #3730a3; }
-                .btn-danger { background: #dc2626; }
-                .btn-danger:hover { background: #b91c1c; }
-                .btn-success { background: #16a34a; }
-                .btn-success:hover { background: #15803d; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background: #f8f9fa; font-weight: bold; }
-                tr:hover { background: #f8f9fa; }
-                .success { background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-                .error { background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>👥 Administrer Brugere</h1>
-                <div>
-                    <a href="/admin" class="btn">Tilbage til Admin</a>
-                    <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
-                </div>
-            </div>
-        '''
+        # Add success/error messages
+        success = request.query_params.get("success")
+        error = request.query_params.get("error")
+
+        user_rows = ""
+        for user_row in users:
+            admin_status = "Ja" if user_row.get('is_admin') else "Nej"
+            user_rows += f'''
+                <tr>
+                    <td>{user_row['id']}</td>
+                    <td>{user_row['username']}</td>
+                    <td>{user_row['email']}</td>
+                    <td>{admin_status}</td>
+                    <td>{user_row['created_at']}</td>
+                    <td>
+                        <a href="/admin/user/{user_row['id']}/avatars" class="btn">Avatars</a>
+                        <a href="/admin/reset-password/{user_row['id']}" class="btn btn-danger">Reset Password</a>
+                    </td>
+                </tr>
+            '''
+
+        users_html = textwrap.dedent(f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Administrer Brugere</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+        .header {{ background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
+        .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+        .btn {{ background: #4f46e5; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; font-size: 14px; }}
+        .btn:hover {{ background: #3730a3; }}
+        .btn-danger {{ background: #dc2626; }}
+        .btn-danger:hover {{ background: #b91c1c; }}
+        .btn-success {{ background: #16a34a; }}
+        .btn-success:hover {{ background: #15803d; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+        th {{ background: #f8f9fa; font-weight: bold; }}
+        tr:hover {{ background: #f8f9fa; }}
+        .success {{ background: #dcfce7; color: #16a34a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }}
+        .error {{ background: #fee2e2; color: #dc2626; padding: 10px; border-radius: 4px; margin-bottom: 15px; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👥 Administrer Brugere</h1>
+        <div>
+            <a href="/admin" class="btn">Tilbage til Admin</a>
+            <a href="/admin/create-user" class="btn btn-success">Opret Ny Bruger</a>
+        </div>
+    </div>
+    {f'<div class="success">{success}</div>' if success else ''}
+    {f'<div class="error">{error}</div>' if error else ''}
+    <div class="card">
+        <h2>Brugere</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Brugernavn</th>
+                    <th>Email</th>
+                    <th>Admin</th>
+                    <th>Oprettet</th>
+                    <th>Handlinger</th>
+                </tr>
+            </thead>
+            <tbody>
+                {user_rows}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+''')
+
         
         # Add success/error messages
         success = request.query_params.get("success")
@@ -2026,17 +2446,22 @@ async def startup_event():
 #####################################################################
 
 if __name__ == "__main__":
-    print("🌟 Starting MyAvatar server...")
-    print("🔗 Local: http://localhost:8000")
-    print("🔑 Admin: admin@myavatar.com / admin123")
-    print("👤 User: test@example.com / password123")
-    print("📋 Admin skal oprette avatars for hver bruger")
-    print("🎯 ✅ Cloudinary - cloud storage med local fallback!")
-    print("🎬 Record funktionalitet med visuel feedback!")
-    print("🗑️ CASCADE DELETE - sletter automatisk relaterede videoer!")
-    print("🔄 HeyGen WEBHOOK - automatisk video retur system!")
-    print("🧹 CLEANUP - /admin/quickclean endpoint tilgængelig!")
-    print("📊 ENHANCED LOGGING - /admin/logs for debugging!")
-    print("🔍 ERROR TRACKING - comprehensive system monitoring!")
-    
+    print("Starting MyAvatar server...")
+    print("Local: http://localhost:8000")
+    print("Admin: admin@myavatar.com / admin123")
+    print("User: test@example.com / password123")
+    print("Admin skal oprette avatars for hver bruger")
+    print("Cloudinary - cloud storage med local fallback!")
+    print("Record funktionalitet med visuel feedback!")
+    print("CASCADE DELETE - sletter automatisk relaterede videoer!")
+    print("HeyGen WEBHOOK - automatisk video retur system!")
+    print("CLEANUP - /admin/quickclean endpoint tilgængelig!")
+    print("ENHANCED LOGGING - /admin/logs for debugging!")
+    print("ERROR TRACKING - comprehensive system monitoring!")
+    print("CASCADE DELETE - sletter automatisk relaterede videoer!")
+    print("HeyGen WEBHOOK - automatisk video retur system!")
+    print("CLEANUP - /admin/quickclean endpoint tilgængelig!")
+    print("ENHANCED LOGGING - /admin/logs for debugging!")
+    print("ERROR TRACKING - comprehensive system monitoring!")
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
