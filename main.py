@@ -210,7 +210,20 @@ log_info(f"BASE_URL loaded: {BASE_URL}", "Config")
 #####################################################################
 # FASTAPI APP INITIALIZATION
 #####################################################################
+from fastapi.responses import PlainTextResponse
+import traceback
+
 app = FastAPI(title="MyAvatar", description="AI Avatar Video Generation Platform")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print("UNCAUGHT EXCEPTION:\n", tb)
+    return PlainTextResponse(f"Internal Server Error:\n{tb}", status_code=500)
+
+@app.get("/debug")
+async def debug():
+    return {"status": "ok"}
 
 app.add_middleware(
     CORSMiddleware,
