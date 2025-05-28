@@ -1401,36 +1401,6 @@ async def dashboard(request: Request):
                     {% endif %}
                 </div>
                 {% endif %}
-                
-                {% if videos %}
-                <div class="card">
-                    <h2>🎥 Dine Videoer</h2>
-                    <div class="video-list">
-                    {% for video in videos %}
-                        <div class="video-item">
-                            <div class="video-info">
-                                <h4>{{ video.title }}</h4>
-                                <p>Avatar: {{ video.avatar_name }} | Oprettet: {{ video.created_at }}</p>
-                                <span class="video-status status-{{ video.status }}">
-                                    {% if video.status == 'completed' %}Færdig
-                                    {% elif video.status == 'processing' %}Behandles
-                                    {% elif video.status == 'failed' %}Fejlet
-                                    {% elif video.status == 'pending' %}Afventer
-                                    {% else %}{{ video.status }}
-                                    {% endif %}
-                                </span>
-                            </div>
-                            <div class="video-actions">
-                                {% if video.status == 'completed' and video.video_path %}
-                                <a href="{{ video.video_path }}" target="_blank" class="btn">▶️ Afspil</a>
-                                <button class="btn" onclick="downloadVideo({{ video.id }})">📥 Download</button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
             </div>
         </body>
         </html>
