@@ -1,4 +1,4 @@
-"""
+
 MyAvatar - Complete AI Avatar Video Generation Platform
 ========================================================
 Railway-compatible with PostgreSQL + HeyGen Webhook + CASCADE DELETE + Enhanced Logging
@@ -29,12 +29,15 @@ from urllib.parse import urlparse
 import logging
 from collections import deque
 import traceback
+
 # Cloudinary imports for avatar storage
 import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
+
 # Load environment variables
 load_dotenv()
+
 # PostgreSQL support
 try:
     import psycopg2
@@ -46,6 +49,7 @@ except ImportError:
 #####################################################################
 # ENHANCED LOGGING SYSTEM
 #####################################################################
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -104,14 +108,14 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
         "X-Api-Key": api_key,
         "Content-Type": "application/json"
     }
-
+    
     if video_format == "9:16":
         width, height = 720, 1280
         log_info(f"Using Portrait format: {width}x{height}", "HeyGen")
     else:
         width, height = 1280, 720
         log_info(f"Using Landscape format: {width}x{height}", "HeyGen")
-
+    
     payload = {
         "video_inputs": [{
             "character": {
@@ -133,19 +137,18 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
             "height": height
         }
     }
-
+    
     try:
         log_info("Sending request to HeyGen API...", "HeyGen")
-
+        
         response = requests.post(
             "https://api.heygen.com/v2/video/generate",
             headers=headers,
             json=payload
         )
-
+        
         log_info(f"HeyGen Response Status: {response.status_code}", "HeyGen")
-        log_info(f"HeyGen Full Response: {response.text}", "HeyGen")  # NEW: Log full response
-
+        
         if response.status_code == 200:
             result = response.json()
             video_id = result.get("data", {}).get("video_id")
@@ -171,16 +174,16 @@ def test_heygen_connection():
     if not heygen_key:
         log_error("HEYGEN_API_KEY not found", "HeyGen")
         return
-
+    
     log_info(f"Testing HeyGen API with key: {heygen_key[:10]}...", "HeyGen")
-
+    
     test_result = create_video_from_audio_file(
         api_key=heygen_key,
         avatar_id="test_avatar_id",
         audio_url="https://www.soundjay.com/misc/bell-ringing-05.wav",
         video_format="16:9"
     )
-
+    
     log_info(f"HeyGen Connection Test Result: {test_result}", "HeyGen")
     return test_result
 
@@ -193,11 +196,13 @@ log_info("HeyGen API handler loaded successfully", "System")
 SECRET_KEY = os.getenv("SECRET_KEY", "your_secret_key_here_change_in_production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY", "")
 HEYGEN_BASE_URL = "https://api.heygen.com"
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
 cloudinary.config()
+
 log_info(f"Environment loaded. HeyGen API Key: {HEYGEN_API_KEY[:10] if HEYGEN_API_KEY else 'NOT_FOUND'}...", "Config")
 log_info(f"BASE_URL loaded: {BASE_URL}", "Config")
 
@@ -209,7 +214,7 @@ app = FastAPI(title="MyAvatar", description="AI Avatar Video Generation Platform
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=True,  
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -225,70 +230,83 @@ try:
 except Exception as e:
     log_error("Static files error", "FastAPI", e)
 
-#####################################################################
-# DATABASE HELPER FUNCTIONS (MISSING FUNCTIONS)
-#####################################################################
-def get_db_connection():
-    """Get database connection"""
-    database_url = os.getenv("DATABASE_URL")
-    
-    if database_url and POSTGRESQL_AVAILABLE:
-        # PostgreSQL connection
-        return psycopg2.connect(database_url)
-    else:
-        # SQLite fallback
-        return sqlite3.connect("myavatar.db")
+templates = Jinja2Templates(directory="templates")
+try:
+    templates.env.loader = ChoiceLoader([
+        FileSystemLoader("templates/portal"),
+        FileSystemLoader("templates/landingpage"),
+        FileSystemLoader("templates"),
+    ])
+    log_info("Templates configured", "FastAPI")
+except Exception as e:
+    log_error("Template configuration error", "FastAPI", e)
 
-def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
-    """Execute database query with proper error handling"""
-    try:
-        conn = get_db_connection()
-        
-        if os.getenv("DATABASE_URL") and POSTGRESQL_AVAILABLE:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        else:
-            cursor = conn.cursor()
-            cursor.row_factory = sqlite3.Row
-        
-        cursor.execute(query, params)
-        
-        if fetch_one:
-            result = cursor.fetchone()
-        elif fetch_all:
-            result = cursor.fetchall()
-        else:
-            result = cursor.rowcount
-        
-        conn.commit()
-        conn.close()
-        
-        return result
-        
-    except Exception as e:
-        log_error(f"Database query error: {query}", "Database", e)
-        return None
-
-# Password context for hashing
+#####################################################################
+# DATABASE FUNCTIONS
+#####################################################################
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def get_password_hash(password: str) -> str:
-    """Hash password using bcrypt"""
     return pwd_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against hash"""
     return pwd_context.verify(plain_password, hashed_password)
 
-#####################################################################
-# DATABASE INITIALIZATION
-#####################################################################
+def get_db_connection():
+    database_url = os.getenv("DATABASE_URL")
+    
+    if database_url and POSTGRESQL_AVAILABLE:
+        log_info("Using PostgreSQL database (Railway)", "Database")
+        try:
+            conn = psycopg2.connect(database_url)
+            return conn, True
+        except Exception as e:
+            log_error("PostgreSQL connection failed", "Database", e)
+            raise
+    else:
+        log_info("Using SQLite database (local)", "Database")
+        conn = sqlite3.connect("myavatar.db")
+        conn.row_factory = sqlite3.Row
+        return conn, False
+
+def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
+    try:
+        conn, is_postgresql = get_db_connection()
+        
+        try:
+            if is_postgresql:
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                pg_query = query.replace("?", "%s")
+                cursor.execute(pg_query, params)
+            else:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+            
+            if fetch_one:
+                result = cursor.fetchone()
+                return dict(result) if result else None
+            elif fetch_all:
+                results = cursor.fetchall()
+                return [dict(row) for row in results] if results else []
+            else:
+                rowcount = cursor.rowcount
+                lastrowid = getattr(cursor, 'lastrowid', None)
+                conn.commit()
+                return {"rowcount": rowcount, "lastrowid": lastrowid}
+        
+        finally:
+            conn.close()
+    except Exception as e:
+        log_error(f"Database query failed: {query}", "Database", e)
+        raise
+
 def init_database():
     log_info("Initializing database...", "Database")
     
     database_url = os.getenv("DATABASE_URL")
     is_postgresql = bool(database_url and POSTGRESQL_AVAILABLE)
     
-    conn = get_db_connection()
+    conn, _ = get_db_connection()
     cursor = conn.cursor()
     
     if is_postgresql:
@@ -382,23 +400,23 @@ def init_database():
                 FOREIGN KEY (avatar_id) REFERENCES avatars (id)
             )
         ''')
-
+    
     cursor.execute("SELECT COUNT(*) as user_count FROM users")
     result = cursor.fetchone()
-
+    
     if is_postgresql:
         existing_users = result['user_count']
     else:
         existing_users = result[0]
-
+    
     log_info(f"Found {existing_users} existing users", "Database")
-
+    
     if existing_users == 0:
         log_info("Creating default users...", "Database")
-
+        
         admin_password = get_password_hash("admin123")
         user_password = get_password_hash("password123")
-
+        
         if is_postgresql:
             cursor.execute(
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (%s, %s, %s, %s)",
@@ -417,11 +435,11 @@ def init_database():
                 "INSERT INTO users (username, email, hashed_password, is_admin) VALUES (?, ?, ?, ?)",
                 ("testuser", "test@example.com", user_password, 0)
             )
-
+        
         log_info("Default users created", "Database")
     else:
         log_info("Users already exist, skipping default creation", "Database")
-
+    
     conn.commit()
     conn.close()
     log_info("Database initialization complete", "Database")
@@ -434,11 +452,11 @@ init_database()
 def authenticate_user(username: str, password: str):
     try:
         user = execute_query("SELECT * FROM users WHERE username = ?", (username,), fetch_one=True)
-
+        
         if not user or not verify_password(password, user["hashed_password"]):
             log_warning(f"Failed login attempt for username: {username}", "Auth")
             return False
-
+        
         log_info(f"Successful login: {username}", "Auth")
         return user
     except Exception as e:
@@ -448,11 +466,11 @@ def authenticate_user(username: str, password: str):
 def authenticate_user_by_email(email: str, password: str):
     try:
         user = execute_query("SELECT * FROM users WHERE email = ?", (email,), fetch_one=True)
-
+        
         if not user or not verify_password(password, user["hashed_password"]):
             log_warning(f"Failed login attempt for email: {email}", "Auth")
             return False
-
+        
         log_info(f"Successful email login: {email}", "Auth")
         return user
     except Exception as e:
@@ -466,7 +484,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
             expire = datetime.utcnow() + expires_delta
         else:
             expire = datetime.utcnow() + timedelta(minutes=15)
-
+        
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
         return encoded_jwt
@@ -479,12 +497,12 @@ def get_current_user(request: Request):
         token = request.cookies.get("access_token")
         if not token:
             return None
-
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             return None
-
+        
         user = execute_query("SELECT * FROM users WHERE username = ?", (username,), fetch_one=True)
         return user
     except Exception as e:
@@ -498,13 +516,14 @@ def is_admin(request: Request):
 #####################################################################
 # CLOUDINARY UPLOAD FUNCTIONS
 #####################################################################
+
 async def upload_avatar_to_cloudinary(image_file: UploadFile, user_id: int) -> str:
     try:
         log_info(f"Starting Cloudinary upload for user {user_id}", "Cloudinary")
-
+        
         image_bytes = await image_file.read()
         public_id = f"user_{user_id}_avatar_{uuid.uuid4().hex}"
-
+        
         result = cloudinary.uploader.upload(
             image_bytes,
             folder="myavatar/avatars",
@@ -516,10 +535,10 @@ async def upload_avatar_to_cloudinary(image_file: UploadFile, user_id: int) -> s
                 {'quality': 'auto', 'fetch_format': 'auto'}
             ]
         )
-
+        
         log_info(f"Cloudinary upload success: {result['secure_url']}", "Cloudinary")
         return result['secure_url']
-
+        
     except Exception as e:
         log_error(f"Cloudinary upload failed for user {user_id}", "Cloudinary", e)
         return await upload_avatar_locally(image_file, user_id)
@@ -527,26 +546,28 @@ async def upload_avatar_to_cloudinary(image_file: UploadFile, user_id: int) -> s
 async def upload_avatar_locally(image_file: UploadFile, user_id: int) -> str:
     try:
         log_info(f"Using local fallback upload for user {user_id}", "Storage")
-
+        
         await image_file.seek(0)
-
+        
         img_filename = f"user_{user_id}_avatar_{uuid.uuid4().hex}.{image_file.filename.split('.')[-1]}"
         img_path = f"static/uploads/images/{img_filename}"
-
+        
         img_bytes = await image_file.read()
         with open(img_path, "wb") as f:
             f.write(img_bytes)
-
+        
         public_url = f"{BASE_URL}/{img_path}"
         log_info(f"Local upload success: {public_url}", "Storage")
         return public_url
-
+        
     except Exception as e:
         log_error(f"Local upload failed for user {user_id}", "Storage", e)
         return None
+
 #####################################################################
 # HTML TEMPLATES
 #####################################################################
+
 MARKETING_HTML = '''
 <!DOCTYPE html>
 <html lang="da">
@@ -611,6 +632,7 @@ MARKETING_HTML = '''
 </body>
 </html>
 '''
+
 DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html>
@@ -949,6 +971,7 @@ DASHBOARD_HTML = """
 </body>
 </html>
 """
+
 #####################################################################
 # ROUTES - AUTHENTICATION
 #####################################################################
@@ -961,688 +984,85 @@ async def landing_page(request: Request):
         success=request.query_params.get("success")
     ))
 
-@app.post("/client-login", response_class=HTMLResponse)
+@app.post("/client-login")
 async def client_login(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
-        log_info(f"Login attempt for email: {email}", "Auth")
-        
         user = authenticate_user_by_email(email, password)
         
         if not user:
-            log_warning(f"Failed login attempt for email: {email}", "Auth")
             return HTMLResponse(content=Template(MARKETING_HTML).render(
-                request=request,
+                request=request, 
                 error="Ugyldig email eller adgangskode"
             ))
         
-        # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": user["username"]},
+            data={"sub": user["username"]}, 
             expires_delta=access_token_expires
         )
         
-        # Redirect to dashboard
-        response = RedirectResponse(url="/dashboard", status_code=302)
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            httponly=True,
-            secure=False  # Set to True in production with HTTPS
-        )
+        if user.get("is_admin", 0) == 1:
+            response = RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
+        else:
+            response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
         
-        log_info(f"Successful login for user: {user['username']}", "Auth")
+        response.set_cookie(key="access_token", value=access_token, httponly=True)
         return response
-        
     except Exception as e:
-        log_error("Login error", "Auth", e)
+        log_error("Client login failed", "Auth", e)
         return HTMLResponse(content=Template(MARKETING_HTML).render(
-            request=request,
-            error="Der opstod en fejl ved login"
+            request=request, 
+            error="Login fejl - prøv igen"
         ))
+
+@app.get("/login", response_class=HTMLResponse)
+async def admin_login_page(request: Request):
+    return RedirectResponse(url="/")
+
+@app.get("/logout")
+async def logout():
+    log_info("User logged out", "Auth")
+    response = RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    response.delete_cookie(key="access_token")
+    return response
+
+#####################################################################
+# ROUTES - USER DASHBOARD
+#####################################################################
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     try:
         user = get_current_user(request)
         if not user:
-            return RedirectResponse(url="/?error=Du skal være logget ind")
+            return RedirectResponse(url="/?error=login_required", status_code=status.HTTP_302_FOUND)
         
-        # Get user's avatars
         avatars = execute_query(
             "SELECT * FROM avatars WHERE user_id = ? ORDER BY created_at DESC",
             (user["id"],),
             fetch_all=True
-        ) or []
+        )
         
-        # Get user's videos with avatar names
-        videos = execute_query("""
-            SELECT v.*, a.name as avatar_name 
-            FROM videos v 
-            LEFT JOIN avatars a ON v.avatar_id = a.id 
-            WHERE v.user_id = ? 
-            ORDER BY v.created_at DESC
-        """, (user["id"],), fetch_all=True) or []
+        videos = execute_query(
+            "SELECT v.*, a.name as avatar_name FROM videos v JOIN avatars a ON v.avatar_id = a.id WHERE v.user_id = ? ORDER BY v.created_at DESC",
+            (user["id"],),
+            fetch_all=True
+        )
         
-        # Check if user is admin
-        is_admin_user = user.get("is_admin", 0) == 1
+        log_info(f"Dashboard accessed by user: {user['username']}", "Dashboard")
         
         return HTMLResponse(content=Template(DASHBOARD_HTML).render(
             request=request,
             user=user,
             avatars=avatars,
             videos=videos,
-            is_admin=is_admin_user
+            is_admin=user.get("is_admin", 0) == 1
         ))
-        
     except Exception as e:
-        log_error("Dashboard error", "Web", e)
-        return RedirectResponse(url="/?error=Der opstod en fejl")
-
-@app.get("/logout")
-async def logout(request: Request):
-    try:
-        user = get_current_user(request)
-        if user:
-            log_info(f"User logged out: {user['username']}", "Auth")
-        
-        response = RedirectResponse(url="/?success=Du er nu logget ud")
-        response.delete_cookie(key="access_token")
-        return response
-        
-    except Exception as e:
-        log_error("Logout error", "Auth", e)
-        return RedirectResponse(url="/")
-
-@app.post("/api/heygen")
-async def create_heygen_video(
-    request: Request,
-    title: str = Form(...),
-    avatar_id: str = Form(...),
-    video_format: str = Form(...),
-    audio: UploadFile = File(...)
-):
-    try:
-        user = get_current_user(request)
-        if not user:
-            return JSONResponse({"success": False, "error": "Authentication required"}, status_code=401)
-        
-        log_info(f"HeyGen video creation request from user: {user['username']}", "HeyGen")
-        
-        # Validate inputs
-        if not title.strip():
-            return JSONResponse({"success": False, "error": "Title is required"})
-        
-        if video_format not in ["16:9", "9:16"]:
-            return JSONResponse({"success": False, "error": "Invalid video format"})
-        
-        # Get avatar details
-        avatar = execute_query(
-            "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
-            (avatar_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            return JSONResponse({"success": False, "error": "Avatar not found"})
-        
-        # Save audio file
-        audio_filename = f"user_{user['id']}_audio_{uuid.uuid4().hex}.wav"
-        audio_path = f"static/uploads/audio/{audio_filename}"
-        
-        # Ensure upload directory exists
-        os.makedirs("static/uploads/audio", exist_ok=True)
-        
-        # Save the uploaded audio file
-        audio_content = await audio.read()
-        with open(audio_path, "wb") as f:
-            f.write(audio_content)
-        
-        audio_url = f"{BASE_URL}/{audio_path}"
-        
-        # Create video record in database
-        video_id = execute_query("""
-            INSERT INTO videos (user_id, avatar_id, title, audio_path, status)
-            VALUES (?, ?, ?, ?, 'pending')
-        """, (user["id"], avatar_id, title, audio_path))
-        
-        # Call HeyGen API
-        heygen_result = create_video_from_audio_file(
-            api_key=HEYGEN_API_KEY,
-            avatar_id=avatar["heygen_avatar_id"],
-            audio_url=audio_url,
-            video_format=video_format
-        )
-        
-        if heygen_result["success"]:
-            # Update video record with HeyGen video ID
-            execute_query("""
-                UPDATE videos 
-                SET heygen_video_id = ?, status = 'processing' 
-                WHERE id = ?
-            """, (heygen_result["video_id"], video_id))
-            
-            log_info(f"HeyGen video creation successful: {heygen_result['video_id']}", "HeyGen")
-            
-            return JSONResponse({
-                "success": True,
-                "video_id": heygen_result["video_id"],
-                "message": heygen_result["message"],
-                "format": heygen_result.get("format"),
-                "dimensions": heygen_result.get("dimensions")
-            })
-        else:
-            # Update video record as failed
-            execute_query("""
-                UPDATE videos 
-                SET status = 'failed', video_path = ? 
-                WHERE id = ?
-            """, (heygen_result["error"], video_id))
-            
-            log_error(f"HeyGen video creation failed: {heygen_result['error']}", "HeyGen")
-            
-            return JSONResponse({
-                "success": False,
-                "error": heygen_result["error"]
-            })
-        
-    except Exception as e:
-        log_error("HeyGen API error", "HeyGen", e)
-        return JSONResponse({
-            "success": False,
-            "error": "Internal server error"
-        }, status_code=500)
-#####################################################################
-# ROUTES - VIDEO MANAGEMENT
-#####################################################################
-
-@app.get("/api/videos/{video_id}/download")
-async def download_video(video_id: str, request: Request):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Get video details
-        video = execute_query("""
-            SELECT * FROM videos 
-            WHERE id = ? AND user_id = ? AND status = 'completed'
-        """, (video_id, user["id"]), fetch_one=True)
-        
-        if not video or not video["video_path"]:
-            raise HTTPException(status_code=404, detail="Video not found or not ready")
-        
-        # If it's a URL, redirect to it
-        if video["video_path"].startswith("http"):
-            return RedirectResponse(url=video["video_path"])
-        
-        # If it's a local file, serve it
-        if os.path.exists(video["video_path"]):
-            return FileResponse(
-                path=video["video_path"],
-                media_type="video/mp4",
-                filename=f"{video['title']}.mp4"
-            )
-        
-        raise HTTPException(status_code=404, detail="Video file not found")
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error(f"Error downloading video {video_id}", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@app.get("/api/videos")
-async def get_videos(request: Request, status: Optional[str] = None, limit: int = 20, offset: int = 0):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Build query based on status filter
-        if status:
-            videos = execute_query("""
-                SELECT v.*, a.name as avatar_name 
-                FROM videos v 
-                LEFT JOIN avatars a ON v.avatar_id = a.id 
-                WHERE v.user_id = ? AND v.status = ? 
-                ORDER BY v.created_at DESC 
-                LIMIT ? OFFSET ?
-            """, (user["id"], status, limit, offset), fetch_all=True)
-        else:
-            videos = execute_query("""
-                SELECT v.*, a.name as avatar_name 
-                FROM videos v 
-                LEFT JOIN avatars a ON v.avatar_id = a.id 
-                WHERE v.user_id = ? 
-                ORDER BY v.created_at DESC 
-                LIMIT ? OFFSET ?
-            """, (user["id"], limit, offset), fetch_all=True)
-        
-        return JSONResponse({"videos": videos or []})
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error("Error fetching videos", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@app.delete("/api/videos/{video_id}")
-async def delete_video(video_id: str, request: Request):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Check if video exists and belongs to user
-        video = execute_query("""
-            SELECT * FROM videos WHERE id = ? AND user_id = ?
-        """, (video_id, user["id"]), fetch_one=True)
-        
-        if not video:
-            raise HTTPException(status_code=404, detail="Video not found")
-        
-        # Delete local audio file if exists
-        if video["audio_path"] and os.path.exists(video["audio_path"]):
-            try:
-                os.remove(video["audio_path"])
-                log_info(f"Deleted audio file: {video['audio_path']}", "Storage")
-            except Exception as e:
-                log_warning(f"Could not delete audio file: {video['audio_path']}", "Storage")
-        
-        # Delete local video file if exists
-        if video["video_path"] and not video["video_path"].startswith("http") and os.path.exists(video["video_path"]):
-            try:
-                os.remove(video["video_path"])
-                log_info(f"Deleted video file: {video['video_path']}", "Storage")
-            except Exception as e:
-                log_warning(f"Could not delete video file: {video['video_path']}", "Storage")
-        
-        # Delete from database
-        execute_query("DELETE FROM videos WHERE id = ?", (video_id,))
-        
-        log_info(f"Video deleted: {video_id} by user {user['username']}", "API")
-        
-        return JSONResponse({"success": True, "message": "Video deleted successfully"})
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error(f"Error deleting video {video_id}", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        log_error("Dashboard load failed", "Dashboard", e)
+        return RedirectResponse(url="/?error=dashboard_error", status_code=status.HTTP_302_FOUND)
 
 #####################################################################
-# ROUTES - AVATAR MANAGEMENT
-#####################################################################
-
-@app.get("/api/avatars")
-async def get_avatars(request: Request):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        avatars = execute_query("""
-            SELECT * FROM avatars 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC
-        """, (user["id"],), fetch_all=True)
-        
-        return JSONResponse({"avatars": avatars or []})
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error("Error fetching avatars", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@app.post("/api/avatars")
-async def create_avatar(
-    request: Request,
-    name: str = Form(...),
-    heygen_avatar_id: str = Form(...),
-    image: Optional[UploadFile] = File(None)
-):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Validate inputs
-        if not name.strip():
-            raise HTTPException(status_code=400, detail="Avatar name is required")
-        
-        if not heygen_avatar_id.strip():
-            raise HTTPException(status_code=400, detail="HeyGen Avatar ID is required")
-        
-        # Handle image upload
-        image_url = None
-        if image and image.filename:
-            try:
-                image_url = await upload_avatar_to_cloudinary(image, user["id"])
-                if not image_url:
-                    image_url = await upload_avatar_locally(image, user["id"])
-            except Exception as e:
-                log_warning(f"Image upload failed for avatar: {name}", "Storage", e)
-        
-        # Create avatar in database
-        avatar_id = execute_query("""
-            INSERT INTO avatars (user_id, name, heygen_avatar_id, image_path)
-            VALUES (?, ?, ?, ?)
-        """, (user["id"], name.strip(), heygen_avatar_id.strip(), image_url))
-        
-        log_info(f"Avatar created: {name} by user {user['username']}", "API")
-        
-        return JSONResponse({
-            "success": True,
-            "avatar_id": avatar_id,
-            "message": "Avatar created successfully"
-        })
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error("Error creating avatar", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-@app.delete("/api/avatars/{avatar_id}")
-async def delete_avatar(avatar_id: str, request: Request):
-    try:
-        user = get_current_user(request)
-        if not user:
-            raise HTTPException(status_code=401, detail="Authentication required")
-        
-        # Check if avatar exists and belongs to user
-        avatar = execute_query("""
-            SELECT * FROM avatars WHERE id = ? AND user_id = ?
-        """, (avatar_id, user["id"]), fetch_one=True)
-        
-        if not avatar:
-            raise HTTPException(status_code=404, detail="Avatar not found")
-        
-        # Check if avatar is used in any videos
-        video_count = execute_query("""
-            SELECT COUNT(*) as count FROM videos WHERE avatar_id = ?
-        """, (avatar_id,), fetch_one=True)
-        
-        if video_count and video_count["count"] > 0:
-            raise HTTPException(status_code=400, detail="Cannot delete avatar that is used in videos")
-        
-        # Delete image file if exists and is local
-        if avatar["image_path"] and not avatar["image_path"].startswith("http") and os.path.exists(avatar["image_path"]):
-            try:
-                os.remove(avatar["image_path"])
-                log_info(f"Deleted avatar image: {avatar['image_path']}", "Storage")
-            except Exception as e:
-                log_warning(f"Could not delete avatar image: {avatar['image_path']}", "Storage")
-        
-        # Delete from database
-        execute_query("DELETE FROM avatars WHERE id = ?", (avatar_id,))
-        
-        log_info(f"Avatar deleted: {avatar['name']} by user {user['username']}", "API")
-        
-        return JSONResponse({"success": True, "message": "Avatar deleted successfully"})
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error(f"Error deleting avatar {avatar_id}", "API", e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-#####################################################################
-# WEBHOOK ENDPOINTS
-#####################################################################
-
-@app.post("/webhook/heygen")
-async def heygen_webhook(request: Request):
-    """
-    HeyGen webhook endpoint to receive video generation status updates
-    """
-    try:
-        # Get the raw body for signature verification (if needed)
-        body = await request.body()
-        
-        # Parse JSON payload
-        try:
-            payload = json.loads(body.decode('utf-8'))
-        except json.JSONDecodeError:
-            log_error("Invalid JSON in webhook payload", "Webhook")
-            raise HTTPException(status_code=400, detail="Invalid JSON")
-        
-        log_info(f"Received HeyGen webhook: {payload}", "Webhook")
-        
-        # Extract relevant information
-        event_type = payload.get("event_type")
-        video_data = payload.get("data", {})
-        heygen_video_id = video_data.get("video_id")
-        
-        if not heygen_video_id:
-            log_error("No video_id in webhook payload", "Webhook")
-            raise HTTPException(status_code=400, detail="Missing video_id")
-        
-        # Find the video in our database
-        video = execute_query("""
-            SELECT * FROM videos WHERE heygen_video_id = ?
-        """, (heygen_video_id,), fetch_one=True)
-        
-        if not video:
-            log_warning(f"Video not found for HeyGen ID: {heygen_video_id}", "Webhook")
-            return JSONResponse({"status": "video not found"})
-        
-        # Process different event types
-        if event_type == "video_generation.completed":
-            # Video generation completed successfully
-            video_url = video_data.get("video_url")
-            thumbnail_url = video_data.get("thumbnail_url")
-            duration = video_data.get("duration", 0)
-            
-            execute_query("""
-                UPDATE videos 
-                SET status = 'completed', video_path = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE heygen_video_id = ?
-            """, (video_url, heygen_video_id))
-            
-            log_info(f"Video completed: {heygen_video_id} -> {video_url}", "Webhook")
-            
-        elif event_type == "video_generation.failed":
-            # Video generation failed
-            error_message = video_data.get("error", "Video generation failed")
-            
-            execute_query("""
-                UPDATE videos 
-                SET status = 'failed', video_path = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE heygen_video_id = ?
-            """, (error_message, heygen_video_id))
-            
-            log_error(f"Video generation failed: {heygen_video_id} - {error_message}", "Webhook")
-            
-        elif event_type == "video_generation.processing":
-            # Video generation is in progress
-            execute_query("""
-                UPDATE videos 
-                SET status = 'processing', updated_at = CURRENT_TIMESTAMP
-                WHERE heygen_video_id = ?
-            """, (heygen_video_id,))
-            
-            log_info(f"Video processing: {heygen_video_id}", "Webhook")
-            
-        else:
-            log_warning(f"Unknown webhook event type: {event_type}", "Webhook")
-        
-        return JSONResponse({"status": "processed"})
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error("Webhook processing error", "Webhook", e)
-        raise HTTPException(status_code=500, detail="Internal server error") 
-#####################################################################
-# ROUTES - ADMIN REDIRECTS & ADDITIONAL AUTH
-#####################################################################
-
-@app.get("/login", response_class=HTMLResponse)
-async def admin_login_page(request: Request):
-    return RedirectResponse(url="/")
-
-#####################################################################
-# ROUTES - ADMIN PANEL 
-#####################################################################
-
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_panel(request: Request):
-    try:
-        user = get_current_user(request)
-        if not user or not user.get("is_admin", 0):
-            return RedirectResponse(url="/?error=admin_required", status_code=status.HTTP_302_FOUND)
-        
-        # Get system statistics
-        total_users = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
-        total_videos = execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True)
-        total_avatars = execute_query("SELECT COUNT(*) as count FROM avatars", fetch_one=True)
-        
-        # Get recent activity
-        recent_users = execute_query(
-            "SELECT username, email, created_at FROM users ORDER BY created_at DESC LIMIT 10",
-            fetch_all=True
-        )
-        
-        recent_videos = execute_query("""
-            SELECT v.title, v.status, v.created_at, u.username 
-            FROM videos v 
-            JOIN users u ON v.user_id = u.id 
-            ORDER BY v.created_at DESC LIMIT 10
-        """, fetch_all=True)
-        
-        log_info(f"Admin panel accessed by: {user['username']}", "Admin")
-        
-        return HTMLResponse(content=f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Admin Panel - MyAvatar</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}
-                .header {{ background: #333; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }}
-                .container {{ padding: 20px; max-width: 1200px; margin: 0 auto; }}
-                .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-                .btn {{ background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }}
-                .stat-card {{ background: #fff; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-                .stat-number {{ font-size: 2em; font-weight: bold; color: #4f46e5; }}
-                table {{ width: 100%; border-collapse: collapse; }}
-                th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
-                th {{ background: #f8f9fa; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>Admin Panel</h1>
-                <div>
-                    <a href="/admin/logs" class="btn">System Logs</a>
-                    <a href="/admin/users" class="btn">Manage Users</a>
-                    <a href="/dashboard" class="btn">Back to Dashboard</a>
-                    <a href="/logout" class="btn">Logout</a>
-                </div>
-            </div>
-            
-            <div class="container">
-                <div class="stats">
-                    <div class="stat-card">
-                        <div class="stat-number">{total_users['count'] if total_users else 0}</div>
-                        <div>Total Users</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number">{total_videos['count'] if total_videos else 0}</div>
-                        <div>Total Videos</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number">{total_avatars['count'] if total_avatars else 0}</div>
-                        <div>Total Avatars</div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h2>Recent Users</h2>
-                    <table>
-                        <tr><th>Username</th><th>Email</th><th>Created</th></tr>
-                        {"".join([f"<tr><td>{u['username']}</td><td>{u['email']}</td><td>{u['created_at']}</td></tr>" for u in (recent_users or [])])}
-                    </table>
-                </div>
-                
-                <div class="card">
-                    <h2>Recent Videos</h2>
-                    <table>
-                        <tr><th>Title</th><th>User</th><th>Status</th><th>Created</th></tr>
-                        {"".join([f"<tr><td>{v['title']}</td><td>{v['username']}</td><td>{v['status']}</td><td>{v['created_at']}</td></tr>" for v in (recent_videos or [])])}
-                    </table>
-                </div>
-            </div>
-        </body>
-        </html>
-        """)
-        
-    except Exception as e:
-        log_error("Admin panel error", "Admin", e)
-        return RedirectResponse(url="/dashboard?error=admin_error")
-
-@app.get("/admin/logs", response_class=HTMLResponse)
-async def admin_logs(request: Request):
-    try:
-        user = get_current_user(request)
-        if not user or not user.get("is_admin", 0):
-            return RedirectResponse(url="/?error=admin_required")
-        
-        recent_logs = log_handler.get_recent_logs(100)
-        error_logs = log_handler.get_error_logs(50)
-        
-        return HTMLResponse(content=f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>System Logs - MyAvatar Admin</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }}
-                .header {{ background: #333; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }}
-                .container {{ padding: 20px; max-width: 1200px; margin: 0 auto; }}
-                .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-                .btn {{ background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; }}
-                .log-entry {{ padding: 10px; margin: 5px 0; border-radius: 4px; font-family: monospace; }}
-                .log-info {{ background: #e3f2fd; }}
-                .log-warning {{ background: #fff3e0; }}
-                .log-error {{ background: #ffebee; }}
-                .log-timestamp {{ color: #666; font-size: 0.9em; }}
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>System Logs</h1>
-                <div>
-                    <a href="/admin" class="btn">Back to Admin</a>
-                    <a href="/logout" class="btn">Logout</a>
-                </div>
-            </div>
-            
-            <div class="container">
-                <div class="card">
-                    <h2>Error Logs</h2>
-                    {"".join([f'<div class="log-entry log-error"><span class="log-timestamp">{log["timestamp"]}</span> [{log["module"]}] {log["message"]}</div>' for log in error_logs])}
-                </div>
-                
-                <div class="card">
-                    <h2>Recent Activity</h2>
-                    {"".join([f'<div class="log-entry log-{log["level"].lower()}"><span class="log-timestamp">{log["timestamp"]}</span> [{log["module"]}] {log["message"]}</div>' for log in recent_logs])}
-                </div>
-            </div>
-        </body>
-        </html>
-        """)
-        
-    except Exception as e:
-        log_error("Admin logs error", "Admin", e)
-        return RedirectResponse(url="/admin?error=logs_error")
-
- #####################################################################
 # ROUTES - ADMIN DASHBOARD 
 #####################################################################
 @app.get("/admin", response_class=HTMLResponse)
@@ -1689,13 +1109,6 @@ async def admin_dashboard(request: Request):
             </div>
             
             <div class="card">
-                <h2>🐛 Debug Tools</h2>
-                <p>Tools for debugging the HeyGen integration issue.</p>
-                <a href="/debug/recent-videos" class="btn btn-success">Check Recent Videos</a>
-                <a href="/debug/check-db" class="btn btn-success">Simple DB Check</a>
-            </div>
-            
-            <div class="card">
                 <h2>📊 System Status</h2>
                 <p><strong>HeyGen API:</strong> ✅ Tilgængelig</p>
                 <p><strong>Storage:</strong> ✅ Cloudinary CDN</p>
@@ -1717,6 +1130,7 @@ async def admin_dashboard(request: Request):
     except Exception as e:
         log_error("Admin dashboard failed", "Admin", e)
         return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+
 @app.get("/admin/users", response_class=HTMLResponse) 
 async def admin_users(request: Request):
     try:
@@ -1815,6 +1229,7 @@ async def admin_users(request: Request):
     except Exception as e:
         log_error("Admin users page failed", "Admin", e)
         return RedirectResponse(url="/admin?error=user_load_failed", status_code=status.HTTP_302_FOUND)
+
 @app.get("/admin/user/{user_id}/avatars", response_class=HTMLResponse)
 async def admin_user_avatars(request: Request, user_id: int = Path(...)):
     try:
@@ -2028,6 +1443,7 @@ async def admin_create_user_page(request: Request):
     '''
     
     return HTMLResponse(content=create_user_html)
+
 @app.post("/admin/create-user", response_class=HTMLResponse)
 async def admin_create_user(
     request: Request,
@@ -2149,71 +1565,6 @@ async def admin_logs(request: Request):
     except Exception as e:
         log_error("Admin logs page failed", "Admin", e)
         return HTMLResponse("<h1>Error loading logs</h1><a href='/admin'>Back to Admin</a>")
-#####################################################################
-# DEBUG ENDPOINTS - NEW ADDITIONS FOR HEYGEN TROUBLESHOOTING
-#####################################################################
-
-@app.get("/debug/recent-videos")
-async def debug_recent_videos(request: Request):
-    """Debug endpoint to check what's actually in your PostgreSQL database"""
-    try:
-        # Check if user is admin for security
-        user = get_current_user(request)
-        if not user or user.get("is_admin", 0) != 1:
-            return JSONResponse({"error": "Admin access required"}, status_code=403)
-        
-        # Get recent videos with all important fields
-        videos = execute_query("""
-            SELECT id, heygen_video_id, status, title, user_id, avatar_id, created_at 
-            FROM videos 
-            ORDER BY created_at DESC 
-            LIMIT 10
-        """, fetch_all=True)
-        
-        result = []
-        for video in videos:
-            result.append({
-                "id": video["id"],
-                "heygen_video_id": video["heygen_video_id"],  # This is the key field!
-                "status": video["status"],
-                "title": video["title"][:50] if video["title"] else None,  # First 50 chars
-                "user_id": video["user_id"],
-                "avatar_id": video["avatar_id"],
-                "created_at": str(video["created_at"])
-            })
-        
-        return JSONResponse({
-            "total_videos": len(result),
-            "videos": result,
-            "database_type": "PostgreSQL on Railway",
-            "note": "This shows the most recent 10 videos and their HeyGen IDs"
-        })
-    except Exception as e:
-        log_error("Debug endpoint failed", "Debug", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@app.get("/debug/check-db")
-async def check_db_simple(request: Request):
-    """Simple debug check for recent videos"""
-    try:
-        user = get_current_user(request)
-        if not user or user.get("is_admin", 0) != 1:
-            return JSONResponse({"error": "Admin access required"}, status_code=403)
-            
-        videos = execute_query(
-            "SELECT id, heygen_video_id, status, title FROM videos ORDER BY created_at DESC LIMIT 5", 
-            fetch_all=True
-        )
-        
-        return JSONResponse([{
-            "id": v["id"], 
-            "heygen_id": v["heygen_video_id"],
-            "status": v["status"],
-            "title": v["title"]
-        } for v in videos])
-    except Exception as e:
-        log_error("Simple debug check failed", "Debug", e)
-        return JSONResponse({"error": str(e)}, status_code=500)
 
 #####################################################################
 # ENHANCED AVATAR MANAGEMENT
@@ -2269,6 +1620,7 @@ async def admin_add_avatar(
             url=f"/admin/user/{user_id}/avatars?error=Fejl: {str(e)}", 
             status_code=303
         )
+
 @app.post("/admin/user/{user_id}/avatars/delete/{avatar_id}", response_class=HTMLResponse)
 async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar_id: int = Path(...)):
     try:
@@ -2321,7 +1673,7 @@ async def admin_delete_avatar(request: Request, user_id: int = Path(...), avatar
         )
 
 #####################################################################
-# API ENDPOINTS - HEYGEN INTEGRATION WITH ENHANCED LOGGING
+# API ENDPOINTS - HEYGEN INTEGRATION
 #####################################################################
 
 @app.post("/api/heygen")
@@ -2350,9 +1702,8 @@ async def create_heygen_video(
         
         heygen_avatar_id = avatar.get('heygen_avatar_id')
 
-        log_info(f"[ENHANCED] Video request by user: {user['username']} using avatar: {avatar['name']}", "HeyGen")
-        log_info(f"[ENHANCED] Video format: {video_format}, Title: {title}", "HeyGen")
-        log_info(f"[ENHANCED] Using HeyGen Avatar ID: {heygen_avatar_id}", "HeyGen")
+        log_info(f"Video request by user: {user['username']} using avatar: {avatar['name']}", "HeyGen")
+        log_info(f"Video format: {video_format}, Title: {title}", "HeyGen")
         
         if not heygen_avatar_id:
             log_error(f"Missing HeyGen avatar ID for avatar {avatar_id}", "HeyGen")
@@ -2368,21 +1719,22 @@ async def create_heygen_video(
                 f.write(audio_bytes)
             
             audio_url = f"{BASE_URL}/static/uploads/audio/{audio_filename}"
-            log_info(f"[ENHANCED] Audio file saved and accessible at: {audio_url}", "HeyGen")
+            log_info(f"Audio file saved and accessible at: {audio_url}", "HeyGen")
             
         except Exception as e:
             log_error("Local audio file save failed", "HeyGen", e)
             return JSONResponse({"error": f"Fil upload fejlede: {str(e)}"}, status_code=500)
 
-        # Save to database FIRST - This creates the record that webhook will look for
+        # Save to database
         result = execute_query(
             "INSERT INTO videos (user_id, avatar_id, title, audio_path, status) VALUES (?, ?, ?, ?, ?)",
             (user["id"], avatar_id, title, audio_url, "processing")
         )
         video_id = result['lastrowid']
-        log_info(f"[ENHANCED] Video record created with database ID: {video_id}", "HeyGen")       
-        # Call HeyGen API with comprehensive logging
-        log_info("[ENHANCED] Calling HeyGen API to create video...", "HeyGen")
+
+        log_info(f"Video record created with ID: {video_id}", "HeyGen")
+
+        # Call HeyGen API
         heygen_result = create_video_from_audio_file(
             api_key=HEYGEN_API_KEY,
             avatar_id=heygen_avatar_id,
@@ -2390,53 +1742,26 @@ async def create_heygen_video(
             video_format=video_format
         )
         
-        # CRITICAL: Log the HeyGen response and what we're storing
-        log_info(f"[ENHANCED] HeyGen API Response: {json.dumps(heygen_result, indent=2)}", "HeyGen")
-        
         if heygen_result["success"]:
-            heygen_video_id = heygen_result.get("video_id")
-            log_info(f"[ENHANCED] HeyGen video ID received: {heygen_video_id}", "HeyGen")
-            
-            if not heygen_video_id:
-                log_error("[ENHANCED] HeyGen returned success but no video_id!", "HeyGen")
-                return JSONResponse({
-                    "success": False,
-                    "error": "HeyGen returned success but no video ID"
-                }, status_code=500)
-            
-            # Update the database record with HeyGen video ID
-            log_info(f"[ENHANCED] Updating database record {video_id} with HeyGen ID: {heygen_video_id}", "HeyGen")
             execute_query(
                 "UPDATE videos SET heygen_video_id = ?, status = ? WHERE id = ?",
-                (heygen_video_id, "processing", video_id)
+                (heygen_result.get("video_id"), "processing", video_id)
             )
-            log_info(f"[ENHANCED] Database update completed for video {video_id}", "HeyGen")
-            
-            # Verify the update worked
-            updated_video = execute_query(
-                "SELECT id, heygen_video_id, status FROM videos WHERE id = ?", 
-                (video_id,), 
-                fetch_one=True
-            )
-            
-            if updated_video:
-                log_info(f"[ENHANCED] Verification SUCCESS - Database now shows: ID={updated_video['id']}, HeyGen_ID={updated_video['heygen_video_id']}, Status={updated_video['status']}", "HeyGen")
-            else:
-                log_error(f"[ENHANCED] Verification FAILED - Could not find video record {video_id} after update", "HeyGen")
-            
+            log_info(f"HeyGen video generation started: {heygen_result.get('video_id')}", "HeyGen")
         else:
-            log_error(f"[ENHANCED] HeyGen API failed: {heygen_result.get('error')}", "HeyGen")
+            log_error(f"HeyGen API failed: {heygen_result.get('error')}", "HeyGen")
         
         return JSONResponse(heygen_result)
+
     except Exception as e:
-        log_error("[ENHANCED] Unexpected error in HeyGen video creation", "HeyGen", e)
+        log_error("Unexpected error in HeyGen video creation", "HeyGen", e)
         return JSONResponse({
             "success": False,
             "error": f"Uventet fejl: {str(e)}"
         }, status_code=500)
 
 #####################################################################
-# ENHANCED HEYGEN WEBHOOK HANDLER - FIXED FOR HEYGEN'S ACTUAL FORMAT
+# ENHANCED HEYGEN WEBHOOK HANDLER - UPDATED WITH YOUR FIX
 #####################################################################
 
 async def download_video_from_heygen(video_url: str, video_id: int) -> str:
@@ -2461,22 +1786,18 @@ async def download_video_from_heygen(video_url: str, video_id: int) -> str:
     except Exception as e:
         log_error(f"Video download failed for video {video_id}", "Webhook", e)
         return None
+
 @app.post("/api/heygen/webhook")
 async def heygen_webhook_handler(request: Request):
-    """Enhanced HeyGen webhook handler with comprehensive logging - FIXED for HeyGen's actual format"""
+    """Enhanced HeyGen webhook handler - FIXED for HeyGen's actual format"""
     try:
         webhook_data = await request.json()
-        log_info(f"[Webhook] Full payload received: {json.dumps(webhook_data, indent=2)}", "Webhook")
+        log_info(f"HeyGen Webhook received: {json.dumps(webhook_data, indent=2)}", "Webhook")
         
-        # Extract video info - HeyGen sends data in nested "event_data" structure
+        # Extract video info - HeyGen sends data in "event_data" structure
         event_data = webhook_data.get("event_data", {})
         event_type = webhook_data.get("event_type", "")
         
-        log_info(f"[Webhook] Event type: {event_type}", "Webhook")
-        log_info(f"[Webhook] Event data keys: {list(event_data.keys())}", "Webhook")
-        log_info(f"[Webhook] Root payload keys: {list(webhook_data.keys())}", "Webhook")
-        
-        # Multiple ways to find video_id (HeyGen's format varies) - FIXED VERSION
         video_id = (
             webhook_data.get("video_id") or 
             webhook_data.get("id") or 
@@ -2484,8 +1805,6 @@ async def heygen_webhook_handler(request: Request):
             webhook_data.get("data", {}).get("id") or
             event_data.get("video_id")  # ← FIXED: HeyGen puts it here!
         )
-        
-        log_info(f"[Webhook] Extracted video_id: {video_id}", "Webhook")
         
         # Derive status from event_type
         if "success" in event_type.lower():
@@ -2495,7 +1814,6 @@ async def heygen_webhook_handler(request: Request):
         else:
             status = webhook_data.get("status", "processing").lower()
         
-        # Extract video URL - FIXED VERSION
         video_url = (
             webhook_data.get("video_url") or 
             webhook_data.get("url") or
@@ -2504,19 +1822,12 @@ async def heygen_webhook_handler(request: Request):
             event_data.get("url")  # ← FIXED: HeyGen puts it here!
         )
         
-        log_info(f"[Webhook] Extracted values - video_id: {video_id}, status: {status}, video_url: {video_url}", "Webhook")
+        log_info(f"Extracted: video_id={video_id}, status={status}, video_url={video_url}, event_type={event_type}", "Webhook")
         
         if not video_id:
-            log_error(f"[Webhook] No video_id found in webhook data", "Webhook")
-            log_error(f"[Webhook] Available root keys: {list(webhook_data.keys())}", "Webhook")
-            log_error(f"[Webhook] Available event_data keys: {list(event_data.keys())}", "Webhook")
-            return JSONResponse({
-                "error": "Missing video_id", 
-                "received_keys": list(webhook_data.keys()),
-                "event_data_keys": list(event_data.keys())
-            }, status_code=400)
-        
-        log_info(f"[Webhook] Looking for video with HeyGen ID: {video_id}", "Webhook")
+            log_error(f"No video_id found in webhook data. Available keys: {list(webhook_data.keys())}", "Webhook")
+            log_error(f"Event data keys: {list(event_data.keys())}", "Webhook")
+            return JSONResponse({"error": "Missing video_id", "received_keys": list(webhook_data.keys())}, status_code=400)
         
         # Find video in database via heygen_video_id
         video_record = execute_query(
@@ -2526,27 +1837,14 @@ async def heygen_webhook_handler(request: Request):
         )
         
         if not video_record:
-            log_error(f"[Webhook] Video record not found for HeyGen ID: {video_id}", "Webhook")
-            
-            # DEBUG: Show what videos DO exist
-            existing_videos = execute_query(
-                "SELECT id, heygen_video_id, title, status FROM videos ORDER BY created_at DESC LIMIT 10", 
-                fetch_all=True
-            )
-            existing_ids = [v["heygen_video_id"] for v in existing_videos if v["heygen_video_id"]]
-            log_error(f"[Webhook] Existing HeyGen IDs in database: {existing_ids}", "Webhook")
-            
-            return JSONResponse({
-                "error": "Video record not found", 
-                "heygen_id": video_id,
-                "existing_heygen_ids": existing_ids
-            }, status_code=404)
+            log_error(f"Video record not found for HeyGen ID: {video_id}", "Webhook")
+            return JSONResponse({"error": "Video record not found", "heygen_id": video_id}, status_code=404)
         
-        log_info(f"[Webhook] Found video record: {video_record['id']} - {video_record['title']}", "Webhook")  
+        log_info(f"Found video record: {video_record['id']} - {video_record['title']}", "Webhook")
+        
         if status == "completed":
             if video_url:
                 # Download video from HeyGen and save locally
-                log_info(f"[Webhook] Video completed, downloading from: {video_url}", "Webhook")
                 local_path = await download_video_from_heygen(video_url, video_record['id'])
                 
                 if local_path:
@@ -2555,21 +1853,16 @@ async def heygen_webhook_handler(request: Request):
                         "UPDATE videos SET video_path = ?, status = ? WHERE id = ?",
                         (local_path, "completed", video_record['id'])
                     )
-                    log_info(f"[Webhook] Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
+                    log_info(f"Video {video_record['id']} completed and downloaded: {local_path}", "Webhook")
                 else:
                     # Error during download - set status to error
                     execute_query(
                         "UPDATE videos SET status = ? WHERE id = ?",
                         ("error", video_record['id'])
                     )
-                    log_error(f"[Webhook] Failed to download video {video_record['id']}", "Webhook")
+                    log_error(f"Failed to download video {video_record['id']}", "Webhook")
             else:
-                log_warning(f"[Webhook] No video_url provided in webhook for {video_id}", "Webhook")
-                # Still mark as completed even without URL
-                execute_query(
-                    "UPDATE videos SET status = ? WHERE id = ?",
-                    ("completed", video_record['id'])
-                )
+                log_warning(f"No video_url provided in webhook for {video_id}", "Webhook")
                 
         elif status == "failed":
             # Update status to failed
@@ -2577,7 +1870,7 @@ async def heygen_webhook_handler(request: Request):
                 "UPDATE videos SET status = ? WHERE id = ?",
                 ("failed", video_record['id'])
             )
-            log_error(f"[Webhook] Video {video_record['id']} failed in HeyGen", "Webhook")
+            log_error(f"Video {video_record['id']} failed in HeyGen", "Webhook")
         
         else:
             # Other status (processing, etc.)
@@ -2585,19 +1878,18 @@ async def heygen_webhook_handler(request: Request):
                 "UPDATE videos SET status = ? WHERE id = ?",
                 (status, video_record['id'])
             )
-            log_info(f"[Webhook] Video {video_record['id']} status updated to: {status}", "Webhook")
+            log_info(f"Video {video_record['id']} status updated to: {status}", "Webhook")
         
         return JSONResponse({
             "success": True, 
-            "message": "Webhook processed successfully", 
+            "message": "Webhook processed", 
             "video_id": video_id,
             "event_type": event_type,
-            "status": status,
-            "database_record_id": video_record['id']
+            "status": status
         })
     
     except Exception as e:
-        log_error("[Webhook] Webhook processing failed", "Webhook", e)
+        log_error("Webhook processing failed", "Webhook", e)
         return JSONResponse({"error": f"Webhook processing failed: {str(e)}"}, status_code=500)
 
 #####################################################################
@@ -2620,11 +1912,7 @@ async def health_check():
             "users_count": users_count.get('count', 0) if users_count else 0,
             "storage": "cloudinary_with_local_fallback",
             "webhook_endpoint": f"{BASE_URL}/api/heygen/webhook",
-            "logging": "enhanced_tracking_enabled",
-            "debug_endpoints": [
-                f"{BASE_URL}/debug/recent-videos",
-                f"{BASE_URL}/debug/check-db"
-            ]
+            "logging": "enhanced_tracking_enabled"
         }
     except Exception as e:
         log_error("Health check failed", "System", e)
@@ -2632,7 +1920,95 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
-        } 
+        }
+
+@app.get("/api/videos/{video_id}")
+async def get_video_info(video_id: int, request: Request):
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"error": "Ikke autoriseret"}, status_code=401)
+        
+        video = execute_query(
+            "SELECT v.*, a.name as avatar_name FROM videos v JOIN avatars a ON v.avatar_id = a.id WHERE v.id = ? AND v.user_id = ?",
+            (video_id, user["id"]),
+            fetch_one=True
+        )
+        
+        if not video:
+            log_warning(f"Video {video_id} not found for user {user['id']}", "API")
+            return JSONResponse({"error": "Video ikke fundet"}, status_code=404)
+        
+        return JSONResponse({
+            "id": video["id"],
+            "title": video["title"],
+            "status": video["status"],
+            "avatar_name": video["avatar_name"],
+            "video_path": video["video_path"],
+            "created_at": video["created_at"],
+            "heygen_video_id": video["heygen_video_id"]
+        })
+    except Exception as e:
+        log_error(f"Get video info failed for video {video_id}", "API", e)
+        return JSONResponse({"error": "Server error"}, status_code=500)
+
+@app.get("/api/videos/{video_id}/download")
+async def download_video_endpoint(video_id: int, request: Request):
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"error": "Ikke autoriseret"}, status_code=401)
+        
+        video = execute_query(
+            "SELECT * FROM videos WHERE id = ? AND user_id = ?",
+            (video_id, user["id"]),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse({"error": "Video ikke fundet"}, status_code=404)
+        
+        if video["status"] != "completed" or not video["video_path"]:
+            return JSONResponse({"error": "Video ikke færdig endnu"}, status_code=400)
+        
+        log_info(f"Video download requested: {video['title']} by user {user['username']}", "API")
+        
+        return JSONResponse({
+            "download_url": video["video_path"],
+            "filename": f"{video['title']}.mp4"
+        })
+    except Exception as e:
+        log_error(f"Video download failed for video {video_id}", "API", e)
+        return JSONResponse({"error": "Download error"}, status_code=500)
+
+#####################################################################
+# ADMIN UTILITIES
+#####################################################################
+
+@app.get("/admin/quickclean")
+async def quick_clean(request: Request):
+    try:
+        admin = get_current_user(request)
+        if not admin or admin.get("is_admin", 0) != 1:
+            return HTMLResponse("Access denied")
+        
+        log_warning("TOTAL RESET initiated by admin", "Admin")
+        
+        videos_result = execute_query("DELETE FROM videos")
+        avatars_result = execute_query("DELETE FROM avatars")
+        
+        log_warning(f"TOTAL RESET completed: {videos_result['rowcount']} videos, {avatars_result['rowcount']} avatars deleted", "Admin")
+        
+        return HTMLResponse(f"""
+        <h2>🧹 TOTAL RESET COMPLETE!</h2>
+        <p>Deleted {videos_result['rowcount']} videos and {avatars_result['rowcount']} avatars</p>
+        <a href='/admin/users'>Start Fresh - Create Avatars</a><br>
+        <a href='/admin'>Back to Admin Panel</a>
+        """)
+    except Exception as e:
+        log_error("Admin quickclean failed", "Admin", e)
+        return HTMLResponse("<h1>Error during cleanup</h1><a href='/admin'>Back to Admin</a>")
+
 #####################################################################
 # APPLICATION STARTUP EVENT
 #####################################################################
@@ -2647,12 +2023,11 @@ async def startup_event():
     log_info("Storage: Cloudinary CDN with local fallback", "System")
     log_info(f"Webhook Endpoint: {BASE_URL}/api/heygen/webhook", "System")
     log_info("Enhanced logging system enabled", "System")
-    log_info("Debug endpoints available: /debug/recent-videos and /debug/check-db", "System")
     
     if HEYGEN_API_KEY:
         test_heygen_connection()
     
-    log_info("🚀 MyAvatar application startup complete - READY FOR HEYGEN DEBUGGING!", "System")
+    log_info("🚀 MyAvatar application startup complete", "System")
 
 #####################################################################
 # MAIN ENTRY POINT
@@ -2671,14 +2046,5 @@ if __name__ == "__main__":
     print("🧹 CLEANUP - /admin/quickclean endpoint tilgængelig!")
     print("📊 ENHANCED LOGGING - /admin/logs for debugging!")
     print("🔍 ERROR TRACKING - comprehensive system monitoring!")
-    print("🐛 DEBUG ENDPOINTS - /debug/recent-videos & /debug/check-db!")
-    print("🔧 WEBHOOK FIXED - Now correctly extracts from event_data!")
-    print("📝 ENHANCED VIDEO CREATION - Comprehensive logging added!")
-    print("")
-    print("🔥 READY TO DEBUG THE HEYGEN INTEGRATION ISSUE!")
-    print("🎯 After creating a video, check /debug/recent-videos to see what's stored")
-    print("📡 Webhook will now correctly find videos by HeyGen ID")
     
-    uvicorn.run(app, host="0.0.0.0", port=8000)    
-
-
+    uvicorn.run(app, host="0.0.0.0", port=8000)
