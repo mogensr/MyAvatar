@@ -643,7 +643,7 @@ DASHBOARD_HTML = """
         .header { background: #333; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; }
         .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: none; cursor: pointer; }
+        .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; border: none; cursor: pointer; transition: transform 0.2s ease; }
         .btn:hover { background: #3730a3; }
         .user-info { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
@@ -1083,7 +1083,7 @@ async def admin_dashboard(request: Request):
                 body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
                 .header { background: #dc2626; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
                 .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-                .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; }
+                .btn { background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; border: none; cursor: pointer; }
                 .btn:hover { background: #3730a3; }
                 .btn-danger { background: #dc2626; }
                 .btn-danger:hover { background: #b91c1c; }
