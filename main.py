@@ -1418,7 +1418,7 @@ async def admin_dashboard(request: Request):
         
         log_info(f"Admin dashboard accessed by: {user['username']}", "Admin")
         
-        admin_html = textwrap.dedent('''
+        admin_html = textwrap.dedent("""
 <!DOCTYPE html>
 <html>
 <head>
