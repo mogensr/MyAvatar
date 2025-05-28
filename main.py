@@ -1,4 +1,4 @@
-
+"""
 MyAvatar - Complete AI Avatar Video Generation Platform
 ========================================================
 Railway-compatible with PostgreSQL + HeyGen Webhook + CASCADE DELETE + Enhanced Logging
@@ -626,14 +626,6 @@ MARKETING_HTML = '''
             <div class="links">
                 <p>Test login: admin@myavatar.com / admin123</p>
                 <p>Eller: test@example.com / password123</p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-'''
-
-DASHBOARD_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
