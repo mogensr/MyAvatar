@@ -1374,45 +1374,36 @@ async def dashboard(request: Request):
         <div class="card">
             <h2>🎥 Dine Videoer</h2>
             <div class="video-list">
-            {% for video in videos %}
-                <div class="video-item">
-                    <div class="video-info">
-                        <h4>{{ video.title }}</h4>
-                        <p>Avatar: {{ video.avatar_name }} | Oprettet: {{ video.created_at }}</p>
-                        <span class="video-status status-{{ video.status }}">
-                            {% if video.status == 'completed' %}Færdig
-                            {% elif video.status == 'processing' %}Behandles
-                            {% elif video.status == 'failed' %}Fejlet
-                            {% elif video.status == 'pending' %}Afventer
-                            {% else %}{{ video.status }}
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="video-actions">
-                        {% if video.status == 'completed' and video.video_path %}
-                        <a href="{{ video.video_path }}" target="_blank" class="btn">▶️ Afspil</a>
-                        <button class="btn" onclick="downloadVideo({{ video.id }})">📥 Download</button>
-                        {% endif %}
-                    </div>
-                </div>
+                {% if videos|length > 0 %}
+                    {% for video in videos %}
+                        <div class="video-item">
+                            <div class="video-info">
+                                <h4>{{ video.title }}</h4>
+                                <p>Avatar: {{ video.avatar_name }} | Oprettet: {{ video.created_at }}</p>
+                                <span class="video-status status-{{ video.status }}">
+                                    {% if video.status == 'completed' %}Færdig
+                                    {% elif video.status == 'processing' %}Behandles
+                                    {% elif video.status == 'failed' %}Fejlet
+                                    {% elif video.status == 'pending' %}Afventer
+                                    {% else %}{{ video.status }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="video-actions">
+                                {% if video.status == 'completed' and video.video_path %}
+                                <a href="{{ video.video_path }}" target="_blank" class="btn">▶️ Afspil</a>
+                                <button class="btn" onclick="downloadVideo({{ video.id }})">📥 Download</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
                 {% else %}
-                <div class="card">
-                    <h2>❌ Ingen Avatars</h2>
-                    <p>Du har ingen avatars endnu. Kontakt admin for at få oprettet avatars til din konto.</p>
-                    {% if is_admin %}
-                    <p><a href="/admin" class="btn">Gå til Admin Panel for at tilføje avatars</a></p>
-                    {% endif %}
-                </div>
+                    <div class="card">
+                        <h2>❌ Ingen videoer</h2>
+                        <p>Du har ingen videoer endnu.</p>
+                    </div>
                 {% endif %}
             </div>
-        </body>
-        </html>
-        '''))
-        rendered_html = dashboard_html.render(
-            request=request,
-            user=user,
-            avatars=avatars,
-            videos=videos,
             is_admin=user.get("is_admin", 0) == 1
         )
         return HTMLResponse(content=rendered_html)
