@@ -400,8 +400,8 @@ def init_database():
             )
         ''')
 
-cursor.execute("SELECT COUNT(*) as user_count FROM users")
-    result = cursor.fetchone()
+        cursor.execute("SELECT COUNT(*) as user_count FROM users")
+        result = cursor.fetchone()
     
     if is_postgresql:
         existing_users = result['user_count']
