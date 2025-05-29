@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Skabte Windows-script og README til projektautomatisering2sDet lyder som om brugeren ønsker et script, der kan hjælpe dem med at arbejde videre med projektet. Jeg vil lave et bash/batch script, der kan automatisere nogle af de almindelige opgaver, såsom at starte serverne, oprette de nødvendige mapper og filer, osv.
 Lad mig lave to scripts:
 
@@ -235,3 +236,242 @@ MyAvatar
 
 ## Husk at starte begge servere
 - Backend og frontend skal køre samtidigt i separate kommandovindueer
+=======
+Skabte Windows-script og README til projektautomatisering2sDet lyder som om brugeren ønsker et script, der kan hjælpe dem med at arbejde videre med projektet. Jeg vil lave et bash/batch script, der kan automatisere nogle af de almindelige opgaver, såsom at starte serverne, oprette de nødvendige mapper og filer, osv.
+Lad mig lave to scripts:
+
+Et Windows batch script (.bat) - siden brugeren bruger Windows (vi ser "C:\Users..." i deres kommandoer)
+En README med hurtig reference til, hvordan man bruger systemet
+Her er et script til at hjælpe dig med at arbejde videre med projektet. Jeg laver et Windows batch script (.bat fil) og en hurtig referenceguide.myavatar-helper.batCode @echo off
+REM MyAvatar Development Helper Script
+echo MyAvatar Development Helper Script
+echo ================================
+echo.
+
+REM Opretter mapper hvis de ikke eksisterer
+if not exist "static\js" (
+    echo Opretter static\js mappe...
+    mkdiMyAvatar Hurtig ReferenceDocument # MyAvatar Portal - Hurtig Reference
+
+## Struktur
+```
+MyAvatar
+├── static
+│   ├── css
+│   └── js
+│       ├── myavatar-dashboard.js  (React-dashboard komponent)
+│       ├── api-service.js         (API service modul)
+│       ├── app-config.js          Jeg har lavet to filer til dig, som vil hjælpe dig med at arbejde videre med projektet:
+1. myavatar-helper.bat
+Dette er et Windows batch script, som gør det lettere at:
+
+Starte både backend og frontend servere
+Åbne dashboard og login i browseren
+Oprette nødvendige mapper og filer
+
+Sådan bruger du scriptet:
+
+Gem filen som myavatar-helper.bat i dit projektrod (samme mappe som main.py)
+Dobbeltklik på filen for at køre den
+Vælg den ønskede handling ved at indtaste et tal (1-6)
+
+Funktioner:
+
+Option 1: Starter både backend og frontend og åbner login-siden i browseren
+Option 2: Starter kun backend serveren (port 8000)
+Option 3: Starter kun frontend serveren (port 8001)
+Option 4: Åbner dashboard i browseren
+Option 5: Åbner login i browseren
+Option 6: Genererer eksempel JavaScript-filer (hvis du har brug for at gendanne dem)
+
+2. MyAvatar Hurtig Reference
+Dette er en dokumentationsfil, der indeholder:
+
+Projektstruktur oversigt
+Trin til at komme i gang
+Liste over vigtige URL'er
+API-endpoints
+Fejlfindingstips
+Kode-tips
+
+Denne reference vil være nyttig, når du arbejder med projektet, og hjælpe dig med at huske de vigtigste dele af systemet.
+Gem disse filer i dit projekt, og de vil gøre det meget lettere at arbejde med MyAvatar Portal fremover!
+
+
+@echo off
+REM MyAvatar Development Helper Script
+echo MyAvatar Development Helper Script
+echo ================================
+echo.
+
+REM Opretter mapper hvis de ikke eksisterer
+if not exist "static\js" (
+    echo Opretter static\js mappe...
+    mkdir "static\js"
+)
+
+REM Vælg handling
+echo Vælg handling:
+echo 1. Start begge servere (backend + frontend)
+echo 2. Start kun backend (port 8000)
+echo 3. Start kun frontend (port 8001)
+echo 4. Åbn dashboard i browser
+echo 5. Åbn login i browser
+echo 6. Generer eksempel-indhold
+echo.
+
+set /p choice="Vælg handling (1-6): "
+
+REM Aktivér det virtuelle miljø
+call venv\Scripts\activate.bat
+
+if "%choice%"=="1" (
+    echo Starter begge servere...
+    start cmd /k "venv\Scripts\activate.bat && python main.py"
+    timeout /t 5
+    start cmd /k "venv\Scripts\activate.bat && python portal_app.py"
+    timeout /t 2
+    start http://localhost:8001/login
+)
+
+if "%choice%"=="2" (
+    echo Starter backend server (port 8000)...
+    python main.py
+)
+
+if "%choice%"=="3" (
+    echo Starter frontend server (port 8001)...
+    python portal_app.py
+)
+
+if "%choice%"=="4" (
+    echo Åbner dashboard i browseren...
+    start http://localhost:8001/dashboard
+)
+
+if "%choice%"=="5" (
+    echo Åbner login i browseren...
+    start http://localhost:8001/login
+)
+
+if "%choice%"=="6" (
+    echo Generer eksempel-indhold...
+    
+    REM Skaber eksempel på api-service.js
+    echo Opretter api-service.js...
+    echo import axios from 'axios'; > static\js\api-service.js
+    echo. >> static\js\api-service.js
+    echo const API_BASE = 'http://localhost:8001'; >> static\js\api-service.js
+    echo. >> static\js\api-service.js
+    echo // Configure axios instance >> static\js\api-service.js
+    echo const apiClient = axios.create({ >> static\js\api-service.js
+    echo   baseURL: API_BASE, >> static\js\api-service.js
+    echo   headers: { >> static\js\api-service.js
+    echo     'Content-Type': 'application/json', >> static\js\api-service.js
+    echo   }, >> static\js\api-service.js
+    echo }); >> static\js\api-service.js
+    echo. >> static\js\api-service.js
+    echo // API Service class with methods for all needed endpoints >> static\js\api-service.js
+    echo class APIService { >> static\js\api-service.js
+    echo   // Video generation method >> static\js\api-service.js
+    echo   static async generateVideo(audioBlob, avatarId) { >> static\js\api-service.js
+    echo     try { >> static\js\api-service.js
+    echo       const formData = new FormData(); >> static\js\api-service.js
+    echo       formData.append('audio', audioBlob, 'recording.webm'); >> static\js\api-service.js
+    echo       formData.append('avatar_id', avatarId); >> static\js\api-service.js
+    echo       const response = await fetch(`${API_BASE}/api/video/generate`, { >> static\js\api-service.js
+    echo         method: 'POST', >> static\js\api-service.js
+    echo         body: formData, >> static\js\api-service.js
+    echo       }); >> static\js\api-service.js
+    echo       return await response.json(); >> static\js\api-service.js
+    echo     } catch (error) { >> static\js\api-service.js
+    echo       console.error('Error generating video:', error); >> static\js\api-service.js
+    echo       throw error; >> static\js\api-service.js
+    echo     } >> static\js\api-service.js
+    echo   } >> static\js\api-service.js
+    echo } >> static\js\api-service.js
+    echo. >> static\js\api-service.js
+    echo export default APIService; >> static\js\api-service.js
+    
+    REM Skaber eksempel på app-config.js
+    echo Opretter app-config.js...
+    echo // Configuration file for MyAvatar Portal > static\js\app-config.js
+    echo. >> static\js\app-config.js
+    echo const config = { >> static\js\app-config.js
+    echo   api: { >> static\js\app-config.js
+    echo     baseUrl: 'http://localhost:8001', >> static\js\app-config.js
+    echo     endpoints: { >> static\js\app-config.js
+    echo       generateVideo: '/api/video/generate', >> static\js\app-config.js
+    echo       videoStatus: '/api/video/status', >> static\js\app-config.js
+    echo     } >> static\js\app-config.js
+    echo   }, >> static\js\app-config.js
+    echo   ui: { >> static\js\app-config.js
+    echo     brandName: 'MyAvatar Portal', >> static\js\app-config.js
+    echo     maxRecordingTime: 300, >> static\js\app-config.js
+    echo   } >> static\js\app-config.js
+    echo }; >> static\js\app-config.js
+    echo. >> static\js\app-config.js
+    echo export default config; >> static\js\app-config.js
+    
+    echo Eksempel-indhold genereret.
+)
+
+echo.
+echo Script afsluttet!
+
+
+# MyAvatar Portal - Hurtig Reference
+
+## Struktur
+```
+MyAvatar
+├── static
+│   ├── css
+│   └── js
+│       ├── myavatar-dashboard.js  (React-dashboard komponent)
+│       ├── api-service.js         (API service modul)
+│       ├── app-config.js          (Konfigurationsfil)
+│       └── audio-recorder.js      (Lydoptagelsesmodul)
+├── templates
+│   └── portal
+│       ├── dashboard.html         (Dashboard template)
+│       ├── login.html             (Login template)
+│       └── register.html          (Registreringstemplate)
+├── portal
+│   ├── auth.py                    (Login/bruger-håndtering)
+│   └── main.py                    (Backend API)
+├── main.py                        (Hoved-API-server, port 8000)
+└── portal_app.py                  (Frontend-server, port 8001)
+```
+
+## Kom i gang
+1. Aktivér miljøet: `venv\Scripts\activate`
+2. Start backend: `python main.py` (kører på port 8000)
+3. Start frontend: `python portal_app.py` (kører på port 8001)
+4. Åbn browseren på: `http://localhost:8001/login`
+
+## Vigtige URL'er
+- Login: `http://localhost:8001/login`
+- Dashboard: `http://localhost:8001/dashboard`
+- Register: `http://localhost:8001/auth/register` 
+- API-dokumentation: `http://localhost:8000/docs`
+
+## API-endpoints
+- `/api/video/generate` (POST) - Generer video med lyd + avatar
+- `/api/video/status/{video_id}` (GET) - Tjek status for videogenerering
+- `/avatars` (GET) - Hent tilgængelige avatarer
+
+## Fejlfinding
+- **500 fejl ved indlæsning af dashboard**: Kontroller template-syntaks i dashboard.html
+- **Manglende ikoner**: Sørg for at Lucide script er indlæst i dashboard.html
+- **JavaScript-fejl**: Tjek browser-konsollen (F12)
+- **API-forbindelsesfejl**: Kontroller om både backend og frontend kører
+
+## Kode-tips
+- React-komponenter bruger inline styles `style={{...}}` for at undgå Jinja2-konflikter
+- Brug `window.Dashboard = Dashboard` i JS-filer for at eksportere komponenter globalt
+- Vær opmærksom på ports (8000 for API, 8001 for frontend)
+
+## Husk at starte begge servere
+- Backend og frontend skal køre samtidigt i separate kommandovindueer
+>>>>>>> e05cedf0924ddae2af19a40187fcfe08559f8d24
