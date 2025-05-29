@@ -537,6 +537,19 @@ async def user_dashboard(request: Request):
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Homepage route
+from fastapi.responses import HTMLResponse, FileResponse
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return "<h1>Welcome to MyAvatar!</h1><p>The API is running.</p>"
+
+# Favicon route
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
 #####################################################################
 # CHAPTER 15: MAIN ENTRY POINT
 #####################################################################
