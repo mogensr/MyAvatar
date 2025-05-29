@@ -541,9 +541,11 @@ templates = Jinja2Templates(directory="templates")
 # Homepage route
 from fastapi.responses import HTMLResponse, FileResponse
 
-@app.get("/", response_class=HTMLResponse)
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
 async def root():
-    return "<h1>Welcome to MyAvatar!</h1><p>The API is running.</p>"
+    return RedirectResponse(url="/dashboard")
 
 # Favicon route
 @app.get("/favicon.ico", include_in_schema=False)
