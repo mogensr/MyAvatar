@@ -1,7 +1,6 @@
-console.log("=== TOP OF myavatar-dashboard.js ===");
+console.log("=== TOP OF myavatar-dashboard-copy.js ===");
 console.log("MyAvatar dashboard JS loaded! [FORCE REDEPLOY 2025-05-30-11:00]");
-
-// static/js/myavatar-dashboard.js
+// static/js/myavatar-dashboard-copy.js
 // React-dashboard til MyAvatar Portal
 // Med faner: Avatar, Video, Optag
 
@@ -274,6 +273,7 @@ const startRec = async () => {
   );
 }
 
+console.log("About to set window.MyAvatarDashboard");
 window.MyAvatarDashboard = Dashboard;
 console.log("=== window.MyAvatarDashboard is now set ===");
 // force-redeploy-2025-05-30 // version: 2025-05-30-10-48
