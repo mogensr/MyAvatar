@@ -3,7 +3,11 @@
 
 window.AppConfig = {
   api: {
-    baseUrl: ""
+
+    baseUrl: "",
+
+  
+
     endpoints: {
       user: "/api/user",
       avatars: "/api/avatars",
