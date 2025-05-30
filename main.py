@@ -507,6 +507,10 @@ async def startup_event():
 # CHAPTER 11: AUTHENTICATION & SESSION MANAGEMENT
 #####################################################################
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("portal/login.html", {"request": request})
+
 @app.post("/login", response_class=HTMLResponse)
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     try:
