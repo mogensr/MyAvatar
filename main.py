@@ -525,12 +525,16 @@ async def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 
+from fastapi.responses import FileResponse
+
 @app.get("/dashboard", response_class=HTMLResponse)
-async def user_dashboard(request: Request):
+async def dashboard(request: Request):
     user = get_current_user(request)
     if not user:
-        return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
-    return HTMLResponse(f"<h1>User Dashboard for {user['username']}</h1><a href='/logout'>Log Ud</a>")
+        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    # Serve the modern dashboard
+    return FileResponse("static/dashboard.html")
+
 #####################################################################
 # CHAPTER 14: STATIC FILES & TEMPLATE SETUP
 #####################################################################
@@ -541,9 +545,11 @@ templates = Jinja2Templates(directory="templates")
 # Homepage route
 from fastapi.responses import HTMLResponse, FileResponse
 
-@app.get("/", response_class=HTMLResponse)
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
 async def root():
-    return "<h1>Welcome to MyAvatar!</h1><p>The API is running.</p>"
+    return RedirectResponse(url="/dashboard")
 
 # Favicon route
 @app.get("/favicon.ico", include_in_schema=False)
