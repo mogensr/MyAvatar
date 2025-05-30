@@ -211,7 +211,7 @@ async def admin_dashboard(request: Request):
                 <div>
                     <a href="/dashboard" class="btn">Dashboard</a>
                     <a href="/admin/logs" class="btn btn-success">System Logs</a>
-                    <a href="/logout" class="btn">Log Ud</a>
+                    <a href="/auth/logout" class="btn">Log Ud</a>
                 </div>
             </div>
             <div class="card">
@@ -507,27 +507,33 @@ async def startup_event():
 # CHAPTER 11: AUTHENTICATION & SESSION MANAGEMENT
 #####################################################################
 
-@app.get("/login", response_class=HTMLResponse)
+@app.get("/auth/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("portal/login.html", {"request": request})
 
-@app.post("/login", response_class=HTMLResponse)
+@app.post("/auth/login", response_class=HTMLResponse)
 async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     try:
-        user = execute_query("SELECT id, username, password, is_admin FROM users WHERE username = ?", (username,), fetch_one=True)
-        if user and verify_password(password, user["password"]):
+        user = execute_query("SELECT id, username, hashed_password, is_admin FROM users WHERE username = ?", (username,), fetch_one=True)
+        if user and verify_password(password, user["hashed_password"]):    
             request.session["user"] = {"id": user["id"], "username": user["username"], "is_admin": user["is_admin"]}
             return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
         else:
-            return HTMLResponse("<h2>Login failed</h2><a href='/'>Back</a>")
+            return templates.TemplateResponse("portal/login.html", {
+                "request": request,
+                "error": "Invalid username or password"
+            })
     except Exception as e:
         log_error("Login failed", "Auth", e)
-        return HTMLResponse("<h2>Login error</h2><a href='/'>Back</a>")
-
-@app.get("/logout")
+        return templates.TemplateResponse("portal/login.html", {
+            "request": request,
+            "error": "An error occurred during login. Please try again."
+        })
+    
+@app.get("/auth/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
 
 from fastapi.responses import FileResponse
 
@@ -535,7 +541,7 @@ from fastapi.responses import FileResponse
 async def dashboard(request: Request):
     user = get_current_user(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
     # Serve the modern dashboard
     return FileResponse("static/dashboard.html")
 
