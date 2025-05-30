@@ -1,6 +1,6 @@
-console.log("MyAvatar dashboard JS loaded!");
+console.log("MyAvatar dashboard JS loaded! [FORCE REDEPLOY 2025-05-30-11:00]");
 
-console.log("MyAvatar dashboard JS loaded!");
+console.log("MyAvatar dashboard JS loaded! [FORCE REDEPLOY 2025-05-30-11:00]");
 // static/js/myavatar-dashboard.js
 // React-dashboard til MyAvatar Portal
 // Med faner: Avatar, Video, Optag
@@ -275,4 +275,5 @@ const startRec = async () => {
 }
 
 window.MyAvatarDashboard = Dashboard;
-// force-redeploy-2025-05-30
+console.log("=== window.MyAvatarDashboard is now set ===");
+// force-redeploy-2025-05-30 // version: 2025-05-30-10-48
