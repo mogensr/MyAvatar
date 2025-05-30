@@ -562,9 +562,9 @@ async def root():
     return RedirectResponse(url="/dashboard")
 
 # Favicon route
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    return FileResponse("static/favicon.ico")
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/auth/login")
 
 #####################################################################
 # CHAPTER 15: MAIN ENTRY POINT
