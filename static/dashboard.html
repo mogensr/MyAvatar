@@ -61,8 +61,8 @@
         </div>
     </div>
     <div class="footer">&copy; 2025 MyAvatar &mdash; All rights reserved.</div>
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="/static/js/app-config.js"></script>
     <script src="/static/js/api-service.js"></script>
     <script src="/static/js/audio-recorder.js"></script>
@@ -70,8 +70,9 @@
     <script>
       // Mount the React dashboard
       if (window.MyAvatarDashboard) {
-        ReactDOM.createRoot(document.getElementById('root')).render(
-          React.createElement(window.MyAvatarDashboard)
+        ReactDOM.render(
+          React.createElement(window.MyAvatarDashboard),
+          document.getElementById('root')
         );
       } else {
         document.getElementById('root').innerHTML = '<div class="alert alert-danger">Dashboard failed to load. Please contact support.</div>';
