@@ -58,4 +58,4 @@ def register_user(
     db.commit()
     db.refresh(user)
 
-    return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
