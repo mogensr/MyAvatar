@@ -3,7 +3,7 @@
 
 window.AppConfig = {
   api: {
-    baseUrl: "http://localhost:8000",
+    baseUrl: ""
     endpoints: {
       user: "/api/user",
       avatars: "/api/avatars",
