@@ -557,9 +557,6 @@ from fastapi.responses import HTMLResponse, FileResponse
 
 from fastapi.responses import RedirectResponse
 
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/dashboard")
 
 # Favicon route
 @app.get("/", include_in_schema=False)
