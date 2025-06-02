@@ -12,16 +12,16 @@ from pathlib import Path
 def resize_background(bg, target_size):
     return cv2.resize(bg, (target_size[1], target_size[0]))
 
-def load_image(image_path):
-    image = Image.open(image_path).convert("RGB")
+def load_image(avatar_url):
+    image = Image.open(avatar_url).convert("RGB")
     return np.array(image)
 
-def apply_rvm_matting(video_path, image_path, output_path, model_path="rvm_mobilenetv3_fp32.onnx"):
+def apply_rvm_matting(video_path, avatar_url, output_path, model_path="rvm_mobilenetv3_fp32.onnx"):
     # Load ONNX model
     ort_session = ort.InferenceSession(model_path)
 
     # Prepare background image
-    background = load_image(image_path)
+    background = load_image(avatar_url)
 
     # Read video
     cap = cv2.VideoCapture(video_path)
@@ -66,7 +66,7 @@ def apply_rvm_matting(video_path, image_path, output_path, model_path="rvm_mobil
     final.write_videofile(output_path, codec="libx264", audio_codec="aac")
     os.remove(tmp_video_path)
 
-def replace_background(video_path, image_path, output_path):
-    print(f"Processing {video_path} with background {image_path}")
-    apply_rvm_matting(video_path, image_path, output_path)
+def replace_background(video_path, avatar_url, output_path):
+    print(f"Processing {video_path} with background {avatar_url}")
+    apply_rvm_matting(video_path, avatar_url, output_path)
     print(f"Output saved to {output_path}")

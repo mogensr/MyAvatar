@@ -22,14 +22,14 @@ def run_videotix_gui():
             f.write(video_file.read())
 
         # Gem billede
-        image_path = temp_dir / image_file.name
+        avatar_url = temp_dir / image_file.name
         image_bytes = image_file.read()
 
         if len(image_bytes) < 100:
             st.error("❌ Det uploadede billede er tomt eller defekt.")
             return
         else:
-            with open(image_path, "wb") as f:
+            with open(avatar_url, "wb") as f:
                 f.write(image_bytes)
 
         try:
@@ -43,7 +43,7 @@ def run_videotix_gui():
             output_path = output_dir / f"processed_{video_file.name}"
 
             with st.spinner("Behandler video, vent venligst..."):
-                replace_background(str(video_path), str(image_path), str(output_path))
+                replace_background(str(video_path), str(avatar_url), str(output_path))
 
             st.success("✅ Video færdigbehandlet!")
             st.video(str(output_path))

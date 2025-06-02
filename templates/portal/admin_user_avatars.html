@@ -9,6 +9,64 @@
 <body>
 <div class="container mt-5">
     <h2 class="mb-4">Avatarer for {{ user.username }}</h2>
+    <a href="/admin/user/{{ user.id }}" class="btn btn-secondary mb-3">Tilbage til brugerredigering</a>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload New Avatar for User {{ user.username }}</h5>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
+                    <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" placeholder="Enter HeyGen Avatar ID">
+                </div>
+                <div class="col-md-3">
+                    <button id="fetchHeygenBtn" class="btn btn-primary mt-3" type="button">Fetch from HeyGen</button>
+                </div>
+            </div>
+            <div id="heygenAvatarResult" class="mt-3"></div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fetchBtn = document.getElementById('fetchHeygenBtn');
+        const resultDiv = document.getElementById('heygenAvatarResult');
+        fetchBtn.addEventListener('click', async function() {
+            const avatarId = document.getElementById('heygen_avatar_id').value.trim();
+            if (!avatarId) {
+                resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a HeyGen Avatar ID.</div>';
+                return;
+            }
+            fetchBtn.disabled = true;
+            resultDiv.innerHTML = '<div class="text-info">Fetching avatar from HeyGen...</div>';
+            try {
+                const resp = await fetch(`/admin/user/{{ user.id }}/fetch-heygen-avatar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ heygen_avatar_id: avatarId })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">Avatar fetched and saved!</div>
+                        <div class="d-flex align-items-center mt-2">
+                            <img src="${data.avatar.avatar_url}" alt="Avatar" style="height:48px; margin-right:12px;">
+                            <div>
+                                <strong>${data.avatar.avatar_name}</strong><br>
+                                HeyGen ID: ${data.avatar.heygen_avatar_id}
+                            </div>
+                        </div>
+                    `;
+                    setTimeout(() => window.location.reload(), 1500); // Reload to show in table
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Failed to fetch avatar.'}</div>`;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">Error fetching from HeyGen.</div>';
+            } finally {
+                fetchBtn.disabled = false;
+            }
+        });
+    });
+    </script>
     <form method="post" action="/admin/user/{{ user.id }}/avatars" enctype="multipart/form-data" class="mb-4">
         <h5>➕ Tilføj ny avatar</h5>
         <div class="row g-2 align-items-end">
@@ -17,12 +75,8 @@
                 <input type="text" class="form-control" id="avatar_name" name="avatar_name" required>
             </div>
             <div class="col-md-4">
-                <label for="heygen_avatar_id" class="form-label">HeyGen ID</label>
-                <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" required>
-            </div>
-            <div class="col-md-4">
                 <label for="avatar_img" class="form-label">Avatar-billede</label>
-                <input type="file" class="form-control" id="avatar_img" name="avatar_img" accept="image/*" required>
+                <input type="file" class="form-control" id="avatar_img" name="avatar_url" accept="image/*" required>
             </div>
         </div>
         <button type="submit" class="btn btn-success mt-3">Tilføj avatar</button>
@@ -41,9 +95,9 @@
         <tbody>
         {% for avatar in avatars %}
             <tr>
-                <td>{{ avatar.name }}</td>
+                <td>{{ avatar.avatar_name }}</td>
                 <td>{{ avatar.heygen_avatar_id or '' }}</td>
-                <td>{% if avatar.image_path %}<img src="{{ avatar.image_path }}" alt="Avatar" style="height:48px;">{% endif %}</td>
+                <td>{% if avatar.avatar_url %}<img src="{{ avatar.avatar_url }}" alt="Avatar" style="height:48px;">{% endif %}</td>
                 <td>{{ avatar.created_at }}</td>
                 <td>
                     <form method="post" action="/admin/user/{{ user.id }}/avatars/delete/{{ avatar.id }}" style="display:inline;">

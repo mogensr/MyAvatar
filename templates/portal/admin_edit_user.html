@@ -9,6 +9,7 @@
 <body>
 <div class="container mt-5">
     <h2 class="mb-4">✏️ Rediger bruger</h2>
+
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
@@ -18,7 +19,7 @@
     <form method="post" action="/admin/edit-user/{{ user.id }}" enctype="multipart/form-data">
         <div class="mb-3">
             <label for="username" class="form-label">Navn</label>
-            <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+            <input type="text" class="form-control" id="useravatar_name" name="useravatar_name" value="{{ user.useravatar_name }}" required>
         </div>
         <div class="mb-3">
             <label for="email" class="form-label">Email</label>
@@ -37,6 +38,58 @@
             {% if user.avatar_img_url %}<br><img src="{{ user.avatar_img_url }}" alt="Avatar" style="height:48px;">{% endif %}
             <input type="file" class="form-control" id="avatar_img" name="avatar_img" accept="image/*">
         </div>
+        <div class="mb-3">
+            <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" placeholder="Enter HeyGen Avatar ID">
+                <button id="fetchHeygenBtn" class="btn btn-primary" type="button">Fetch from HeyGen</button>
+            </div>
+            <div id="heygenAvatarResult" class="mt-2"></div>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fetchBtn = document.getElementById('fetchHeygenBtn');
+            const resultDiv = document.getElementById('heygenAvatarResult');
+            if (fetchBtn) {
+                fetchBtn.addEventListener('click', async function() {
+                    const avatarId = document.getElementById('heygen_avatar_id').value.trim();
+                    if (!avatarId) {
+                        resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a HeyGen Avatar ID.</div>';
+                        return;
+                    }
+                    fetchBtn.disabled = true;
+                    resultDiv.innerHTML = '<div class="text-info">Fetching avatar from HeyGen...</div>';
+                    try {
+                        const resp = await fetch(`/admin/user/{{ user.id }}/fetch-heygen-avatar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ heygen_avatar_id: avatarId })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            resultDiv.innerHTML = `
+                                <div class="alert alert-success">Avatar fetched and saved!</div>
+                                <div class="d-flex align-items-center mt-2">
+                                    <img src="${data.avatar.avatar_url}" alt="Avatar" style="height:48px; margin-right:12px;">
+                                    <div>
+                                        <strong>${data.avatar.avatar_name}</strong><br>
+                                        HeyGen ID: ${data.avatar.heygen_avatar_id}
+                                    </div>
+                                </div>
+                            `;
+                            setTimeout(() => window.location.reload(), 1500);
+                        } else {
+                            resultDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Failed to fetch avatar.'}</div>`;
+                        }
+                    } catch (e) {
+                        resultDiv.innerHTML = '<div class="alert alert-danger">Error fetching from HeyGen.</div>';
+                    } finally {
+                        fetchBtn.disabled = false;
+                    }
+                });
+            }
+        });
+        </script>
         <div class="mb-3">
             <label for="logo_img" class="form-label">Logo</label>
             {% if user.logo_url %}<br><img src="{{ user.logo_url }}" alt="Logo" style="height:48px;">{% endif %}

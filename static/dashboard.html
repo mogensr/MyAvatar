@@ -1,82 +1,1036 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyAvatar Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>MyAvatar Studio</title>
+    
+    <!-- ==================== CHAPTER 1: STYLES ==================== -->
     <style>
+        /* === 1.1 Reset & Base === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background: #f4f6f8;
-            color: #23272f;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            color: #1f2937;
+            line-height: 1.6;
         }
-        .dashboard-header {
-            background: #23272f;
-            color: #fff;
-            padding: 32px 0 16px 0;
-            border-bottom-left-radius: 24px;
-            border-bottom-right-radius: 24px;
+        
+        /* === 1.2 Header === */
+        .header {
+            background: #4f46e5;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* === 1.3 Layout === */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* === 1.4 Forms === */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+        
+        .form-hint {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        /* === 1.5 Avatars === */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .avatar-item {
             text-align: center;
-            margin-bottom: 32px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .dashboard-header h1 {
-            font-weight: 700;
-            letter-spacing: 1px;
+        
+        .avatar-item:hover {
+            border-color: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .dashboard-section {
-            background: #fff;
-            border-radius: 18px;
-            box-shadow: 0 2px 12px #0001;
-            padding: 32px 24px;
-            margin-bottom: 32px;
+        
+        .avatar-item.selected {
+            border-color: #4f46e5;
+            background: #eef2ff;
         }
-        .nav-tabs .nav-link.active {
-            background: #e0e7ef;
-            color: #23272f;
+        
+        .avatar-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
         }
-        .nav-tabs .nav-link {
-            color: #23272f;
+        
+        .avatar-name {
+            font-weight: 600;
+            font-size: 0.875rem;
         }
-        .footer {
+        
+        .heygen-id {
+            font-size: 0.75rem;
+            color: #6b7280;
+            word-break: break-all;
+        }
+        
+        /* === 1.6 Recording === */
+        .recording-section {
             text-align: center;
-            color: #aaa;
-            padding: 16px 0;
-            font-size: 0.95em;
+            padding: 2rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
         }
-        @media (max-width: 600px) {
-            .dashboard-section { padding: 18px 6px; }
-            .dashboard-header { padding: 18px 0 8px 0; }
+        
+        .record-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            background: #4f46e5;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 1rem;
+        }
+        
+        .record-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+        }
+        
+        .record-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .record-btn.recording {
+            background: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .recording-status {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .recording-timer {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4f46e5;
+            font-family: monospace;
+        }
+        
+        /* === 1.7 Audio Preview === */
+        .audio-preview {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        
+        .audio-player {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        /* === 1.8 Buttons === */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+        
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        /* === 1.9 Videos Grid === */
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .video-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+        
+        .video-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .video-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+        
+        .video-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-processing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .video-date {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        
+        .video-player {
+            width: 100%;
+            max-height: 200px;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* === 1.10 Loading & States === */
+        .spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #e5e7eb;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* === 1.11 Modal === */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 4px solid #e5e7eb;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        /* === 1.12 Toast Notifications === */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+        
+        .toast {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .toast.success {
+            border-left: 4px solid #10b981;
+        }
+        
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+        
+        /* === 1.13 Utilities === */
+        .hidden {
+            display: none;
+        }
+        
+        /* === 1.14 Debug Info === */
+        .debug-info {
+            background: #f3f4f6;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-family: monospace;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-header">
-        <h1>MyAvatar Dashboard</h1>
-        <p style="font-size:1.1em; opacity:0.8;">Welcome! Manage your avatars, record and send videos, and more.</p>
-    </div>
+    <!-- ==================== CHAPTER 2: HTML STRUCTURE ==================== -->
+    
+    <!-- === 2.1 Header === -->
+    <header class="header">
+        <div class="logo">🎬 MyAvatar Studio</div>
+        <div class="user-section">
+            <span>Welcome, <span id="username">User</span></span>
+            <a href="/auth/logout" class="logout-btn">Sign Out</a>
+        </div>
+    </header>
+
+    <!-- === 2.2 Main Container === -->
     <div class="container">
-        <div class="dashboard-section">
-            <div id="root"></div>
+        
+        <!-- === 2.3 Create Video Card === -->
+        <div class="card">
+            <h2 class="card-title">➕ Create New Video</h2>
+            
+            <!-- Title Input -->
+            <div class="form-group">
+                <label class="form-label">Video Title</label>
+                <input 
+                    type="text" 
+                    id="videoTitle" 
+                    class="form-input" 
+                    placeholder="Enter a title for your video..."
+                    maxlength="100"
+                >
+                <div class="form-hint">Give your video a descriptive title</div>
+            </div>
+            
+            <!-- Avatar Selection -->
+            <div class="form-group">
+                <label class="form-label">Select Avatar</label>
+                <div id="avatarGrid" class="avatar-grid">
+                    <div class="empty-state">
+                        <div class="spinner"></div>
+                        <p>Loading avatars...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recording Section -->
+            <div class="form-group">
+                <label class="form-label">Record Your Voice</label>
+                <div class="recording-section">
+                    <button id="recordBtn" class="record-btn" disabled>
+                        🎤
+                    </button>
+                    <div id="recordingStatus" class="recording-status">
+                        Select an avatar and enter a title to start recording
+                    </div>
+                    <div id="recordingTimer" class="recording-timer hidden">
+                        00:00
+                    </div>
+                </div>
+                
+                <!-- Audio Preview -->
+                <div id="audioPreview" class="audio-preview hidden">
+                    <audio id="audioPlayer" controls class="audio-player"></audio>
+                    <div class="button-group">
+                        <button id="reRecordBtn" class="btn btn-secondary">
+                            🔄 Record Again
+                        </button>
+                        <button id="generateBtn" class="btn btn-success">
+                            ✨ Generate Video
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- === 2.4 Videos List Card === -->
+        <div class="card">
+            <h2 class="card-title">🎬 My Videos</h2>
+            <div id="videosGrid" class="videos-grid">
+                <div class="empty-state">
+                    <div class="spinner"></div>
+                    <p>Loading videos...</p>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="footer">&copy; 2025 MyAvatar &mdash; All rights reserved.</div>
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <script src="/static/js/app-config.js"></script>
-    <script src="/static/js/api-service.js"></script>
-    <script src="/static/js/audio-recorder.js"></script>
-    <script src="/static/js/myavatar-dashboard.js"></script>
+    
+    <!-- === 2.5 Loading Modal === -->
+    <div id="loadingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-spinner"></div>
+            <h3>Processing Video</h3>
+            <p id="loadingText">This may take up to 5 minutes...</p>
+        </div>
+    </div>
+    
+    <!-- === 2.6 Toast Container === -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ==================== CHAPTER 3: JAVASCRIPT ==================== -->
     <script>
-      // Mount the React dashboard
-      if (window.MyAvatarDashboard) {
-        ReactDOM.render(
-          React.createElement(window.MyAvatarDashboard),
-          document.getElementById('root')
-        );
-      } else {
-        document.getElementById('root').innerHTML = '<div class="alert alert-danger">Dashboard failed to load. Please contact support.</div>';
-      }
+        // === 3.1 State Management ===
+        const state = {
+            user: null,
+            avatars: [],
+            videos: [],
+            selectedAvatar: null,
+            audioBlob: null,
+            mediaRecorder: null,
+            isRecording: false,
+            recordingTime: 0,
+            recordingInterval: null
+        };
+
+        // === 3.2 DOM Elements Cache ===
+        const elements = {
+            username: document.getElementById('username'),
+            videoTitle: document.getElementById('videoTitle'),
+            avatarGrid: document.getElementById('avatarGrid'),
+            recordBtn: document.getElementById('recordBtn'),
+            recordingStatus: document.getElementById('recordingStatus'),
+            recordingTimer: document.getElementById('recordingTimer'),
+            audioPreview: document.getElementById('audioPreview'),
+            audioPlayer: document.getElementById('audioPlayer'),
+            reRecordBtn: document.getElementById('reRecordBtn'),
+            generateBtn: document.getElementById('generateBtn'),
+            videosGrid: document.getElementById('videosGrid'),
+            loadingModal: document.getElementById('loadingModal'),
+            loadingText: document.getElementById('loadingText'),
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        // === 3.3 API Configuration ===
+        const API = {
+            user: '/api/user',
+            avatars: '/api/avatars',
+            videos: '/api/videos',
+            generateVideo: '/api/video/generate',
+            videoStatus: '/api/video/status'
+        };
+
+        // === 3.4 Initialize Application ===
+        async function init() {
+            try {
+                await loadUser();
+                await loadAvatars();
+                await loadVideos();
+                setupEventListeners();
+                showToast('Dashboard loaded successfully', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to load dashboard', 'error');
+            }
+        }
+
+        // === 3.5 User Management ===
+        async function loadUser() {
+            try {
+                const response = await fetch(API.user, { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    state.user = data.user;
+                    if (state.user) {
+                        elements.username.textContent = state.user.username;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load user:', error);
+            }
+        }
+
+        // === 3.6 Avatar Management ===
+        async function loadAvatars() {
+            try {
+                const response = await fetch(API.avatars, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch avatars');
+                
+                const data = await response.json();
+                state.avatars = data.avatars || [];
+                renderAvatars();
+            } catch (error) {
+                console.error('Failed to load avatars:', error);
+                elements.avatarGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <p>Failed to load avatars</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderAvatars() {
+            if (state.avatars.length === 0) {
+                elements.avatarGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>No avatars available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.avatarGrid.innerHTML = state.avatars.map(avatar => `
+                <div class="avatar-item" data-id="${avatar.id}">
+                    <img src="${avatar.thumbnail_url || 'https://via.placeholder.com/80'}" 
+                         alt="${avatar.name}" 
+                         class="avatar-image">
+                    <div class="avatar-name">${avatar.name}</div>
+                    ${avatar.heygen_avatar_id ? `<div class="heygen-id">ID: ${avatar.heygen_avatar_id.substring(0, 8)}...</div>` : ''}
+                </div>
+            `).join('');
+
+            // Add click handlers
+            elements.avatarGrid.querySelectorAll('.avatar-item').forEach(item => {
+                item.addEventListener('click', () => selectAvatar(parseInt(item.dataset.id)));
+            });
+        }
+
+        function selectAvatar(avatarId) {
+            state.selectedAvatar = state.avatars.find(a => a.id === avatarId);
+            
+            // Update UI
+            elements.avatarGrid.querySelectorAll('.avatar-item').forEach(item => {
+                item.classList.toggle('selected', parseInt(item.dataset.id) === avatarId);
+            });
+            
+            updateRecordButton();
+            showToast(`Selected avatar: ${state.selectedAvatar.name}`, 'success');
+        }
+
+        // === 3.7 Recording Management ===
+        function updateRecordButton() {
+            const hasTitle = elements.videoTitle.value.trim().length > 0;
+            const hasAvatar = state.selectedAvatar !== null;
+            
+            elements.recordBtn.disabled = !hasTitle || !hasAvatar;
+            
+            if (!hasTitle && !hasAvatar) {
+                elements.recordingStatus.textContent = 'Select an avatar and enter a title to start recording';
+            } else if (!hasAvatar) {
+                elements.recordingStatus.textContent = 'Select an avatar to start recording';
+            } else if (!hasTitle) {
+                elements.recordingStatus.textContent = 'Enter a title to start recording';
+            } else {
+                elements.recordingStatus.textContent = 'Ready to record - Click the microphone';
+            }
+        }
+
+        async function toggleRecording() {
+            if (state.isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                state.mediaRecorder = new MediaRecorder(stream);
+                const chunks = [];
+                
+                state.mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+                
+                state.mediaRecorder.onstop = () => {
+                    state.audioBlob = new Blob(chunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(state.audioBlob);
+                    elements.audioPlayer.src = audioUrl;
+                    elements.audioPreview.classList.remove('hidden');
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                state.mediaRecorder.start();
+                state.isRecording = true;
+                state.recordingTime = 0;
+                
+                // Update UI
+                elements.recordBtn.classList.add('recording');
+                elements.recordBtn.innerHTML = '⏹️';
+                elements.recordingStatus.textContent = 'Recording... Click to stop';
+                elements.recordingTimer.classList.remove('hidden');
+                
+                // Start timer
+                state.recordingInterval = setInterval(() => {
+                    state.recordingTime++;
+                    const minutes = Math.floor(state.recordingTime / 60);
+                    const seconds = state.recordingTime % 60;
+                    elements.recordingTimer.textContent = 
+                        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Auto-stop after 5 minutes
+                    if (state.recordingTime >= 300) {
+                        stopRecording();
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Recording error:', error);
+                showToast('Failed to start recording. Please allow microphone access.', 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (state.mediaRecorder && state.isRecording) {
+                state.mediaRecorder.stop();
+                state.isRecording = false;
+                
+                // Clear timer
+                if (state.recordingInterval) {
+                    clearInterval(state.recordingInterval);
+                    state.recordingInterval = null;
+                }
+                
+                // Update UI
+                elements.recordBtn.classList.remove('recording');
+                elements.recordBtn.innerHTML = '🎤';
+                elements.recordingStatus.textContent = 'Recording complete';
+                elements.recordingTimer.classList.add('hidden');
+            }
+        }
+
+        function resetRecording() {
+            state.audioBlob = null;
+            elements.audioPreview.classList.add('hidden');
+            elements.audioPlayer.src = '';
+            updateRecordButton();
+        }
+
+        // === 3.8 Video Generation ===
+        async function generateVideo() {
+            if (!state.audioBlob || !state.selectedAvatar) {
+                showToast('Missing audio or avatar', 'error');
+                return;
+            }
+
+            const title = elements.videoTitle.value.trim();
+            if (!title) {
+                showToast('Please enter a title', 'error');
+                return;
+            }
+
+            try {
+                showLoadingModal();
+                
+                // Create form data matching video_routes.py expectations
+                const formData = new FormData();
+                formData.append('file', state.audioBlob, 'recording.webm');
+                
+                // Get HeyGen avatar ID
+                const heygenAvatarId = state.selectedAvatar.heygen_avatar_id || state.selectedAvatar.id;
+                
+                // Send with avatar_id as query parameter
+                const response = await fetch(`${API.generateVideo}?avatar_id=${heygenAvatarId}`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || JSON.stringify(error) || 'Failed to generate video');
+                }
+
+                const result = await response.json();
+                console.log('Video generation started:', result);
+                
+                // Poll for status using the video_id from response
+                const videoId = result.video_id || result.id;
+                if (!videoId) {
+                    throw new Error('No video ID returned from server');
+                }
+                
+                await pollVideoStatus(videoId);
+                
+                // Success
+                hideLoadingModal();
+                showToast('Video generated successfully!', 'success');
+                
+                // Save title to database (since video_routes doesn't handle it)
+                await saveVideoTitle(videoId, title);
+                
+                // Reset form
+                resetForm();
+                
+                // Reload videos
+                await loadVideos();
+                
+            } catch (error) {
+                console.error('Video generation error:', error);
+                hideLoadingModal();
+                showToast(`Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function pollVideoStatus(videoId) {
+            let attempts = 0;
+            const maxAttempts = 60; // 5 minutes
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${API.videoStatus}/${videoId}`, {
+                        credentials: 'include'
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Failed to check status');
+                    }
+
+                    const data = await response.json();
+                    console.log('Video status:', data);
+
+                    // Check if video is ready
+                    if (data.status === 'completed' || data.state === 'succeeded' || data.video_url) {
+                        return;
+                    } else if (data.status === 'failed' || data.state === 'failed') {
+                        throw new Error('Video generation failed');
+                    }
+
+                    // Update loading text
+                    elements.loadingText.textContent = `Processing... (${attempts + 1}/${maxAttempts})`;
+                    
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    attempts++;
+                    
+                } catch (error) {
+                    console.error('Status check error:', error);
+                    throw error;
+                }
+            }
+
+            throw new Error('Video generation timed out');
+        }
+
+        async function saveVideoTitle(videoId, title) {
+            // This is a placeholder - you need to implement this endpoint in main.py
+            // to update the video title in the database
+            try {
+                await fetch(`/api/video/${videoId}/title`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title }),
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.log('Could not save video title:', error);
+            }
+        }
+
+        function resetForm() {
+            elements.videoTitle.value = '';
+            state.selectedAvatar = null;
+            state.audioBlob = null;
+            elements.avatarGrid.querySelectorAll('.avatar-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            resetRecording();
+            updateRecordButton();
+        }
+
+        // === 3.9 Video Management ===
+        async function loadVideos() {
+            try {
+                const response = await fetch(API.videos, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to fetch videos');
+                
+                state.videos = await response.json();
+                renderVideos();
+            } catch (error) {
+                console.error('Failed to load videos:', error);
+                elements.videosGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <p>Failed to load videos</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderVideos() {
+            if (state.videos.length === 0) {
+                elements.videosGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📹</div>
+                        <p>No videos yet. Create your first video above!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            elements.videosGrid.innerHTML = state.videos.map(video => {
+                const date = new Date(video.created_at).toLocaleDateString();
+                const statusClass = `status-${video.status || 'processing'}`;
+                
+                return `
+                    <div class="video-card">
+                        <div class="video-header">
+                            <div class="video-title">${video.title || 'Untitled Video'}</div>
+                            <span class="status-badge ${statusClass}">
+                                ${video.status || 'processing'}
+                            </span>
+                        </div>
+                        <div class="video-date">Created: ${date}</div>
+                        ${video.status === 'completed' && video.video_url ? `
+                            <video controls class="video-player">
+                                <source src="${video.video_url}" type="video/mp4">
+                            </video>
+                            <a href="${video.video_url}" download class="btn btn-primary">
+                                ⬇️ Download
+                            </a>
+                        ` : `
+                            <div class="empty-state">
+                                <div class="spinner"></div>
+                                <p>Processing video...</p>
+                            </div>
+                        `}
+                        <div class="debug-info">
+                            Video ID: ${video.video_id || video.heygen_job_id || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // === 3.10 UI Helpers ===
+        function showLoadingModal() {
+            elements.loadingModal.classList.add('show');
+            elements.loadingText.textContent = 'Uploading audio and starting video generation...';
+        }
+
+        function hideLoadingModal() {
+            elements.loadingModal.classList.remove('show');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; cursor: pointer;">✕</button>
+            `;
+            
+            elements.toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        // === 3.11 Event Listeners Setup ===
+        function setupEventListeners() {
+            elements.videoTitle.addEventListener('input', updateRecordButton);
+            elements.recordBtn.addEventListener('click', toggleRecording);
+            elements.reRecordBtn.addEventListener('click', resetRecording);
+            elements.generateBtn.addEventListener('click', generateVideo);
+        }
+
+        // === 3.12 Auto-refresh videos ===
+        setInterval(async () => {
+            // Only refresh if there are processing videos
+            const hasProcessingVideos = state.videos.some(v => 
+                v.status === 'processing' || v.status === 'pending'
+            );
+            if (hasProcessingVideos) {
+                await loadVideos();
+            }
+        }, 10000); // Check every 10 seconds
+
+        // === 3.13 Initialize on load ===
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
