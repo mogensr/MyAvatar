@@ -1,279 +1,106 @@
-console.log("=== TOP OF myavatar-dashboard-copy.js ===");
-console.log("MyAvatar dashboard JS loaded! [FORCE REDEPLOY 2025-05-30-11:00]");
 // static/js/myavatar-dashboard.js
-// React-dashboard til MyAvatar Portal
-// Med faner: Avatar, Video, Optag
 
-const { useState, useEffect, useRef } = React;
-const API            = window.APIService;
-const cfg            = window.AppConfig;
-const AudioRecorder  = window.AudioRecorder;
+window.MyAvatarDashboard = function MyAvatarDashboard({ initialUser }) {
+    const [isRecording, setIsRecording] = React.useState(false);
+    const [mediaRecorder, setMediaRecorder] = React.useState(null);
+    const [videoStatus, setVideoStatus] = React.useState(null);
+    const [videoUrl, setVideoUrl] = React.useState(null);
 
-// Avatar-kort
-const AvatarCard = ({ avatar, selected, onSelect }) => (
-  <div
-    className={`card mb-2 ${selected ? 'border-primary' : ''}`}
-    style={{ cursor: 'pointer' }}
-    onClick={() => onSelect(avatar)}
-  >
-    <div className="card-body py-2 d-flex align-items-center">
-      <img
-        src={avatar.thumbnail_url || cfg.ui.logo}
-        width="48"
-        height="48"
-        className="me-2 rounded"
-      />
-      <span>{avatar.name}</span>
-    </div>
-  </div>
-);
+    const chunks = React.useRef([]);
 
-// Video-kort
-const VideoCard = ({ video }) => {
-  const videoUrl = video.video_url?.startsWith('http') ? video.video_url : `${window.AppConfig.api.baseUrl}${video.video_url}`;
-  
-  return (
-    <div className="col-md-4 mb-3">
-      <div className="card h-100">
-        <video 
-          src={videoUrl} 
-          controls 
-          className="card-img-top" 
-          onError={(e) => {
-            console.error('Video playback error:', e);
-            e.target.style.display = 'none';
-          }}
-        />
-        <div className="card-body py-2 d-flex justify-content-between">
-          <small className="text-muted">
-            {new Date(video.created_at).toLocaleString()}
-          </small>
-          <div className="btn-group">
-            <a
-              href={videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-sm btn-outline-primary me-1"
-            >
-              Play in new tab
-            </a>
-            <a
-              href={videoUrl}
-              download
-              className="btn btn-sm btn-outline-success"
-            >
-              Download
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = e => chunks.current.push(e.data);
+            recorder.onstop = () => {
+                const blob = new Blob(chunks.current, { type: 'audio/webm' });
+                chunks.current = [];
+                uploadAudio(blob);
+            };
+            recorder.start();
+            setMediaRecorder(recorder);
+            setIsRecording(true);
+            showToast("Optager lyd...", "info");
+        } catch (err) {
+            console.error("Error starting recording:", err);
+            showToast("Kunne ikke starte optagelse", "error");
+        }
+    };
 
-// Hovedkomponent
-function Dashboard({ initialUser, initialOrg }) {
-  console.log("Dashboard component mounted", { initialUser, initialOrg }); // <-- This goes first!
+    const stopRecording = () => {
+        if (mediaRecorder) {
+            mediaRecorder.stop();
+            setIsRecording(false);
+        }
+    };
 
-  const [user, setUser]           = useState(initialUser || null);
-  const [avatars, setAvatars]     = useState([]);
-  const [videos, setVideos]       = useState([]);
-  const [view, setView]           = useState('avatars');
-  const [selAvatar, setSelAvatar] = useState(null);
-  const [recording, setRecording] = useState(false);
-  const [secLeft, setSecLeft]     = useState(0);
-  const [progress, setProgress]   = useState(null);
-  const [microphoneTestResult, setMicrophoneTestResult] = useState(null);
-  const recRef = useRef(null);
+    const uploadAudio = async (blob) => {
+        showToast("Uploader lyd...", "info");
 
-  // Hent initial data
-  useEffect(() => {
-    (async () => {
-      try {
-        const [a, v] = await Promise.all([
-          API.getAvatars(),
-          API.getVideos()
-        ]);
-        setAvatars(a.avatars || []);
-        setVideos(v || []);
-      } catch (err) {
-        console.error('Fejl ved hentning:', err);
-      }
-    })();
-  }, []);
+        const formData = new FormData();
+        formData.append("file", blob, "recording.webm");
 
-  // Test mikrofon
-  const testMicrophone = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      source.connect(analyser);
-      
-      // Test lyd niveau
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(dataArray);
-      
-      // Luk stream efter test
-      stream.getTracks().forEach(track => track.stop());
-      
-      setMicrophoneTestResult({
-        success: true,
-        message: 'Mikrofon fungerer! Lyd blev registreret.'
-      });
-    } catch (err) {
-      console.error('Fejl ved mikrofon test:', err);
-      setMicrophoneTestResult({
-        success: false,
-        message: 'Kunne ikke teste mikrofon. Fejl: ' + err.message
-      });
-    }
-  };
+        try {
+            const response = await fetch("/api/video/generate", {
+                method: "POST",
+                body: formData
+            });
 
- // Start optagelse
-const startRec = async () => {
-  console.log('startRec triggered');
-  try {
-    // Få mikrofon adgang
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
-    // Initialiser og start optagelse
-    recRef.current = new AudioRecorder({
-      maxSeconds: cfg.ui.maxRecordingTime,
-      onTick: secs => setSecLeft(secs)
-    });
-    
-    // ADD THIS LINE - Makes recorder accessible to API service
-    window.recorder = recRef.current;
-    
-    await recRef.current.start();
-    setRecording(true);
-    setProgress(null);
-  } catch (err) {
-    console.error('Fejl ved mikrofon adgang:', err);
-    alert('Kunne ikke få adgang til mikrofonen. Venligst giv tilladelse i browseren.');
-    setRecording(false);
-  }
-};
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error);
+            }
 
-  // Stop optagelse og generer video
-  const stopRec = async () => {
-    console.log('stopRec triggered, stopping recorder');
-    const blob = await recRef.current.getBlob();
-    setRecording(false);
-    generateVideo(blob);
-  };
+            const data = await response.json();
+            showToast("Video genereres...", "success");
+            pollVideoStatus(data.id || data.video_id);
+        } catch (err) {
+            console.error(err);
+            showToast("Upload fejlede", "error");
+        }
+    };
 
-  // Generer video via HeyGen + poll status
-  const generateVideo = async blob => {
-    console.log('generateVideo', blob, selAvatar);
-    if (!selAvatar) return alert(cfg.ui.text.selectAvatarFirst);
-    try {
-      setProgress(0);
-      const { video_id } = await API.generateVideo(blob, selAvatar.id);
-      const data = await API.pollVideoStatus(
-        video_id,
-        p => { console.log('poll progress', p); setProgress(p); }
-      );
-      setVideos(v => [data, ...v]);
-      setProgress(null);
-    } catch (err) {
-      console.error('Video generation error:', err);
-      setProgress('err');
-    }
-  };
+    const pollVideoStatus = async (videoId) => {
+        let tries = 0;
+        const poll = async () => {
+            const res = await fetch(`/api/video/status/${videoId}`);
+            const data = await res.json();
+            if (data.status === "completed" && data.video_url) {
+                setVideoStatus("klar");
+                setVideoUrl(data.video_url);
+                showToast("Video klar!", "success");
+            } else if (tries < 15) {
+                tries++;
+                setTimeout(poll, 4000);
+            } else {
+                showToast("Timeout på video", "error");
+            }
+        };
+        poll();
+    };
 
-  // Hvis user ikke tilgængelig
-  if (!user) {
-    return <div className="container py-5 text-center">Indlæser…</div>;
-  }
+    return (
+        React.createElement("div", { className: "text-center" },
+            React.createElement("h2", null, "Hej ", initialUser.username),
+            React.createElement("p", null, "Tryk på knappen for at optage din stemme og generere din avatar-video."),
+            isRecording
+                ? React.createElement("button", { className: "btn btn-danger", onClick: stopRecording }, "🛑 Stop & Send")
+                : React.createElement("button", { className: "btn btn-primary", onClick: startRecording }, "🎙️ Start optagelse"),
 
-  return (
-    <div className="container-fluid">
-      {/* Faner */}
-      <div className="row mb-3">
-        <div className="col">
-          <button
-            className={`btn me-2 ${view==='avatars'?'btn-primary':'btn-outline-primary'}`}
-            onClick={() => setView('avatars')}
-          >Mine Avatarer</button>
-          <button
-            className={`btn me-2 ${view==='videos'?'btn-primary':'btn-outline-primary'}`}
-            onClick={() => setView('videos')}
-          >Mine Videoer</button>
-          <button
-            className={`btn ${view==='record'?'btn-primary':'btn-outline-primary'}`}
-            onClick={() => setView('record')}
-          >Optag Video (HeyGen)</button>
-        </div>
-      </div>
-
-      {/* Paneler */}
-      {view === 'avatars' && (
-        <div className="row">
-          {avatars.map(av => (
-            <div key={av.id} className="col-md-4">
-              <AvatarCard
-                avatar={av}
-                selected={selAvatar?.id === av.id}
-                onSelect={setSelAvatar}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {view === 'videos' && (
-        <div className="row">
-          {videos.length === 0 ? (
-            <p>{cfg.ui.text.noVideosMessage}</p>
-          ) : (
-            videos.map(v => <VideoCard key={v.video_id} video={v} />)
-          )}
-        </div>
-      )}
-
-      {view === 'record' && (
-        <div className="card p-3">
-          <h5>{cfg.ui.text.recordTitle}</h5>
-          <div className="mb-3">
-            <button className="btn btn-outline-info me-2" onClick={testMicrophone}>
-              🔍 Test Mikrofon
-            </button>
-            {!recording ? (
-              <button className="btn btn-danger" onClick={startRec}>
-                🎤 Start Optagelse
-              </button>
-            ) : (
-              <button className="btn btn-secondary" onClick={stopRec}>
-                ⏹ Stop ({secLeft}s)
-              </button>
-            )}
-          </div>
-          
-          {progress !== null && (
-            typeof progress === 'number' ? (
-              <div className="progress mt-3" style={{ height: 6 }}>
-                <div className="progress-bar" style={{ width: `${progress}%` }} />
-              </div>
-            ) : (
-              <p className="text-danger mt-3">{cfg.ui.text.generationFailed}</p>
+            videoStatus === "klar" && videoUrl && React.createElement("div", { className: "mt-4" },
+                React.createElement("h5", null, "Din video:"),
+                React.createElement("video", {
+                    src: videoUrl,
+                    controls: true,
+                    style: { maxWidth: "100%", borderRadius: "10px" }
+                }),
+                React.createElement("a", {
+                    href: videoUrl,
+                    download: "myavatar-video.mp4",
+                    className: "btn btn-success mt-2"
+                }, "⬇️ Download video")
             )
-          )}
-          
-          {microphoneTestResult && (
-            <div className={`alert alert-${microphoneTestResult.success ? 'success' : 'danger'} mt-3`}>
-              {microphoneTestResult.message}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-console.log("About to set window.MyAvatarDashboard");
-window.MyAvatarDashboard = Dashboard;
-console.log("=== window.MyAvatarDashboard is now set ===");
-// force-redeploy-2025-05-30 // version: 2025-05-30-10-48
+        )
+    );
+};

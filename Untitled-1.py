@@ -329,7 +329,7 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 name VARCHAR(255) NOT NULL,
-                image_path TEXT NOT NULL,
+                avatar_url TEXT NOT NULL,
                 heygen_avatar_id VARCHAR(255) DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
@@ -374,7 +374,7 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
-                image_path TEXT NOT NULL,
+                avatar_url TEXT NOT NULL,
                 heygen_avatar_id TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
@@ -912,8 +912,8 @@ function downloadVideo(videoId) {
                 <li style="margin-bottom: 15px;">
                     <strong>{{ avatar.name }}</strong><br>
                     HeyGen ID: {{ avatar.heygen_avatar_id }}<br>
-                    {% if avatar.image_path %}
-                    <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; margin: 5px 0;">
+                    {% if avatar.avatar_url %}
+                    <img src="{{ avatar.avatar_url }}" alt="{{ avatar.name }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; margin: 5px 0;">
                     {% endif %}
                 </li>
             {% endfor %}
@@ -1330,8 +1330,8 @@ if avatars:
                         <tr>
                             <td>
                 '''
-                if avatar.get('image_path'):
-                    avatar_html += f'<img src="{avatar["image_path"]}" alt="{avatar["name"]}" class="avatar-img">'
+                if avatar.get('avatar_url'):
+                    avatar_html += f'<img src="{avatar["avatar_url"]}" alt="{avatar["name"]}" class="avatar-img">'
                 else:
                     avatar_html += '<div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center;">Ingen billede</div>'
                 
@@ -1654,7 +1654,7 @@ async def admin_add_avatar(
         log_info(f"Avatar image uploaded successfully: {img_url}", "Avatar")
         
         result = execute_query(
-            "INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id) VALUES (?, ?, ?, ?)",
+            "INSERT INTO avatars (user_id, name, avatar_url, heygen_avatar_id) VALUES (?, ?, ?, ?)",
             (user_id, avatar_name, img_url, heygen_avatar_id)
         )
         
