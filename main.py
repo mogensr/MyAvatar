@@ -1137,9 +1137,14 @@ async def import_avatar_from_heygen(
         # Use a default name based on the ID
         avatar_name = f"HeyGen Avatar ({heygen_avatar_id[:8]}...)"
         
-        # Use a placeholder thumbnail since we can't fetch from HeyGen
-        # You can replace this with a better default image
-        thumbnail_url = "https://via.placeholder.com/200x200?text=HeyGen+Avatar"
+        # Try to use HeyGen's thumbnail URL pattern (this might work for some avatars)
+        # Common patterns: 
+        # https://files.heygen.ai/avatar/{avatar_id}/thumbnail.jpg
+        # https://resource.heygen.com/avatar/{avatar_id}/thumbnail.jpg
+        thumbnail_url = f"https://files.heygen.ai/avatar/{heygen_avatar_id}/thumbnail.jpg"
+        
+        # Alternative: Use a better placeholder with the avatar ID
+        # thumbnail_url = f"https://ui-avatars.com/api/?name={heygen_avatar_id[:8]}&size=200&background=4f46e5&color=fff"
         
         # Check if avatar already exists for this user
         existing = execute_query(
@@ -1429,6 +1434,8 @@ async def list_videos(request: Request):
                         <td>
                             <a href='/admin/video/{video['id']}' class="btn btn-primary">View</a>
                             {f'<a href="/admin/video/{video["id"]}/check-heygen" class="btn btn-warning">Check Status</a>' if video['status'] == 'processing' else ''}
+                            <a href='/admin/video/{video['id']}/delete' class="btn btn-danger btn-sm" 
+                               onclick="return confirm('Delete this video?')" title="Delete">🗑️</a>
                         </td>
                     </tr>
                 """
@@ -1559,6 +1566,10 @@ async def view_video(request: Request, video_id: int):
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
                 .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+                .btn {{ padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; }}
+                .btn-primary {{ background: #4f46e5; color: white; }}
+                .btn-danger {{ background: #dc2626; color: white; }}
+                .btn-danger:hover {{ background: #b91c1c; }}
             </style>
         </head>
         <body>
@@ -1568,7 +1579,9 @@ async def view_video(request: Request, video_id: int):
                 <p><strong>Created:</strong> {video['created_at']}</p>
                 {f'<video src="{video["video_url"]}" controls width="600"></video>' if video['video_url'] else '<p>Video not yet generated</p>'}
                 <br><br>
-                <a href='/admin/videos'>← Back to Videos</a>
+                <a href='/admin/videos' class="btn btn-primary">← Back to Videos</a>
+                <a href='/admin/video/{video_id}/delete' class="btn btn-danger" 
+                   onclick="return confirm('Are you sure you want to delete this video?')">🗑️ Delete Video</a>
             </div>
         </body>
         </html>
@@ -1577,6 +1590,30 @@ async def view_video(request: Request, video_id: int):
     except Exception as e:
         log_error("View video failed", "Admin", e)
         return HTMLResponse("<h1>Error loading video</h1><a href='/admin/videos'>Back</a>")
+
+@app.get("/admin/video/{video_id}/delete")
+async def delete_video(request: Request, video_id: int):
+    """Delete a video (admin only)"""
+    try:
+        admin = get_current_user(request)
+        if not admin or admin.get("is_admin", 0) != 1:
+            return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        
+        # Get video details before deletion for logging
+        video = execute_query("SELECT title, user_id FROM videos WHERE id = ?", (video_id,), fetch_one=True)
+        
+        if video:
+            # Delete the video
+            execute_query("DELETE FROM videos WHERE id = ?", (video_id,))
+            log_info(f"Video '{video['title']}' (ID: {video_id}) deleted by admin {admin['username']}", "Admin")
+            
+            # TODO: Optionally delete from Cloudinary/HeyGen as well
+            
+        return RedirectResponse(url="/admin/videos", status_code=status.HTTP_302_FOUND)
+        
+    except Exception as e:
+        log_error(f"Delete video failed: {str(e)}", "Admin", e)
+        return HTMLResponse("<h1>Error deleting video</h1><a href='/admin/videos'>Back</a>")
 
 #####################################################################
 # CHAPTER 10: SYSTEM MAINTENANCE, HEALTH, & STARTUP
