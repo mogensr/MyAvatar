@@ -4,7 +4,7 @@ import aiofiles
 import httpx
 import logging
 from typing import Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Request, Depends
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
@@ -26,13 +26,22 @@ cloudinary.config(
 
 router = APIRouter(prefix="/api/video", tags=["video"])
 
+# Helper function to get current user from session
+def get_current_user(request: Request):
+    return request.session.get("user", None)
 
 @router.post("/generate")
 async def generate_video(
+    request: Request,  # Add request to get session
     file: UploadFile = File(...),
     avatar_id: Optional[str] = Query(None),
     voice_id: Optional[str] = Query(None)
 ):
+    # Get the current user
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         # Windows-kompatibel midlertidig mappe
         temp_dir = os.path.join(os.getcwd(), "temp_audio")
@@ -79,7 +88,7 @@ async def generate_video(
             "test": False,
             "caption": False,
             "private": False,
-            "callback_url": "https://app.myavatar.dk/api/heygen/webhook"  # THIS IS THE FIX!
+            "callback_url": "https://app.myavatar.dk/api/heygen/webhook"
         }
 
         logging.info(f"[DEBUG] Payload til HeyGen: {payload}")
@@ -99,16 +108,27 @@ async def generate_video(
             video_id = result_data.get("data", {}).get("video_id")
             
             if video_id:
-                # Save to database with timeout to avoid locks
+                # Get avatar details from database
                 conn = sqlite3.connect("myavatar.db", timeout=10.0)
                 cur = conn.cursor()
+                
+                # Find the avatar record by heygen_avatar_id
                 cur.execute(
-                    "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status, audio_path) VALUES (?, ?, ?, ?, ?, ?)",
-                    (1, 1, "Video from API", video_id, "processing", audio_url)
+                    "SELECT id FROM avatars WHERE heygen_avatar_id = ? AND user_id = ?",
+                    (avatar_id, user["id"])
+                )
+                avatar_record = cur.fetchone()
+                avatar_db_id = avatar_record[0] if avatar_record else None
+                
+                # Save to database with the current user's ID
+                cur.execute(
+                    "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
+                    (user["id"], avatar_db_id, "Video from API", video_id, "processing")
                 )
                 conn.commit()
                 conn.close()
-                logging.info(f"[DEBUG] Video saved to DB with ID: {video_id}")
+                
+                logging.info(f"[DEBUG] Video saved to DB with ID: {video_id} for user: {user['username']}")
                 return {"success": True, "video_id": video_id, "status": "processing", "message": "Video generation started."}
             else:
                 # No video_id, but API call succeeded: return pending status
@@ -125,7 +145,12 @@ async def generate_video(
 
 
 @router.get("/status/{video_id}")
-async def check_video_status(video_id: str):
+async def check_video_status(video_id: str, request: Request):
+    # Get the current user
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
     try:
         headers = {"X-Api-Key": HEYGEN_API_KEY}
         
@@ -147,13 +172,13 @@ async def check_video_status(video_id: str):
             status = result.get("data", {}).get("status") or result.get("status")
             video_url = result.get("data", {}).get("video_url") or result.get("video_url")
             
-            # Update database if video is completed
+            # Update database if video is completed - only for user's own videos
             if status == "completed" and video_url:
                 conn = sqlite3.connect("myavatar.db", timeout=10.0)
                 cur = conn.cursor()
                 cur.execute(
-                    "UPDATE videos SET status = 'completed', video_url = ? WHERE heygen_job_id = ?",
-                    (video_url, video_id)
+                    "UPDATE videos SET status = 'completed', video_url = ? WHERE heygen_job_id = ? AND user_id = ?",
+                    (video_url, video_id, user["id"])
                 )
                 conn.commit()
                 conn.close()
