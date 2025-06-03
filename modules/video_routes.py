@@ -77,7 +77,8 @@ async def generate_video(
                 }
             }],
             "test": False,
-            "caption": False
+            "caption": False,
+            "private": False  # Ensure video is public
         }
 
         logging.info(f"[DEBUG] Payload til HeyGen: {payload}")
