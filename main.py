@@ -1356,7 +1356,7 @@ async def list_videos(request: Request):
             return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
         
         videos = execute_query("""
-            SELECT v.id, v.title, v.video_url, v.status, v.created_at,
+            SELECT v.id, v.title, v.video_url, v.status, v.created_at, v.heygen_job_id,
                    u.username, a.avatar_name
             FROM videos v
             JOIN users u ON v.user_id = u.id
@@ -1375,16 +1375,27 @@ async def list_videos(request: Request):
                 table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                 th { background: #4f46e5; color: white; padding: 12px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #e0e0e0; }
-                .btn { padding: 6px 12px; text-decoration: none; border-radius: 4px; display: inline-block; }
+                .btn { padding: 6px 12px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 2px; }
                 .btn-primary { background: #4f46e5; color: white; }
+                .btn-warning { background: #f59e0b; color: white; }
+                .btn-warning:hover { background: #d97706; }
                 .status-completed { background: #10b981; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
                 .status-processing { background: #f59e0b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
                 .status-pending { background: #6b7280; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+                .alert { background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
             </style>
         </head>
         <body>
             <div class="container">
                 <h2>All Videos</h2>
+                
+                <div class="alert">
+                    <strong>⚠️ Webhook Issue Detected:</strong> Videos are stuck in "processing" because HeyGen webhook is not working. 
+                    <a href="/admin/videos/check-all-processing" class="btn btn-warning" onclick="return confirm('This will check all processing videos with HeyGen. Continue?')">
+                        🔄 Check All Processing Videos
+                    </a>
+                </div>
+                
                 <table>
                     <thead>
                         <tr>
@@ -1394,6 +1405,7 @@ async def list_videos(request: Request):
                             <th>Avatar</th>
                             <th>Status</th>
                             <th>Created</th>
+                            <th>HeyGen ID</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1403,6 +1415,7 @@ async def list_videos(request: Request):
         if videos:
             for video in videos:
                 status_class = f"status-{video['status']}"
+                heygen_id = video['heygen_job_id'] or 'N/A'
                 html += f"""
                     <tr>
                         <td>{video['id']}</td>
@@ -1411,13 +1424,15 @@ async def list_videos(request: Request):
                         <td>{video['avatar_name'] or 'N/A'}</td>
                         <td><span class="{status_class}">{video['status']}</span></td>
                         <td>{video['created_at'][:16]}</td>
+                        <td style="font-size: 11px;">{heygen_id[:8]}...</td>
                         <td>
                             <a href='/admin/video/{video['id']}' class="btn btn-primary">View</a>
+                            {f'<a href="/admin/video/{video["id"]}/check-heygen" class="btn btn-warning">Check Status</a>' if video['status'] == 'processing' else ''}
                         </td>
                     </tr>
                 """
         else:
-            html += '<tr><td colspan="7">No videos yet</td></tr>'
+            html += '<tr><td colspan="8">No videos yet</td></tr>'
         
         html += """
                     </tbody>
@@ -1432,6 +1447,99 @@ async def list_videos(request: Request):
     except Exception as e:
         log_error("List videos failed", "Admin", e)
         return HTMLResponse("<h1>Error loading videos</h1><a href='/admin'>Back to Admin</a>")
+
+@app.get("/admin/video/{video_id}/check-heygen")
+async def check_single_video_status(request: Request, video_id: int):
+    """Admin function to manually check a video's status from HeyGen"""
+    try:
+        admin = get_current_user(request)
+        if not admin or admin.get("is_admin", 0) != 1:
+            return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        
+        # Get video details
+        video = execute_query("SELECT * FROM videos WHERE id = ?", (video_id,), fetch_one=True)
+        if not video:
+            return HTMLResponse("<h1>Video not found</h1><a href='/admin/videos'>Back</a>")
+        
+        if not video['heygen_job_id']:
+            return HTMLResponse("<h1>No HeyGen ID for this video</h1><a href='/admin/videos'>Back</a>")
+        
+        # Check HeyGen status
+        heygen_status = check_heygen_status(video['heygen_job_id'])
+        status_data = heygen_status.get("data", {})
+        status = status_data.get("status", "unknown")
+        video_url = status_data.get("video_url")
+        
+        # Update if completed
+        if status == "completed" and video_url:
+            execute_query(
+                "UPDATE videos SET status = 'completed', video_url = ? WHERE id = ?",
+                (video_url, video_id)
+            )
+            log_info(f"[Admin Check] Video {video_id} updated to completed with URL", "Admin")
+            return RedirectResponse(url=f"/admin/video/{video_id}", status_code=status.HTTP_302_FOUND)
+        
+        # Show current status
+        html = f"""
+        <h2>HeyGen Status Check</h2>
+        <p><strong>Video ID:</strong> {video_id}</p>
+        <p><strong>HeyGen ID:</strong> {video['heygen_job_id']}</p>
+        <p><strong>Current Status:</strong> {status}</p>
+        <p><strong>Video URL:</strong> {video_url or 'Not available yet'}</p>
+        <pre>{json.dumps(status_data, indent=2)}</pre>
+        <a href='/admin/videos'>Back to Videos</a>
+        """
+        return HTMLResponse(html)
+        
+    except Exception as e:
+        log_error(f"Check video status failed: {str(e)}", "Admin", e)
+        return HTMLResponse(f"<h1>Error checking status</h1><p>{str(e)}</p><a href='/admin/videos'>Back</a>")
+
+@app.get("/admin/videos/check-all-processing")
+async def check_all_processing_videos(request: Request):
+    """Admin function to check all processing videos"""
+    try:
+        admin = get_current_user(request)
+        if not admin or admin.get("is_admin", 0) != 1:
+            return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+        
+        # Get all processing videos
+        processing_videos = execute_query(
+            "SELECT id, heygen_job_id FROM videos WHERE status = 'processing' AND heygen_job_id IS NOT NULL",
+            fetch_all=True
+        )
+        
+        updated_count = 0
+        for video in processing_videos:
+            try:
+                heygen_status = check_heygen_status(video['heygen_job_id'])
+                status_data = heygen_status.get("data", {})
+                status = status_data.get("status", "unknown")
+                video_url = status_data.get("video_url")
+                
+                if status == "completed" and video_url:
+                    execute_query(
+                        "UPDATE videos SET status = 'completed', video_url = ? WHERE id = ?",
+                        (video_url, video['id'])
+                    )
+                    updated_count += 1
+                    log_info(f"[Bulk Check] Video {video['id']} updated to completed", "Admin")
+                    
+            except Exception as e:
+                log_error(f"Failed to check video {video['id']}: {str(e)}", "Admin", e)
+                continue
+        
+        html = f"""
+        <h2>Bulk Status Check Complete</h2>
+        <p>Checked {len(processing_videos)} processing videos</p>
+        <p>Updated {updated_count} videos to completed status</p>
+        <a href='/admin/videos'>Back to Videos</a>
+        """
+        return HTMLResponse(html)
+        
+    except Exception as e:
+        log_error(f"Bulk check failed: {str(e)}", "Admin", e)
+        return HTMLResponse(f"<h1>Error during bulk check</h1><p>{str(e)}</p><a href='/admin/videos'>Back</a>")
 
 @app.get("/admin/video/{video_id}", response_class=HTMLResponse)
 async def view_video(request: Request, video_id: int):
@@ -1562,6 +1670,145 @@ async def dashboard(request: Request):
         return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
     # Serve the modern dashboard with necessary JavaScript files
     return FileResponse("static/dashboard.html")
+
+@app.get("/my-videos", response_class=HTMLResponse)
+async def my_videos_page(request: Request):
+    """Simple page for users to see all their videos"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=status.HTTP_302_FOUND)
+    
+    # Get user's videos
+    videos = execute_query(
+        """SELECT 
+            v.id,
+            v.title,
+            v.video_url,
+            v.status,
+            v.created_at,
+            v.heygen_job_id,
+            a.avatar_name
+        FROM videos v
+        LEFT JOIN avatars a ON v.avatar_id = a.id
+        WHERE v.user_id = ?
+        ORDER BY v.created_at DESC""",
+        (user["id"],),
+        fetch_all=True
+    )
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>My Videos - {user['username']}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+            .container {{ max-width: 1200px; margin: 0 auto; }}
+            .header {{ background: #4f46e5; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
+            .video-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }}
+            .video-card {{ background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+            .video-card h3 {{ margin-top: 0; color: #333; }}
+            .status {{ padding: 4px 8px; border-radius: 4px; font-size: 12px; display: inline-block; }}
+            .status-completed {{ background: #10b981; color: white; }}
+            .status-processing {{ background: #f59e0b; color: white; }}
+            .btn {{ background: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; }}
+            .btn:hover {{ background: #3730a3; }}
+            .btn-secondary {{ background: #6b7280; }}
+            .btn-secondary:hover {{ background: #4b5563; }}
+            video {{ width: 100%; border-radius: 8px; margin-top: 10px; }}
+            .no-videos {{ text-align: center; padding: 60px 20px; background: white; border-radius: 8px; }}
+            .refresh-note {{ background: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>My Videos</h1>
+                <div>
+                    <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                    <a href="/auth/logout" class="btn btn-secondary">Logout</a>
+                </div>
+            </div>
+            
+            <div class="refresh-note">
+                💡 <strong>Tip:</strong> If you don't see your recent videos, refresh this page. Videos typically complete within 2-3 minutes.
+            </div>
+    """
+    
+    if videos:
+        # Check for any processing videos
+        has_processing = any(v['status'] == 'processing' for v in videos)
+        if has_processing:
+            html += """
+            <div style="background: #dbeafe; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                🔄 <strong>Processing:</strong> Some videos are still processing. They should be ready soon!
+                <a href="/my-videos" class="btn" style="margin-left: 20px; padding: 5px 15px;">Refresh Page</a>
+            </div>
+            """
+        
+        html += '<div class="video-grid">'
+        
+        for video in videos:
+            status_class = f"status-{video['status']}"
+            created_date = video['created_at'][:16] if video['created_at'] else 'Unknown'
+            
+            html += f"""
+            <div class="video-card">
+                <h3>{video['title']}</h3>
+                <p><strong>Avatar:</strong> {video['avatar_name'] or 'Unknown'}</p>
+                <p><strong>Created:</strong> {created_date}</p>
+                <p><span class="status {status_class}">{video['status'].upper()}</span></p>
+            """
+            
+            if video['status'] == 'completed' and video['video_url']:
+                html += f"""
+                <video controls>
+                    <source src="{video['video_url']}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <a href="{video['video_url']}" target="_blank" class="btn">Download Video</a>
+                """
+            elif video['status'] == 'processing':
+                # Auto-check processing videos
+                if video['heygen_job_id']:
+                    html += f"""
+                    <p style="color: #666;">Video is processing... Check back in a few minutes.</p>
+                    <p style="font-size: 12px; color: #999;">ID: {video['heygen_job_id'][:8]}...</p>
+                    """
+                else:
+                    html += '<p style="color: #666;">Processing...</p>'
+            else:
+                html += '<p style="color: #dc2626;">Video generation failed or pending.</p>'
+            
+            html += '</div>'
+        
+        html += '</div>'
+    else:
+        html += """
+        <div class="no-videos">
+            <h2>No Videos Yet</h2>
+            <p>You haven't created any videos yet. Go to the dashboard to create your first video!</p>
+            <a href="/dashboard" class="btn">Go to Dashboard</a>
+        </div>
+        """
+    
+    html += """
+        </div>
+        
+        <script>
+        // Auto-refresh page every 30 seconds if there are processing videos
+        const hasProcessing = document.querySelector('.status-processing');
+        if (hasProcessing) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 30000);
+        }
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(html)
 
 #####################################################################
 # CHAPTER 12: API ENDPOINTS FOR DASHBOARD
@@ -1767,7 +2014,18 @@ async def get_user_videos(request: Request):
     
     try:
         videos = execute_query(
-            "SELECT heygen_job_id as video_id, title, video_url, status, created_at FROM videos WHERE user_id = ? ORDER BY created_at DESC",
+            """SELECT 
+                v.id,
+                v.heygen_job_id as video_id, 
+                v.title, 
+                v.video_url, 
+                v.status, 
+                v.created_at,
+                a.avatar_name
+            FROM videos v
+            LEFT JOIN avatars a ON v.avatar_id = a.id
+            WHERE v.user_id = ? 
+            ORDER BY v.created_at DESC""",
             (user["id"],),
             fetch_all=True
         )
@@ -1776,6 +2034,31 @@ async def get_user_videos(request: Request):
         if videos:
             for video in videos:
                 video_dict = dict(video)
+                
+                # If video is processing but older than 5 minutes, try to check its status
+                if video_dict['status'] == 'processing' and video_dict.get('video_id'):
+                    try:
+                        # Auto-check old processing videos
+                        created_time = datetime.fromisoformat(video_dict['created_at'].replace(' ', 'T'))
+                        if datetime.utcnow() - created_time > timedelta(minutes=5):
+                            # Check HeyGen status
+                            heygen_status = check_heygen_status(video_dict['video_id'])
+                            status_data = heygen_status.get("data", {})
+                            status = status_data.get("status", "unknown")
+                            video_url = status_data.get("video_url")
+                            
+                            if status == "completed" and video_url:
+                                # Update database
+                                execute_query(
+                                    "UPDATE videos SET status = 'completed', video_url = ? WHERE id = ?",
+                                    (video_url, video['id'])
+                                )
+                                video_dict['status'] = 'completed'
+                                video_dict['video_url'] = video_url
+                                log_info(f"Auto-updated video {video['id']} to completed for user {user['username']}", "API")
+                    except Exception as e:
+                        log_warning(f"Failed to auto-check video {video['id']}: {str(e)}", "API")
+                
                 video_list.append(video_dict)
         
         return video_list
@@ -2003,6 +2286,55 @@ async def debug_api(request: Request):
         "headers": {k: v for k, v in request.headers.items() if k.lower() != 'cookie'}
     }
 
+@app.get("/api/video/force-check/{video_id}")
+async def force_check_video(request: Request, video_id: str):
+    """Manually check and update video status from HeyGen"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    try:
+        # Check if video belongs to user
+        video = execute_query(
+            "SELECT * FROM videos WHERE heygen_job_id = ? AND user_id = ?",
+            (video_id, user["id"]),
+            fetch_one=True
+        )
+        
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        # Force check HeyGen status
+        heygen_status = check_heygen_status(video_id)
+        status_data = heygen_status.get("data", {})
+        status = status_data.get("status", "unknown")
+        video_url = status_data.get("video_url")
+        
+        # Update database if completed
+        if status == "completed" and video_url:
+            execute_query(
+                "UPDATE videos SET status = 'completed', video_url = ? WHERE heygen_job_id = ?",
+                (video_url, video_id)
+            )
+            log_info(f"[Manual Check] Video {video_id} completed with URL: {video_url}", "API")
+            
+            return {
+                "status": "completed",
+                "video_url": video_url,
+                "message": "Video URL found and updated!"
+            }
+        
+        return {
+            "status": status,
+            "video_url": video_url,
+            "heygen_response": status_data,
+            "message": f"Video is currently: {status}"
+        }
+        
+    except Exception as e:
+        log_error(f"Force check failed: {str(e)}", "API", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
 #####################################################################
 # CHAPTER 13: HEYGEN WEBHOOK ENDPOINT - FIXED VERSION
 #####################################################################
@@ -2075,6 +2407,32 @@ async def heygen_webhook(request: Request):
     except Exception as e:
         log_error("[Webhook] Webhook processing failed", "Webhook", e)
         return JSONResponse({"error": f"Webhook processing failed: {str(e)}"}, status_code=500)
+
+@app.get("/api/heygen/webhook/test")
+async def test_webhook(request: Request):
+    """Test endpoint to verify webhook is accessible"""
+    return JSONResponse({
+        "status": "ok",
+        "message": "Webhook endpoint is accessible",
+        "url": f"{BASE_URL}/api/heygen/webhook"
+    })
+
+@app.post("/api/heygen/webhook/test")
+async def test_webhook_post(request: Request):
+    """Test POST to webhook endpoint"""
+    try:
+        body = await request.json()
+        log_info(f"[Webhook Test] Received test payload: {json.dumps(body, indent=2)}", "Webhook")
+        return JSONResponse({
+            "status": "ok",
+            "message": "Test webhook received",
+            "received_data": body
+        })
+    except Exception as e:
+        return JSONResponse({
+            "status": "error",
+            "message": str(e)
+        })
 
 #####################################################################
 # CHAPTER 14: STATIC FILES & TEMPLATE SETUP
