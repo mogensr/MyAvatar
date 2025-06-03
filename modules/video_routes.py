@@ -157,8 +157,15 @@ async def check_video_status(video_id: str):
                 conn.close()
                 logging.info(f"[DEBUG] Video {video_id} marked as completed with URL: {video_url}")
         
-        return response.json()
-        
+        data = response.json().get("data", {})
+        status = data.get("status", "processing")
+        video_url = data.get("video_url", "")
+        # Optionally update your DB here as before...
+        return {
+            "status": status,
+            "video_url": video_url,
+            "raw": response.json()  # Optional: include the full raw response for debugging
+        }
     except Exception as e:
         logging.error(f"[ERROR] Status check failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
