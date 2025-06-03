@@ -107,14 +107,16 @@ async def generate_video(
                 conn.commit()
                 conn.close()
                 logging.info(f"[DEBUG] Video saved to DB with ID: {video_id}")
+                return {"success": True, "video_id": video_id, "status": "processing", "message": "Video generation started."}
+            else:
+                # No video_id, but API call succeeded: return pending status
+                return {"success": True, "status": "pending", "message": "Video generation started, waiting for HeyGen to finish."}
         else:
             logging.error(f"[ERROR] HeyGen response: {response.text}")
             raise HTTPException(status_code=response.status_code, detail=response.text)
 
-        return response.json()
-
     except Exception as e:
-        # 💥 Crash debug log
+        # Crash debug log
         tb = traceback.format_exc()
         print("[CRASH] Video generation failed:\n", tb)
         raise HTTPException(status_code=500, detail=str(e))
