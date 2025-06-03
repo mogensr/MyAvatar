@@ -88,18 +88,43 @@ window.MyAvatarDashboard = function MyAvatarDashboard({ initialUser }) {
                 ? React.createElement("button", { className: "btn btn-danger", onClick: stopRecording }, "🛑 Stop & Send")
                 : React.createElement("button", { className: "btn btn-primary", onClick: startRecording }, "🎙️ Start optagelse"),
 
-            videoStatus === "klar" && videoUrl && React.createElement("div", { className: "mt-4" },
-                React.createElement("h5", null, "Din video:"),
-                React.createElement("video", {
-                    src: videoUrl,
-                    controls: true,
-                    style: { maxWidth: "100%", borderRadius: "10px" }
-                }),
-                React.createElement("a", {
-                    href: videoUrl,
-                    download: "myavatar-video.mp4",
-                    className: "btn btn-success mt-2"
-                }, "⬇️ Download video")
+            videoUrl && (
+                React.createElement("div", { className: "mt-4" },
+                    React.createElement("h5", null, "Din video:"),
+                    React.createElement("video", {
+                        src: videoUrl,
+                        controls: true,
+                        style: { maxWidth: "100%", borderRadius: "10px" },
+                        onError: () => setVideoError("Kunne ikke indlæse video. Tjek linket eller prøv at åbne det direkte.")
+                    }),
+                    videoError && (
+                        React.createElement("div", { className: "alert alert-danger mt-2" },
+                            videoError,
+                            React.createElement("br", null),
+                            React.createElement("a", { href: videoUrl, target: "_blank", rel: "noopener noreferrer" }, "Åbn video i nyt vindue")
+                        )
+                    ),
+                    React.createElement("a", {
+                        href: videoUrl,
+                        download: "myavatar-video.mp4",
+                        className: "btn btn-success mt-2"
+                    }, "⬇️ Download video"),
+                    React.createElement("div", { className: "mt-2" },
+                        React.createElement("input", {
+                            type: "text",
+                            value: videoUrl,
+                            readOnly: true,
+                            style: { width: "80%", fontSize: "small" }
+                        }),
+                        React.createElement("button", {
+                            className: "btn btn-outline-secondary btn-sm ms-2",
+                            onClick: () => {
+                                navigator.clipboard.writeText(videoUrl);
+                                showToast("Video URL kopieret!", "success");
+                            }
+                        }, "Kopiér video URL")
+                    )
+                )
             )
         )
     );
