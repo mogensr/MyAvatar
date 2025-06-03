@@ -125,8 +125,8 @@ async def generate_video(
                     
                     # Save to database with the current user's ID
                     cur.execute(
-                        "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
-                        (user["id"], avatar_db_id, "Video from API", video_id, "processing")
+                        "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status, audio_path) VALUES (?, ?, ?, ?, ?, ?)",
+                        (user["id"], avatar_db_id, "Video from API", video_id, "processing", audio_url)
                     )
                     conn.commit()
                     
@@ -142,8 +142,8 @@ async def generate_video(
                         conn.execute("PRAGMA journal_mode=WAL")
                         cur = conn.cursor()
                         cur.execute(
-                            "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
-                            (user["id"], avatar_db_id, "Video from API", video_id, "processing")
+                            "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status, audio_path) VALUES (?, ?, ?, ?, ?, ?)",
+                            (user["id"], avatar_db_id, "Video from API", video_id, "processing", audio_url)
                         )
                         conn.commit()
                 finally:
