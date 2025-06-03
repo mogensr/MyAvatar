@@ -159,7 +159,8 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_db_connection():
-    conn = sqlite3.connect("myavatar.db")
+    conn = sqlite3.connect("myavatar.db", timeout=30.0)
+    conn.execute("PRAGMA journal_mode=WAL")  # Better concurrency
     conn.row_factory = sqlite3.Row
     return conn
 

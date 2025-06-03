@@ -108,25 +108,47 @@ async def generate_video(
             video_id = result_data.get("data", {}).get("video_id")
             
             if video_id:
-                # Get avatar details from database
-                conn = sqlite3.connect("myavatar.db", timeout=10.0)
-                cur = conn.cursor()
-                
-                # Find the avatar record by heygen_avatar_id
-                cur.execute(
-                    "SELECT id FROM avatars WHERE heygen_avatar_id = ? AND user_id = ?",
-                    (avatar_id, user["id"])
-                )
-                avatar_record = cur.fetchone()
-                avatar_db_id = avatar_record[0] if avatar_record else None
-                
-                # Save to database with the current user's ID
-                cur.execute(
-                    "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
-                    (user["id"], avatar_db_id, "Video from API", video_id, "processing")
-                )
-                conn.commit()
-                conn.close()
+                # Get avatar details from database with better error handling
+                conn = None
+                try:
+                    conn = sqlite3.connect("myavatar.db", timeout=30.0)  # Increased timeout
+                    conn.execute("PRAGMA journal_mode=WAL")  # Better concurrency
+                    cur = conn.cursor()
+                    
+                    # Find the avatar record by heygen_avatar_id
+                    cur.execute(
+                        "SELECT id FROM avatars WHERE heygen_avatar_id = ? AND user_id = ?",
+                        (avatar_id, user["id"])
+                    )
+                    avatar_record = cur.fetchone()
+                    avatar_db_id = avatar_record[0] if avatar_record else None
+                    
+                    # Save to database with the current user's ID
+                    cur.execute(
+                        "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
+                        (user["id"], avatar_db_id, "Video from API", video_id, "processing")
+                    )
+                    conn.commit()
+                    
+                except sqlite3.OperationalError as e:
+                    if "locked" in str(e):
+                        logging.error(f"[ERROR] Database locked, retrying...")
+                        # Simple retry mechanism
+                        import time
+                        time.sleep(1)
+                        if conn:
+                            conn.close()
+                        conn = sqlite3.connect("myavatar.db", timeout=30.0)
+                        conn.execute("PRAGMA journal_mode=WAL")
+                        cur = conn.cursor()
+                        cur.execute(
+                            "INSERT INTO videos (user_id, avatar_id, title, heygen_job_id, status) VALUES (?, ?, ?, ?, ?)",
+                            (user["id"], avatar_db_id, "Video from API", video_id, "processing")
+                        )
+                        conn.commit()
+                finally:
+                    if conn:
+                        conn.close()
                 
                 logging.info(f"[DEBUG] Video saved to DB with ID: {video_id} for user: {user['username']}")
                 return {"success": True, "video_id": video_id, "status": "processing", "message": "Video generation started."}
@@ -174,15 +196,22 @@ async def check_video_status(video_id: str, request: Request):
             
             # Update database if video is completed - only for user's own videos
             if status == "completed" and video_url:
-                conn = sqlite3.connect("myavatar.db", timeout=10.0)
-                cur = conn.cursor()
-                cur.execute(
-                    "UPDATE videos SET status = 'completed', video_url = ? WHERE heygen_job_id = ? AND user_id = ?",
-                    (video_url, video_id, user["id"])
-                )
-                conn.commit()
-                conn.close()
-                logging.info(f"[DEBUG] Video {video_id} marked as completed with URL: {video_url}")
+                conn = None
+                try:
+                    conn = sqlite3.connect("myavatar.db", timeout=30.0)
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    cur = conn.cursor()
+                    cur.execute(
+                        "UPDATE videos SET status = 'completed', video_url = ? WHERE heygen_job_id = ? AND user_id = ?",
+                        (video_url, video_id, user["id"])
+                    )
+                    conn.commit()
+                    logging.info(f"[DEBUG] Video {video_id} marked as completed with URL: {video_url}")
+                except sqlite3.OperationalError as e:
+                    logging.error(f"[ERROR] Database update failed: {str(e)}")
+                finally:
+                    if conn:
+                        conn.close()
         
         data = response.json().get("data", {})
         status = data.get("status", "processing")
