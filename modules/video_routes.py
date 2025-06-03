@@ -63,7 +63,7 @@ async def generate_video(
         if not audio_url:
             raise HTTPException(status_code=500, detail="Cloudinary upload failed")
 
-        # HeyGen v2 payload
+        # HeyGen v2 payload with callback URL
         payload = {
             "video_inputs": [{
                 "character": {
@@ -78,7 +78,8 @@ async def generate_video(
             }],
             "test": False,
             "caption": False,
-            "private": False  # Ensure video is public
+            "private": False,
+            "callback_url": "https://app.myavatar.dk/api/heygen/webhook"  # THIS IS THE FIX!
         }
 
         logging.info(f"[DEBUG] Payload til HeyGen: {payload}")
