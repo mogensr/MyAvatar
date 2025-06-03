@@ -2045,28 +2045,48 @@ async def get_user_avatars(request: Request):
 
 @app.get("/api/videos")
 async def get_user_videos(request: Request):
-    """Get all videos for current user"""
+    """Get all videos for current user (or ALL videos if admin)"""
     user = get_current_user(request)
     if not user:
         return []
     
     try:
-        videos = execute_query(
-            """SELECT 
-                v.id,
-                v.heygen_job_id as video_id, 
-                v.title, 
-                v.video_url, 
-                v.status, 
-                v.created_at,
-                a.avatar_name
-            FROM videos v
-            LEFT JOIN avatars a ON v.avatar_id = a.id
-            WHERE v.user_id = ? 
-            ORDER BY v.created_at DESC""",
-            (user["id"],),
-            fetch_all=True
-        )
+        # If user is admin, show ALL videos from all users
+        if user.get("is_admin", 0) == 1:
+            videos = execute_query(
+                """SELECT 
+                    v.id,
+                    v.heygen_job_id as video_id, 
+                    v.title, 
+                    v.video_url, 
+                    v.status, 
+                    v.created_at,
+                    a.avatar_name,
+                    u.username
+                FROM videos v
+                LEFT JOIN avatars a ON v.avatar_id = a.id
+                LEFT JOIN users u ON v.user_id = u.id
+                ORDER BY v.created_at DESC""",
+                fetch_all=True
+            )
+        else:
+            # Regular users only see their own videos
+            videos = execute_query(
+                """SELECT 
+                    v.id,
+                    v.heygen_job_id as video_id, 
+                    v.title, 
+                    v.video_url, 
+                    v.status, 
+                    v.created_at,
+                    a.avatar_name
+                FROM videos v
+                LEFT JOIN avatars a ON v.avatar_id = a.id
+                WHERE v.user_id = ? 
+                ORDER BY v.created_at DESC""",
+                (user["id"],),
+                fetch_all=True
+            )
         
         video_list = []
         if videos:
