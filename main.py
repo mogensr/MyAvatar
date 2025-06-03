@@ -21,10 +21,10 @@ app = FastAPI(title="MyAvatar Video Generation API")
 security = HTTPBearer()
 
 # Database configuration
-DATABASE_PATH = os.getenv("DATABASE_PATH", "videos.db")
+DATABASE_PATH = os.getenv("DATABASE_PATH", "/data/videos.db")
 HEYGEN_API_KEY = os.getenv("HEYGEN_API_KEY")
 HEYGEN_API_URL = "https://api.heygen.com/v2/video/generate"
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://your-domain.com/webhook/heygen")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://your-app-name.railway.app/webhook/heygen")
 
 # Pydantic models
 class VideoGenerationRequest(BaseModel):
@@ -75,6 +75,11 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
 
 def init_database():
     """Initialize the database with required tables"""
+    # Create data directory if it doesn't exist (for Railway persistent storage)
+    data_dir = os.path.dirname(DATABASE_PATH)
+    if data_dir and not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -174,6 +179,223 @@ async def startup_event():
 
 @app.get("/")
 async def root():
+    """Dashboard HTML page"""
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>MyAvatar Dashboard</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f5f5f5;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .header {
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }
+            h1 {
+                margin: 0;
+                color: #333;
+            }
+            .stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .stat-card {
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .stat-value {
+                font-size: 2em;
+                font-weight: bold;
+                color: #2563eb;
+            }
+            .stat-label {
+                color: #666;
+                margin-top: 5px;
+            }
+            .videos-section {
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+            }
+            th {
+                background-color: #f8f9fa;
+                font-weight: 600;
+            }
+            .status {
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.875em;
+            }
+            .status-completed {
+                background-color: #d1fae5;
+                color: #065f46;
+            }
+            .status-processing {
+                background-color: #dbeafe;
+                color: #1e40af;
+            }
+            .status-pending {
+                background-color: #fef3c7;
+                color: #92400e;
+            }
+            .status-failed {
+                background-color: #fee2e2;
+                color: #991b1b;
+            }
+            .btn {
+                background-color: #2563eb;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .btn:hover {
+                background-color: #1d4ed8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>MyAvatar Dashboard</h1>
+                <p>Video Generation Service</p>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-videos">0</div>
+                    <div class="stat-label">Total Videos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completed-videos">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="processing-videos">0</div>
+                    <div class="stat-label">Processing</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="failed-videos">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+            </div>
+            
+            <div class="videos-section">
+                <h2>Recent Videos</h2>
+                <table id="videos-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>HeyGen Job ID</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #666;">Loading videos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <script>
+            // Fetch and display video statistics
+            async function loadStats() {
+                try {
+                    const response = await fetch('/api/stats');
+                    const stats = await response.json();
+                    
+                    document.getElementById('total-videos').textContent = stats.total || 0;
+                    document.getElementById('completed-videos').textContent = stats.completed || 0;
+                    document.getElementById('processing-videos').textContent = stats.processing || 0;
+                    document.getElementById('failed-videos').textContent = stats.failed || 0;
+                } catch (error) {
+                    console.error('Error loading stats:', error);
+                }
+            }
+            
+            // Fetch and display recent videos
+            async function loadVideos() {
+                try {
+                    const response = await fetch('/api/videos/recent');
+                    const videos = await response.json();
+                    
+                    const tbody = document.querySelector('#videos-table tbody');
+                    
+                    if (videos.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666;">No videos found</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = videos.map(video => `
+                        <tr>
+                            <td>${video.id}</td>
+                            <td>${video.heygen_job_id || '-'}</td>
+                            <td><span class="status status-${video.status}">${video.status}</span></td>
+                            <td>${new Date(video.created_at).toLocaleString()}</td>
+                            <td>
+                                ${video.video_url ? `<a href="${video.video_url}" target="_blank" class="btn">View</a>` : '-'}
+                            </td>
+                        </tr>
+                    `).join('');
+                } catch (error) {
+                    console.error('Error loading videos:', error);
+                }
+            }
+            
+            // Load data on page load
+            loadStats();
+            loadVideos();
+            
+            // Refresh data every 10 seconds
+            setInterval(() => {
+                loadStats();
+                loadVideos();
+            }, 10000);
+        </script>
+    </body>
+    </html>
+    """
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html_content)
+
+@app.get("/health")
+async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "MyAvatar Video Generation API"}
 
@@ -231,6 +453,47 @@ async def generate_video(
     except Exception as e:
         logger.error(f"Video generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/stats")
+async def get_stats():
+    """Get video statistics for dashboard"""
+    stats = execute_query(
+        """
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
+        FROM videos
+        """,
+        (),
+        fetch_one=True
+    )
+    
+    return {
+        "total": stats["total"] or 0,
+        "completed": stats["completed"] or 0,
+        "processing": stats["processing"] or 0,
+        "pending": stats["pending"] or 0,
+        "failed": stats["failed"] or 0
+    }
+
+@app.get("/api/videos/recent")
+async def get_recent_videos(limit: int = 10):
+    """Get recent videos for dashboard (no auth required)"""
+    videos = execute_query(
+        """
+        SELECT id, heygen_job_id, video_url, status, created_at, updated_at
+        FROM videos 
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+        fetch_all=True
+    )
+    
+    return videos
 
 @app.get("/api/videos/{video_id}", response_model=VideoResponse)
 async def get_video(video_id: int, current_user: Dict = Depends(get_current_user)):
@@ -435,4 +698,5 @@ async def internal_error_handler(request: Request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
