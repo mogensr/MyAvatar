@@ -2223,8 +2223,6 @@ async def heygen_webhook(request: Request):
 #####################################################################
 # CHAPTER 14: STATIC FILES & TEMPLATE SETUP
 #####################################################################
-
-{{ ... }}
 @app.get("/admin/test-heygen/{avatar_id}")
 async def test_heygen_avatar(request: Request, avatar_id: str):
     admin = get_current_user(request)
