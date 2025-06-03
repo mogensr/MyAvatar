@@ -89,7 +89,8 @@ class HeyGenAPI:
             )
             
             print(f"📡 HeyGen Response Status: {response.status_code}")
-            print(f"📄 HeyGen Response: {response.text}")
+            print(f"📄 HeyGen Response Headers: {response.headers}")
+            print(f"📄 HeyGen Response Body: {response.text}")
             
             if response.status_code == 200:
                 data = response.json()
@@ -103,6 +104,7 @@ class HeyGenAPI:
                         "full_response": data
                     }
                 else:
+                    print(f"❗ No video_id in response! Full response: {json.dumps(data, indent=2)}")
                     return {
                         "success": False,
                         "error": "No video_id in response",
