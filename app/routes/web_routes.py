@@ -12,11 +12,19 @@ from ..auth.authentication import (get_current_user, authenticate_user, authenti
                                   create_access_token, get_password_hash, is_admin)
 from ..logger.log_handler import log_info, log_error
 
+# ============================================================================
+# ROUTER SETUP
+# ============================================================================
+
 # Create router
 router = APIRouter(prefix="", tags=["web"])
 
 # Set up templates
 templates = Jinja2Templates(directory="templates")
+
+# ============================================================================
+# MAIN PAGES
+# ============================================================================
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -28,6 +36,10 @@ async def index(request: Request):
         return RedirectResponse(url="/dashboard", status_code=303)
     
     return templates.TemplateResponse("portal/login.html", {"request": request})
+
+# ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -79,6 +91,7 @@ async def login_post(
         
         log_info(f"User {user['username']} logged in", "Web")
         return response
+        
     except Exception as e:
         log_error("Login error", "Web", e)
         return templates.TemplateResponse(
@@ -88,6 +101,19 @@ async def login_post(
                 "error": "Login error"
             }
         )
+
+@router.get("/logout")
+async def logout(request: Request):
+    """
+    Logout user
+    """
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("access_token")
+    return response
+
+# ============================================================================
+# REGISTRATION ROUTES
+# ============================================================================
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
@@ -143,6 +169,7 @@ async def register(
                 "success": "Registration successful. Please log in."
             }
         )
+        
     except Exception as e:
         log_error("Registration error", "Web", e)
         return templates.TemplateResponse(
@@ -153,20 +180,16 @@ async def register(
             }
         )
 
-@router.get("/logout")
-async def logout(request: Request):
-    """
-    Logout user
-    """
-    response = RedirectResponse(url="/login", status_code=303)
-    response.delete_cookie("access_token")
-    return response
+# ============================================================================
+# DASHBOARD ROUTE - FIXED VERSION
+# ============================================================================
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """
-    User dashboard
+    User dashboard - Fixed to use proper template rendering
     """
+    # Check authentication
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -185,11 +208,7 @@ async def dashboard(request: Request):
         fetch_all=True
     )
     
-    # Render dashboard with embedded HTML
-    with open("templates/dashboard.html", "r") as f:
-        dashboard_html = f.read()
-    
-    # Convert to list of dicts for videos and avatars
+    # Convert database results to list of dicts for videos
     video_list = []
     for v in videos:
         if isinstance(v, dict):
@@ -201,6 +220,7 @@ async def dashboard(request: Request):
                 video_dict[key] = v[key]
             video_list.append(video_dict)
     
+    # Convert database results to list of dicts for avatars
     avatar_list = []
     for a in avatars:
         if isinstance(a, dict):
@@ -212,17 +232,26 @@ async def dashboard(request: Request):
                 avatar_dict[key] = a[key]
             avatar_list.append(avatar_dict)
     
-    return HTMLResponse(content=dashboard_html.format(
-        username=user["username"],
-        is_admin=user["is_admin"],
-        avatar_id=user["avatar_id"],
-        user_id=user["id"],
-        api_key=user.get("api_key", os.getenv("HEYGEN_API_KEY", "")),
-        videos=video_list,
-        avatars=avatar_list
-    ))
+    # Use proper template rendering instead of .format() - THIS IS THE FIX!
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "user": user,
+            "username": user["username"],
+            "is_admin": user["is_admin"],
+            "avatar_id": user["avatar_id"],
+            "user_id": user["id"],
+            "api_key": user.get("api_key", os.getenv("HEYGEN_API_KEY", "")),
+            "videos": video_list,
+            "avatars": avatar_list
+        }
+    )
 
-# Admin routes
+# ============================================================================
+# ADMIN ROUTES
+# ============================================================================
+
 @router.get("/admin/users", response_class=HTMLResponse)
 async def admin_users(request: Request):
     """
@@ -342,6 +371,7 @@ async def admin_create_user(
         
         # Redirect to users list
         return RedirectResponse(url="/admin/users", status_code=303)
+        
     except Exception as e:
         log_error("Admin create user error", "Admin", e)
         return templates.TemplateResponse(
@@ -351,3 +381,7 @@ async def admin_create_user(
                 "error": "Error creating user"
             }
         )
+
+# ============================================================================
+# END OF FILE
+# ============================================================================
