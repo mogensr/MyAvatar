@@ -55,7 +55,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("MyAvatar")
+logger = logging.getLogger("MyAvatar-Premium")
 
 class LogHandler:
     def __init__(self, max_logs=1000):
