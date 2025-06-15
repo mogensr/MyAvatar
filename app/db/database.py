@@ -41,9 +41,7 @@ def get_db_connection():
         log_error("Failed to establish database connection", "Database", e)
         raise
 
-def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
-    """Execute SQL query with proper error handling"""
-    connection = None
+
     try:
         # Convert SQLite placeholders to PostgreSQL placeholders
         if USE_POSTGRES and "?" in query:
