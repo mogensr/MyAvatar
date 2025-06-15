@@ -1,0 +1,52 @@
+{
+  "tests_run": 9,
+  "tests_passed": 6,
+  "tests_failed": 3,
+  "details": [
+    {
+      "test": "Import validation",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "Server validation",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "Environment variables",
+      "status": "FAILED",
+      "message": "Missing: JWT_SECRET_KEY, TIINGO_API_KEY"
+    },
+    {
+      "test": "Login validation",
+      "status": "FAILED",
+      "message": "Login failed, even after registration attempt"
+    },
+    {
+      "test": "Dashboard validation",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "API endpoint /api/videos",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "API endpoint /api/avatars",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "API endpoint /api/voices",
+      "status": "PASSED",
+      "message": ""
+    },
+    {
+      "test": "Finance API",
+      "status": "FAILED",
+      "message": "TIINGO_API_KEY not found in environment"
+    }
+  ]
+}

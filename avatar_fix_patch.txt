@@ -1,0 +1,70 @@
+### Avatar Persistence Fix for Video Creation Endpoints
+
+## 1. Replace in create_video_from_text_endpoint (around line 170-187)
+
+# REPLACE THIS:
+        # Get user's avatar ID
+        avatar_id = user.get("avatar_id")
+        if not avatar_id:
+            # Get default avatar for user
+            avatar = execute_query(
+                "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+                (user["id"],),
+                fetch_one=True
+            )
+            
+            if avatar:
+                avatar_id = avatar["avatar_id"]
+            else:
+                return JSONResponse(
+                    status_code=400,
+                    content={"success": False, "error": "No avatar available"}
+                )
+
+# WITH THIS:
+        # Use the avatar persistence utility to ensure we have a valid avatar
+        avatar_result = ensure_avatar_persistence(user)
+        
+        if not avatar_result["success"]:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": avatar_result["error"]}
+            )
+            
+        avatar_id = avatar_result["avatar_id"]
+        log_info(f"Using avatar {avatar_id} for user {user['username']} when creating text video", "API")
+
+
+## 2. Replace in create_video_from_audio_endpoint (around line 245-262)
+
+# REPLACE THIS:
+        # Get user's avatar ID
+        avatar_id = user.get("avatar_id")
+        if not avatar_id:
+            # Get default avatar for user
+            avatar = execute_query(
+                "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+                (user["id"],),
+                fetch_one=True
+            )
+            
+            if avatar:
+                avatar_id = avatar["avatar_id"]
+            else:
+                return JSONResponse(
+                    status_code=400,
+                    content={"success": False, "error": "No avatar available"}
+                )
+
+# WITH THIS:
+        # Use the avatar persistence utility to ensure we have a valid avatar
+        avatar_result = ensure_avatar_persistence(user)
+        
+        if not avatar_result["success"]:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": avatar_result["error"]}
+            )
+            
+        avatar_id = avatar_result["avatar_id"]
+        log_info(f"Using avatar {avatar_id} for user {user['username']} when creating audio video", "API")

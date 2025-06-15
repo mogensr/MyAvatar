@@ -1,0 +1,68 @@
+<!-- Text-to-Video Component for MyAvatar -->
+<div class="video-creation-container">
+    <!-- Input Type Selector -->
+    <div class="form-group">
+        <label for="input-type-selector">Choose Input Method:</label>
+        <select id="input-type-selector" class="form-control">
+            <option value="audio">Audio Recording</option>
+            <option value="text">Text Script</option>
+        </select>
+    </div>
+    
+    <!-- Audio Recording Section -->
+    <div id="audio-recording-section">
+        <!-- Your existing audio recording UI goes here -->
+    </div>
+    
+    <!-- Text Input Section -->
+    <div id="text-input-section" style="display: none;">
+        <form id="text-to-video-form">
+            <input type="hidden" id="avatar-id" name="avatar_id" value="{{ avatar_id }}">
+            
+            <div class="form-group">
+                <label for="title">Video Title:</label>
+                <input type="text" id="title" name="title" class="form-control" required placeholder="Enter a title for your video">
+            </div>
+            
+            <div class="form-group">
+                <label for="script-textarea">Script:</label>
+                <textarea id="script-textarea" name="text" class="form-control" rows="6" required placeholder="Type your script here. The avatar will speak this text."></textarea>
+                <small class="form-text text-muted">
+                    Write your script naturally as you want it to be spoken. Limit: 5000 characters.
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="voice-selector">Voice:</label>
+                <select id="voice-selector" name="voice_id" class="form-control">
+                    <option value="en-US-JennyNeural">Jenny (Female, US)</option>
+                    <option value="en-US-GuyNeural">Guy (Male, US)</option>
+                    <option value="en-GB-SoniaNeural">Sonia (Female, UK)</option>
+                    <option value="en-GB-RyanNeural">Ryan (Male, UK)</option>
+                    <option value="en-AU-NatashaNeural">Natasha (Female, AU)</option>
+                    <option value="en-AU-WilliamNeural">William (Male, AU)</option>
+                </select>
+            </div>
+            
+            <!-- Video Format Selector - Same as for audio -->
+            <div class="form-group">
+                <label for="video-format">Video Format:</label>
+                <select id="video-format" name="video_format" class="form-control">
+                    <option value="16:9">Landscape (16:9)</option>
+                    <option value="9:16">Portrait (9:16)</option>
+                    <option value="1:1">Square (1:1)</option>
+                </select>
+            </div>
+            
+            <button type="submit" id="submit-text-btn" class="btn btn-primary btn-block">
+                Generate Video
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Notification Area -->
+<div id="notification-area" class="notifications"></div>
+
+<!-- Make sure to include the text_to_video.js script in your page -->
+<script src="/static/js/text_to_video.js"></script>

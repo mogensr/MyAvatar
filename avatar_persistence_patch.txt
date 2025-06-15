@@ -1,0 +1,50 @@
+To fix the avatar persistence issue, make the following changes:
+
+1. In api_routes.py, around line 170, replace this code:
+```python
+# Get user's avatar ID
+avatar_id = user.get("avatar_id")
+if not avatar_id:
+    # Get default avatar for user
+    avatar = execute_query(
+        "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+        (user["id"],),
+        fetch_one=True
+    )
+    
+    if avatar:
+        avatar_id = avatar["avatar_id"]
+    else:
+        return JSONResponse(
+            status_code=400,
+            content={"success": False, "error": "No avatar available"}
+        )
+```
+
+With this improved code that uses our new utility:
+```python
+# Get user's avatar ID with persistence handling
+avatar_id = ensure_avatar_persistence(user)
+
+if not avatar_id:
+    return JSONResponse(
+        status_code=400,
+        content={"success": False, "error": "No avatar available. Please add an avatar first."}
+    )
+```
+
+2. Apply the same change in create_video_from_audio_endpoint (around line 249)
+
+3. Add the import at the top of the file if not already added:
+```python
+from ..utils.avatar_utils import ensure_avatar_persistence
+```
+
+The avatar_utils.py has already been created with a function that:
+1. Checks for an avatar_id in the user record
+2. If not found, looks for a default avatar
+3. If no default, finds any avatar and sets it as default
+4. Updates the user record for future persistence
+5. Returns the avatar_id or None if no avatar exists
+
+This ensures avatars will be properly persisted across sessions.
