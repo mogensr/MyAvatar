@@ -283,12 +283,11 @@ def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
         
         # Get fresh user data from database with proper SQL formatting
         user = execute_query(
-            """SELECT id, username, email, is_admin, created_at, 
-               avatar_img_url, phone, logo_url, linkedin_url 
-               FROM users WHERE username = ?""", 
+            "SELECT * FROM users WHERE username = ?", 
             (username,), 
             fetch_one=True
         )
+        user = row_to_dict(user)
         
         if not user:
             log_warning(f"User {username} from token not found in database", "Auth")
