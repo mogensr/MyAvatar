@@ -20,7 +20,9 @@ except ImportError:
 
 # Environment variables
 DATABASE_URL = os.getenv("DATABASE_URL")
-USE_POSTGRES = DATABASE_URL is not None and DATABASE_URL.startswith("postgres://")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+USE_POSTGRES = DATABASE_URL is not None and POSTGRESQL_AVAILABLE
 
 def get_db_connection():
     """Get a database connection based on configuration"""
