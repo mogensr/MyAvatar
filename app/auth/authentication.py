@@ -32,6 +32,23 @@ pwd_context = CryptContext(
     deprecated="auto",
     bcrypt__rounds=12
 )
+def row_to_dict(row, columns=None):
+    """Convert database row to dictionary, handling both SQLite Row and PostgreSQL tuple"""
+    if row is None:
+        return None
+    if hasattr(row, 'keys'):
+        return dict(row)
+    if isinstance(row, tuple):
+        if columns is None:
+            columns = ['id', 'username', 'email', 'password', 'created_at', 
+                      'last_login', 'is_admin', 'api_key', 'avatar_id', 
+                      'avatar_img_url', 'avatar_video_url', 'is_premium', 
+                      'credits_remaining', 'subscription_tier', 'subscription_expires',
+                      'api_usage_count', 'display_name', 'bio', 'company',
+                      'total_videos_created', 'total_minutes_generated', 'last_video_created']
+        return dict(zip(columns[:len(row)], row))
+    return row
+
 
 # Optional Bearer token support
 security = HTTPBearer(auto_error=False)
@@ -81,6 +98,7 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
             (username,), 
             fetch_one=True
         )
+        user = row_to_dict(user)
         
         if not user:
             log_info(f"Authentication failed: User {username} not found", "Auth")
@@ -92,7 +110,7 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
             return None
             
         # Verify password
-        if not verify_password(password, user['hashed_password']):
+        if not verify_password(password, user['password']):
             log_info(f"Authentication failed: Invalid password for user {username}", "Auth")
             return None
         
@@ -121,6 +139,7 @@ def authenticate_user_by_email(email: str, password: str) -> Optional[Dict[str, 
             (email,), 
             fetch_one=True
         )
+        user = row_to_dict(user)
         
         if not user:
             log_info(f"Authentication failed: User with email {email} not found", "Auth")
@@ -132,7 +151,7 @@ def authenticate_user_by_email(email: str, password: str) -> Optional[Dict[str, 
             return None
             
         # Verify password
-        if not verify_password(password, user['hashed_password']):
+        if not verify_password(password, user['password']):
             log_info(f"Authentication failed: Invalid password for email {email}", "Auth")
             return None
         
