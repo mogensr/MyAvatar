@@ -89,7 +89,7 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
             "error": error_msg
         }
 
-def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format: str = "16:9", voice_id: str = "en-US-JennyNeural"):
+def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format: str = "16:9", voice_id: str = None):
     """
     Create video using text-to-speech instead of audio file
     
@@ -98,7 +98,7 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         avatar_id: ID of the avatar to use
         text: Text to convert to speech
         video_format: Video format (16:9, 9:16, 1:1)
-        voice_id: ID of the voice to use
+        voice_id: ID of the voice to use. If None or 'cloned', will use avatar's cloned voice
         
     Returns:
         Dictionary with video details or error information
@@ -119,18 +119,28 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         width = 1280
         height = 720
     
+    # Create the clip data
+    clip_data = {
+        "avatar_id": avatar_id,
+        "avatar_style": "normal",
+        "input_text": text,
+        "offset": {"x": 0, "y": 0},
+        "scale": 1
+    }
+    
+    # Only add voice_id if specified and not 'cloned'
+    if voice_id and voice_id.lower() != 'cloned':
+        clip_data["voice_id"] = voice_id
+        log_info(f"Using specified voice_id: {voice_id}", "HeyGen API")
+    else:
+        log_info(f"Using avatar's cloned voice for avatar_id: {avatar_id}", "HeyGen API")
+    
+    # Build the full request data
     data = {
         "background": {
             "color": "#ffffff"
         },
-        "clips": [{
-            "avatar_id": avatar_id,
-            "avatar_style": "normal",
-            "input_text": text,
-            "offset": {"x": 0, "y": 0},
-            "scale": 1,
-            "voice_id": voice_id
-        }],
+        "clips": [clip_data],
         "ratio": video_format,
         "test": False,
         "version": "v1",
@@ -140,12 +150,19 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
     
     try:
         log_info(f"Creating TTS video with avatar {avatar_id}, format: {video_format}", "HeyGen API")
+        
+        # Log the exact request being sent for debugging
+        log_info(f"HeyGen API request data: {json.dumps(data)}", "HeyGen API")
+        
         response = requests.post(
             "https://api.heygen.com/v1/video/generate",
             headers=headers,
             data=json.dumps(data)
         )
         response_data = response.json()
+        
+        # Log full response for debugging
+        log_info(f"HeyGen API response: {json.dumps(response_data)}", "HeyGen API")
         
         if response.status_code == 200 and "data" in response_data:
             log_info(f"TTS Video creation initiated, video_id: {response_data['data'].get('video_id')}", "HeyGen API")
@@ -158,7 +175,8 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
             log_error(error_msg, "HeyGen API")
             return {
                 "success": False,
-                "error": error_msg
+                "error": error_msg,
+                "details": response_data  # Include full error details
             }
     except Exception as e:
         error_msg = f"Exception in TTS video creation: {str(e)}"
