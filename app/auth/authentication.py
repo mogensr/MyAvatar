@@ -111,9 +111,17 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
             fetch_one=True
         )
         
+        # DEBUG: Print what we got from database
+        log_info(f"Raw database result: {user_raw}", "Auth")
+        log_info(f"Raw database result type: {type(user_raw)}", "Auth")
+        
         # Convert to dict - this should work now with our fixed database cursor
         user = row_to_dict(user_raw)
-
+        
+        # DEBUG: Print converted result
+        log_info(f"Converted user dict: {user}", "Auth")
+        log_info(f"Converted user type: {type(user)}", "Auth")
+        
         if not user:
             log_info(f"Authentication failed: User {username} not found", "Auth")
             return None
@@ -121,6 +129,11 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
         # Check if user is active (optional field)
         if 'is_active' in user and not user['is_active']:
             log_warning(f"Authentication failed: User {username} is inactive", "Auth")
+            return None
+
+        # DEBUG: Check if password key exists
+        if 'password' not in user:
+            log_error(f"Password key not found in user dict. Available keys: {list(user.keys()) if isinstance(user, dict) else 'Not a dict'}", "Auth")
             return None
 
         # Verify password
