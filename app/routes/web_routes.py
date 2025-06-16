@@ -23,22 +23,26 @@ router = APIRouter(prefix="", tags=["web"])
 templates = Jinja2Templates(directory="templates")
 
 # ============================================================================
-# MAIN PAGES
+# MAIN PAGES - WITH ADMIN REDIRECT
 # ============================================================================
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """
-    Main page - redirects to dashboard if logged in, otherwise shows login page
+    Main page - redirects to appropriate dashboard if logged in, otherwise shows login page
     """
     user = get_current_user(request)
     if user:
-        return RedirectResponse(url="/dashboard", status_code=303)
+        # Redirect admin users to admin dashboard
+        if user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/admin/dashboard", status_code=303)
+        else:
+            return RedirectResponse(url="/dashboard", status_code=303)
     
     return templates.TemplateResponse("portal/login.html", {"request": request})
 
 # ============================================================================
-# AUTHENTICATION ROUTES
+# AUTHENTICATION ROUTES - WITH ADMIN REDIRECT
 # ============================================================================
 
 @router.get("/login", response_class=HTMLResponse)
@@ -56,7 +60,7 @@ async def login_post(
     password: str = Form(...)
 ):
     """
-    Process login
+    Process login - WITH ADMIN REDIRECT
     """
     try:
         # Try to authenticate by username or email
@@ -81,8 +85,12 @@ async def login_post(
             expires_delta=timedelta(minutes=120)
         )
         
-        # Create response
-        response = RedirectResponse(url="/dashboard", status_code=303)
+        # Create response - redirect admin users to admin dashboard
+        if user.get("is_admin", 0) == 1:
+            response = RedirectResponse(url="/admin/dashboard", status_code=303)
+        else:
+            response = RedirectResponse(url="/dashboard", status_code=303)
+            
         response.set_cookie(
             key="access_token",
             value=access_token,
@@ -153,7 +161,7 @@ async def register(
         hashed_password = get_password_hash(password)
         execute_query(
             """
-            INSERT INTO users (username, email, password, created_at)
+            INSERT INTO users (username, email, hashed_password, created_at)
             VALUES (?, ?, ?, ?)
             """,
             (username, email, hashed_password, datetime.now().isoformat())
@@ -181,13 +189,13 @@ async def register(
         )
 
 # ============================================================================
-# DASHBOARD ROUTE - FIXED VERSION
+# DASHBOARD ROUTE - WITH REAL STATISTICS
 # ============================================================================
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """
-    User dashboard - Fixed to use proper template rendering
+    User dashboard - With real statistics instead of mock data
     """
     # Check authentication
     user = get_current_user(request)
@@ -210,15 +218,26 @@ async def dashboard(request: Request):
     
     # Convert database results to list of dicts for videos
     video_list = []
+    total_duration = 0
+    total_views = 0
+    total_shares = 0
+    
     for v in videos:
         if isinstance(v, dict):
-            video_list.append(v)
+            video_dict = v
         else:
             # Handle SQLite Row objects
             video_dict = {}
             for key in v.keys():
                 video_dict[key] = v[key]
-            video_list.append(video_dict)
+        
+        video_list.append(video_dict)
+        
+        # Calculate real statistics
+        if video_dict.get('duration'):
+            total_duration += float(video_dict['duration'])
+        # Note: views and shares would need to be tracked in your database
+        # For now, we'll set them to 0 since those columns don't exist yet
     
     # Convert database results to list of dicts for avatars
     avatar_list = []
@@ -232,21 +251,30 @@ async def dashboard(request: Request):
                 avatar_dict[key] = a[key]
             avatar_list.append(avatar_dict)
     
-    # Use proper template rendering instead of .format() - THIS IS THE FIX!
+    # Calculate real statistics
+    total_videos = len(video_list)
+    total_duration_hours = round(total_duration / 3600, 1) if total_duration > 0 else 0
+    
+    # Use proper template rendering with REAL statistics
     return templates.TemplateResponse(
-    "dashboard.html",
-    {
-        "request": request,
-        "user": user,
-        "username": user.get("username", ""),
-        "is_admin": user.get("is_admin", 0), 
-        "avatar_id": user.get("avatar_id", ""),
-        "user_id": user.get("id", 0),
-        "api_key": user.get("api_key", "") or os.getenv("HEYGEN_API_KEY", ""),
-        "videos": video_list,
-        "avatars": avatar_list
-    }
-)
+        "dashboard.html",
+        {
+            "request": request,
+            "user": user,
+            "username": user.get("username", ""),
+            "is_admin": user.get("is_admin", 0), 
+            "avatar_id": user.get("avatar_id", ""),
+            "user_id": user.get("id", 0),
+            "api_key": user.get("api_key", "") or os.getenv("HEYGEN_API_KEY", ""),
+            "videos": video_list,
+            "avatars": avatar_list,
+            # REAL STATISTICS - not mock data
+            "total_videos": total_videos,
+            "total_duration": f"{total_duration_hours}h" if total_duration_hours > 0 else "0h",
+            "total_views": total_views,  # Will be 0 until view tracking is implemented
+            "total_shares": total_shares,  # Will be 0 until share tracking is implemented
+        }
+    )
 
 # ============================================================================
 # ADMIN ROUTES
@@ -361,7 +389,7 @@ async def admin_create_user(
         hashed_password = get_password_hash(password)
         execute_query(
             """
-            INSERT INTO users (username, email, password, created_at, is_admin, api_key)
+            INSERT INTO users (username, email, hashed_password, created_at, is_admin, api_key)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (username, email, hashed_password, datetime.now().isoformat(), is_admin_user, api_key)
