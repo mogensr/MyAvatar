@@ -36,7 +36,7 @@
                 <td>{% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank">LinkedIn</a>{% endif %}</td>
                 <td>
                     <a href="/admin/edit-user/{{ user.id }}" class="btn btn-sm btn-warning">Rediger</a>
-<a href="/admin/user/{{ user.id }}/avatars" class="btn btn-sm btn-info ms-1">Administrér avatarer</a>
+<a href="/admin/manage-avatars/{{ user.id }}" class="btn btn-sm btn-info ms-1">Administrér avatarer</a>
                 </td>
             </tr>
         {% endfor %}
