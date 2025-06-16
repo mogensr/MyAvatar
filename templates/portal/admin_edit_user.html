@@ -1,118 +1,78 @@
-<!-- templates/portal/admin_edit_user.html -->
 <!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <title>Rediger bruger</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rediger Bruger - MyAvatar Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<div class="container mt-5">
-    <h2 class="mb-4">✏️ Rediger bruger</h2>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>✏️ Rediger Bruger</h2>
+            <a href="/admin/users" class="btn btn-secondary">← Tilbage til Brugere</a>
+        </div>
 
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-    {% if success %}
-    <div class="alert alert-success">{{ success }}</div>
-    {% endif %}
-    <form method="post" action="/admin/edit-user/{{ user.id }}" enctype="multipart/form-data">
-        <div class="mb-3">
-            <label for="username" class="form-label">Navn</label>
-            <input type="text" class="form-control" id="useravatar_name" name="useravatar_name" value="{{ user.useravatar_name }}" required>
-        </div>
-        <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
-        </div>
-        <div class="mb-3">
-            <label for="phone" class="form-label">Telefonnummer</label>
-            <input type="text" class="form-control" id="phone" name="phone" value="{{ user.phone or '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="heygen_id" class="form-label">HeyGen ID</label>
-            <input type="text" class="form-control" id="heygen_id" name="heygen_id" value="{{ user.heygen_id or '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="avatar_img" class="form-label">Avatar-billede (HeyGen)</label>
-            {% if user.avatar_img_url %}<br><img src="{{ user.avatar_img_url }}" alt="Avatar" style="height:48px;">{% endif %}
-            <input type="file" class="form-control" id="avatar_img" name="avatar_img" accept="image/*">
-        </div>
-        <div class="mb-3">
-            <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
-            <div class="input-group">
-                <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" placeholder="Enter HeyGen Avatar ID">
-                <button id="fetchHeygenBtn" class="btn btn-primary" type="button">Fetch from HeyGen</button>
-            </div>
-            <div id="heygenAvatarResult" class="mt-2"></div>
-        </div>
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const fetchBtn = document.getElementById('fetchHeygenBtn');
-            const resultDiv = document.getElementById('heygenAvatarResult');
-            if (fetchBtn) {
-                fetchBtn.addEventListener('click', async function() {
-                    const avatarId = document.getElementById('heygen_avatar_id').value.trim();
-                    if (!avatarId) {
-                        resultDiv.innerHTML = '<div class="alert alert-warning">Please enter a HeyGen Avatar ID.</div>';
-                        return;
-                    }
-                    fetchBtn.disabled = true;
-                    resultDiv.innerHTML = '<div class="text-info">Fetching avatar from HeyGen...</div>';
-                    try {
-                        const resp = await fetch(`/admin/user/{{ user.id }}/fetch-heygen-avatar`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ heygen_avatar_id: avatarId })
-                        });
-                        const data = await resp.json();
-                        if (data.success) {
-                            resultDiv.innerHTML = `
-                                <div class="alert alert-success">Avatar fetched and saved!</div>
-                                <div class="d-flex align-items-center mt-2">
-                                    <img src="${data.avatar.avatar_url}" alt="Avatar" style="height:48px; margin-right:12px;">
-                                    <div>
-                                        <strong>${data.avatar.avatar_name}</strong><br>
-                                        HeyGen ID: ${data.avatar.heygen_avatar_id}
-                                    </div>
-                                </div>
-                            `;
-                            setTimeout(() => window.location.reload(), 1500);
-                        } else {
-                            resultDiv.innerHTML = `<div class="alert alert-danger">${data.error || 'Failed to fetch avatar.'}</div>`;
-                        }
-                    } catch (e) {
-                        resultDiv.innerHTML = '<div class="alert alert-danger">Error fetching from HeyGen.</div>';
-                    } finally {
-                        fetchBtn.disabled = false;
-                    }
-                });
-            }
-        });
-        </script>
-        <div class="mb-3">
-            <label for="logo_img" class="form-label">Logo</label>
-            {% if user.logo_url %}<br><img src="{{ user.logo_url }}" alt="Logo" style="height:48px;">{% endif %}
-            <input type="file" class="form-control" id="logo_img" name="logo_img" accept="image/*">
-        </div>
-        <div class="mb-3">
-            <label for="linkedin_url" class="form-label">LinkedIn profil (URL)</label>
-            <input type="url" class="form-control" id="linkedin_url" name="linkedin_url" value="{{ user.linkedin_url or '' }}">
-        </div>
-        <div class="mb-3">
-            <label for="uploaded_images" class="form-label">Ekstra billeder</label>
-            {% if user.uploaded_images %}
-                <div class="mb-2">
-                {% for img_url in user.uploaded_images.split(',') %}
-                    <img src="{{ img_url }}" alt="Ekstra billede" style="height:32px; margin-right:4px;">
-                {% endfor %}
-                </div>
+        <!-- Success/Error Messages -->
+        {% if request.query_params.get('error') %}
+        <div class="alert alert-danger">
+            {% if request.query_params.get('error') == 'update_failed' %}
+                Fejl ved opdatering af bruger. Prøv igen.
+            {% else %}
+                Der opstod en fejl. Prøv igen.
             {% endif %}
-            <input type="file" class="form-control" id="uploaded_images" name="uploaded_images" accept="image/*" multiple>
         </div>
-        <button type="submit" class="btn btn-success">Gem ændringer</button>
-        <a href="/admin/users" class="btn btn-secondary ms-2">Tilbage</a>
-    </form>
-</div>
+        {% endif %}
+
+        <!-- User Info -->
+        <div class="alert alert-info">
+            <strong>Bruger ID:</strong> {{ user_to_edit.id }} | 
+            <strong>Oprettet:</strong> {{ user_to_edit.created_at }}
+            {% if user_to_edit.last_login %}
+                | <strong>Sidste login:</strong> {{ user_to_edit.last_login }}
+            {% endif %}
+        </div>
+
+        <!-- Edit Form -->
+        <form action="/admin/edit-user/{{ user_to_edit.id }}" method="post">
+            <div class="mb-3">
+                <label for="username" class="form-label">Brugernavn</label>
+                <input type="text" class="form-control" id="username" name="username" 
+                       value="{{ user_to_edit.username }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" 
+                       value="{{ user_to_edit.email }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Brugerrettigheder</label>
+                
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_premium" name="is_premium" 
+                           {% if user_to_edit.is_premium %}checked{% endif %}>
+                    <label class="form-check-label" for="is_premium">
+                        Premium Bruger
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin" 
+                           {% if user_to_edit.is_admin %}checked{% endif %}>
+                    <label class="form-check-label" for="is_admin">
+                        Administrator
+                    </label>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">Gem Ændringer</button>
+                <a href="/admin/users" class="btn btn-secondary">Annuller</a>
+                <a href="/admin/manage-avatars/{{ user_to_edit.id }}" class="btn btn-primary">Administrér Avatarer</a>
+            </div>
+        </form>
+    </div>
 </body>
 </html>
