@@ -4,7 +4,7 @@ Web routes for MyAvatar
 import os
 import uuid
 import requests
-from werkzeug.utils import secure_filename
+import re
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -14,6 +14,28 @@ from ..db.database import execute_query
 from ..auth.authentication import (get_current_user, authenticate_user, authenticate_user_by_email,
                                   create_access_token, get_password_hash, is_admin)
 from ..logger.log_handler import log_info, log_error
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+
+def secure_filename(filename):
+    """
+    Secure a filename by removing dangerous characters.
+    Alternative to Werkzeug's secure_filename for FastAPI.
+    """
+    # Remove any path separators
+    filename = filename.replace('/', '').replace('\\', '')
+    # Remove any characters that aren't alphanumeric, dots, hyphens, or underscores
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
+    # Remove multiple dots
+    filename = re.sub(r'\.+', '.', filename)
+    # Remove leading/trailing dots and spaces
+    filename = filename.strip('. ')
+    # If filename is empty or too long, generate a safe one
+    if not filename or len(filename) > 100:
+        return f"file_{uuid.uuid4().hex[:8]}.jpg"
+    return filename
 
 # ============================================================================
 # ROUTER SETUP
@@ -542,14 +564,14 @@ async def admin_delete_avatar(request: Request, avatar_id: int):
 
 @router.post("/admin/upload-image/{user_id}")
 async def admin_upload_image(request: Request, user_id: int):
-    """Admin upload image for user - UPDATED"""
+    """Admin upload image for user - UPDATED WITHOUT WERKZEUG"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
     
     try:
         form = await request.form()
-        image_file = form.get("image_file")  # Changed from "avatar_file"
+        image_file = form.get("image_file")
         
         if not image_file or not image_file.filename:
             return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_file", status_code=303)
@@ -566,7 +588,8 @@ async def admin_upload_image(request: Request, user_id: int):
         
         # Generate secure filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        file_ext = os.path.splitext(image_file.filename)[1].lower()
+        secure_name = secure_filename(image_file.filename)
+        file_ext = os.path.splitext(secure_name)[1].lower()
         unique_filename = f"user_{user_id}_{timestamp}{file_ext}"
         file_path = os.path.join(upload_dir, unique_filename)
         
