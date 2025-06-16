@@ -1,12 +1,17 @@
 """
 Database functions for MyAvatar
 Supports both SQLite and PostgreSQL
+FIXED VERSION - PostgreSQL now returns dictionary-like objects
 """
 import os
 import sqlite3
 from datetime import datetime
 import traceback
 from ..logger.log_handler import log_info, log_error, log_warning
+
+# ============================================================================
+# POSTGRESQL SETUP
+# ============================================================================
 
 # PostgreSQL support
 try:
@@ -23,6 +28,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 USE_POSTGRES = DATABASE_URL is not None and POSTGRESQL_AVAILABLE
+
+# ============================================================================
+# DATABASE CONNECTION FUNCTIONS - FIXED
+# ============================================================================
 
 def get_db_connection():
     """Get a database connection based on configuration"""
@@ -42,7 +51,7 @@ def get_db_connection():
         raise
 
 def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
-    """Execute SQL query with proper error handling"""
+    """Execute SQL query with proper error handling - FIXED VERSION"""
     connection = None
     try:
         # Convert SQLite placeholders to PostgreSQL placeholders
@@ -52,7 +61,13 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
             log_info(f"Converted query from: {original_query} to: {query}", "Database")
             
         connection = get_db_connection()
-        cursor = connection.cursor()
+        
+        # Use RealDictCursor for PostgreSQL to return dictionary-like objects - THIS IS THE FIX!
+        if USE_POSTGRES:
+            cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            cursor = connection.cursor()
+            
         cursor.execute(query, params)
         
         if fetch_one:
@@ -73,6 +88,10 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
     finally:
         if connection:
             connection.close()
+
+# ============================================================================
+# DATABASE INITIALIZATION
+# ============================================================================
 
 def init_database():
     """Initialize database tables if they don't exist"""
@@ -232,14 +251,20 @@ def update_database_schema():
         log_error("Failed to update database schema", "Database", e)
         raise
 
-# Helper function for placeholder compatibility
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
 def get_placeholder():
     """Get the correct placeholder for the database type"""
     return "%s" if USE_POSTGRES else "?"
 
-# Helper function to format queries
 def format_query(query: str):
     """Format query for current database type"""
     if USE_POSTGRES and "?" in query:
         return query.replace("?", "%s")
     return query
+
+# ============================================================================
+# END OF FILE
+# ============================================================================
