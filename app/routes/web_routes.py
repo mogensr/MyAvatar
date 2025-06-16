@@ -410,6 +410,133 @@ async def admin_create_user(
             }
         )
 
+@router.get("/admin/edit-user/{user_id}", response_class=HTMLResponse)
+async def admin_edit_user_page(request: Request, user_id: int):
+    """Admin edit user page"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        # Get the user to edit
+        user_to_edit = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_edit:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        return templates.TemplateResponse("portal/admin_edit_user.html", {
+            "request": request,
+            "user": user,
+            "user_to_edit": user_to_edit,
+            "title": f"Edit User: {user_to_edit['username']}"
+        })
+    except Exception as e:
+        log_error(f"Error in admin_edit_user_page: {e}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
+
+@router.post("/admin/edit-user/{user_id}")
+async def admin_edit_user_submit(request: Request, user_id: int):
+    """Handle admin edit user form submission"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        # Get form data
+        form = await request.form()
+        username = form.get("username", "").strip()
+        email = form.get("email", "").strip()
+        is_premium = 1 if form.get("is_premium") == "on" else 0
+        is_admin_user = 1 if form.get("is_admin") == "on" else 0
+        
+        # Update user
+        execute_query(
+            """
+            UPDATE users 
+            SET username = ?, email = ?, is_premium = ?, is_admin = ?
+            WHERE id = ?
+            """,
+            (username, email, is_premium, is_admin_user, user_id)
+        )
+        
+        log_info(f"Admin {user['username']} updated user {username}", "Admin")
+        return RedirectResponse(url=f"/admin/users?success=user_updated", status_code=303)
+    
+    except Exception as e:
+        log_error(f"Error updating user: {e}", "Admin", e)
+        return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
+
+@router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
+async def admin_manage_avatars_page(request: Request, user_id: int):
+    """Admin manage user avatars page"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        # Get the user to manage
+        user_to_manage = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get user's avatars
+        avatars = execute_query(
+            "SELECT * FROM user_avatars WHERE user_id = ?",
+            (user_id,),
+            fetch_all=True
+        )
+        
+        return templates.TemplateResponse("portal/admin_manage_avatars.html", {
+            "request": request,
+            "user": user,
+            "user_to_manage": user_to_manage,
+            "avatars": avatars,
+            "title": f"Manage Avatars: {user_to_manage['username']}"
+        })
+    except Exception as e:
+        log_error(f"Error in admin_manage_avatars_page: {e}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
+
+@router.post("/admin/delete-avatar/{avatar_id}")
+async def admin_delete_avatar(request: Request, avatar_id: int):
+    """Admin delete avatar"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        # Get avatar info first
+        avatar = execute_query(
+            "SELECT user_id FROM user_avatars WHERE id = ?",
+            (avatar_id,),
+            fetch_one=True
+        )
+        
+        if avatar:
+            user_id = avatar["user_id"]
+            # Delete avatar
+            execute_query(
+                "DELETE FROM user_avatars WHERE id = ?",
+                (avatar_id,)
+            )
+            log_info(f"Admin {user['username']} deleted avatar {avatar_id}", "Admin")
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted", status_code=303)
+        else:
+            return RedirectResponse(url="/admin/users?error=avatar_not_found", status_code=303)
+            
+    except Exception as e:
+        log_error(f"Error deleting avatar: {e}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
+
 # ============================================================================
 # END OF FILE
 # ============================================================================
