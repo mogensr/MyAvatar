@@ -6,5 +6,8 @@ startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 
+[variables]
+ENABLE_SAFE_MODE = "true"
+
 [deploy.nixpacks]
 aptPkgs = ["libgl1-mesa-glx", "libglib2.0-0", "libsm6", "libxext6", "libxrender1", "libfontconfig1"]
