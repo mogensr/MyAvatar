@@ -23,15 +23,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MyAvatar")
 
+# Import compatibility mode checking
+from app.compatibility import ENABLE_SAFE_MODE, ENABLE_BACKGROUND_REPLACEMENT, log_compatibility_status
+
 # Import modular components
 from app.logger.log_handler import log_handler, log_info, log_error, log_warning
 from app.db.database import init_database, update_database_schema
 from app.db.admin import create_admin_user
-from app.database.background_schema import initialize_backgrounds_schema, add_default_backgrounds
 from app.routes.api_routes import router as api_router
 from app.routes.web_routes import router as web_router
 from app.routes.finance_routes import router as finance_router
-from app.routes.background_routes import router as background_router
+
+# Conditionally import background replacement components
+if ENABLE_BACKGROUND_REPLACEMENT:
+    from app.database.background_schema import initialize_backgrounds_schema, add_default_backgrounds
+    from app.routes.background_routes import router as background_router
 
 # FASTAPI APP INITIALIZATION
 app = FastAPI(title="MyAvatar", description="AI Avatar Video Generation Platform - Premium Edition")
@@ -61,7 +67,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(web_router)
 app.include_router(finance_router)
-app.include_router(background_router)
+
+# Conditionally register background routes
+if ENABLE_BACKGROUND_REPLACEMENT:
+    app.include_router(background_router)
 
 # Create necessary directories
 for directory in ["static/uploads/audio", "static/uploads/images", "output", "processed", "uploads", "temp_audio", "static/backgrounds", "temp/background_processing", "temp/video_processing"]:
@@ -73,25 +82,29 @@ async def startup_event():
     """
     Initialize database and update schema on startup
     """
-    log_info("Starting MyAvatar application", "Server")
+    # Log compatibility status
+    status = log_compatibility_status()
+    log_info(f"Starting MyAvatar application (Safe Mode: {status['safe_mode']})", "Server")
     
     try:
         init_database()
         update_database_schema()
         create_admin_user()  # Create admin user if not exists
         
-        # Initialize background replacement feature
-        db_path = os.path.join(os.getcwd(), 'database.db')
-        backgrounds_dir = os.path.join(os.getcwd(), 'static', 'backgrounds')
-        initialize_backgrounds_schema(db_path)
-        add_default_backgrounds(db_path, backgrounds_dir)
-        log_info("Background replacement feature initialized", "Server")
-        log_info("[\n\n\n\n\n\n                                            [Server] MyAvatar Premium Edition is running  ")
+        # Initialize background replacement feature only if not in safe mode
+        if ENABLE_BACKGROUND_REPLACEMENT:
+            db_path = os.path.join(os.getcwd(), 'database.db')
+            backgrounds_dir = os.path.join(os.getcwd(), 'static', 'backgrounds')
+            initialize_backgrounds_schema(db_path)
+            add_default_backgrounds(db_path, backgrounds_dir)
+            log_info("Background replacement feature initialized", "Server")
     except Exception as e:
-        log_error("Error during startup", "Server", e)
-        log_warning("Application may not function correctly without database", "Server")
+        log_error(f"Error during startup: {str(e)}", "Server", e)
+        log_warning("Application may not function correctly due to startup error", "Server")
     
-    log_info("MyAvatar Premium Edition is running", "Server")
+    # Successfully started
+    edition_name = "Premium Edition" if not ENABLE_SAFE_MODE else "Premium Edition (Safe Mode)"
+    log_info(f"MyAvatar {edition_name} is running", "Server")
 
 if __name__ == "__main__":
     import uvicorn
