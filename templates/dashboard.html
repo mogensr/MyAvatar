@@ -1111,46 +1111,88 @@
     <div id="recordingModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">🎤 Voice Recording</h3>
+                <h3 class="modal-title">🎤 Create Video</h3>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             
-            <div class="recording-controls">
-                <button id="recordBtn" class="record-btn inactive" onclick="toggleRecording()">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <div id="recordingStatus" class="recording-status">Click to start recording</div>
-                <div id="recordingTimer" class="recording-timer">00:00</div>
+            <!-- Step 1: Choose Avatar -->
+            <div id="avatarSelection" class="step">
+                <h4 style="margin-bottom: 1rem;">Step 1: Choose Your Avatar</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    {% for avatar in avatars %}
+                    <div class="avatar-option" onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.heygen_avatar_id }}', '{{ avatar.name }}')" style="cursor: pointer; border: 2px solid var(--gray-300); border-radius: 0.5rem; padding: 1rem; text-align: center; transition: all var(--transition-fast);">
+                        {% if avatar.image_path %}
+                            <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem;">
+                        {% else %}
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--gray-200); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+                                <i class="fas fa-user" style="font-size: 2rem; color: var(--gray-500);"></i>
+                            </div>
+                        {% endif %}
+                        <div style="font-weight: 600; font-size: 0.875rem;">{{ avatar.name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             
-            <audio id="audioPlayer" class="audio-player" controls style="display: none;"></audio>
+            <!-- Step 2: Choose Format -->
+            <div id="formatSelection" class="step" style="display: none;">
+                <h4 style="margin-bottom: 1rem;">Step 2: Choose Video Format</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="format-option" onclick="selectFormat('16:9', 1920, 1080)" style="cursor: pointer; border: 2px solid var(--gray-300); border-radius: 0.5rem; padding: 1rem; text-align: center;">
+                        <div style="width: 60px; height: 34px; background: var(--gray-300); margin: 0 auto 0.5rem; border-radius: 4px;"></div>
+                        <div style="font-weight: 600;">16:9</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-600);">Landscape</div>
+                    </div>
+                    <div class="format-option" onclick="selectFormat('9:16', 1080, 1920)" style="cursor: pointer; border: 2px solid var(--gray-300); border-radius: 0.5rem; padding: 1rem; text-align: center;">
+                        <div style="width: 34px; height: 60px; background: var(--gray-300); margin: 0 auto 0.5rem; border-radius: 4px;"></div>
+                        <div style="font-weight: 600;">9:16</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-600);">Portrait</div>
+                    </div>
+                    <div class="format-option" onclick="selectFormat('1:1', 1080, 1080)" style="cursor: pointer; border: 2px solid var(--gray-300); border-radius: 0.5rem; padding: 1rem; text-align: center;">
+                        <div style="width: 50px; height: 50px; background: var(--gray-300); margin: 0 auto 0.5rem; border-radius: 4px;"></div>
+                        <div style="font-weight: 600;">1:1</div>
+                        <div style="font-size: 0.75rem; color: var(--gray-600);">Square</div>
+                    </div>
+                </div>
+            </div>
             
-            <form id="videoForm" style="display: none;">
-                <div class="form-group">
-                    <label class="form-label">Video Title</label>
-                    <input type="text" class="form-input" id="videoTitle" placeholder="Enter video title" required>
+            <!-- Step 3: Record Voice -->
+            <div id="recordingStep" class="step" style="display: none;">
+                <h4 style="margin-bottom: 1rem;">Step 3: Record Your Voice</h4>
+                <div class="recording-controls">
+                    <button id="recordBtn" class="record-btn inactive" onclick="toggleRecording()">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div id="recordingStatus" class="recording-status">Click to start recording</div>
+                    <div id="recordingTimer" class="recording-timer">00:00</div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">Avatar</label>
-                    <select class="form-input" id="avatarSelect" required style="background-repeat: no-repeat; background-position: 10px center; background-size: 30px 30px; padding-left: 50px;">
-                        <option value="">Select an avatar</option>
-                        {% for avatar in avatars %}
-                            <option value="{{ avatar.id }}" data-image="{{ avatar.image_path }}" data-heygen-id="{{ avatar.heygen_avatar_id }}">{{ avatar.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Description (Optional)</label>
-                    <textarea class="form-input" id="videoDescription" rows="3" placeholder="Enter video description"></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="resetRecording()">Reset</button>
-                    <button type="submit" class="btn btn-primary" id="createVideoBtn">Create Video</button>
-                </div>
-            </form>
+                <audio id="audioPlayer" class="audio-player" controls style="display: none;"></audio>
+            </div>
+            
+            <!-- Step 4: Final Details -->
+            <div id="finalStep" class="step" style="display: none;">
+                <h4 style="margin-bottom: 1rem;">Step 4: Video Details</h4>
+                <form id="videoForm">
+                    <div class="form-group">
+                        <label class="form-label">Video Title</label>
+                        <input type="text" class="form-input" id="videoTitle" placeholder="Enter video title" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Description (Optional)</label>
+                        <textarea class="form-input" id="videoDescription" rows="3" placeholder="Enter video description"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: space-between;">
+                        <button type="button" class="btn btn-secondary" onclick="goBackStep()">Back</button>
+                        <div>
+                            <button type="button" class="btn btn-secondary" onclick="resetRecording()">Reset</button>
+                            <button type="submit" class="btn btn-primary" id="createVideoBtn">Create Video</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     
@@ -1162,6 +1204,57 @@
         let recordingTime = 0;
         let recordingTimer;
         let audioBlob;
+        let selectedAvatarId = null;
+        let selectedHeygenId = null;
+        let selectedFormat = null;
+        let selectedWidth = null;
+        let selectedHeight = null;
+        
+        // Step navigation
+        function selectAvatar(avatarId, heygenId, avatarName) {
+            selectedAvatarId = avatarId;
+            selectedHeygenId = heygenId;
+            
+            // Highlight selected avatar
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                el.style.borderColor = 'var(--gray-300)';
+                el.style.backgroundColor = 'transparent';
+            });
+            event.target.closest('.avatar-option').style.borderColor = 'var(--primary)';
+            event.target.closest('.avatar-option').style.backgroundColor = 'var(--gray-50)';
+            
+            // Show format selection
+            setTimeout(() => {
+                document.getElementById('avatarSelection').style.display = 'none';
+                document.getElementById('formatSelection').style.display = 'block';
+            }, 500);
+        }
+        
+        function selectFormat(format, width, height) {
+            selectedFormat = format;
+            selectedWidth = width;
+            selectedHeight = height;
+            
+            // Highlight selected format
+            document.querySelectorAll('.format-option').forEach(el => {
+                el.style.borderColor = 'var(--gray-300)';
+                el.style.backgroundColor = 'transparent';
+            });
+            event.target.closest('.format-option').style.borderColor = 'var(--primary)';
+            event.target.closest('.format-option').style.backgroundColor = 'var(--gray-50)';
+            
+            // Show recording step
+            setTimeout(() => {
+                document.getElementById('formatSelection').style.display = 'none';
+                document.getElementById('recordingStep').style.display = 'block';
+            }, 500);
+        }
+        
+        function goBackStep() {
+            // Go back to recording step
+            document.getElementById('finalStep').style.display = 'none';
+            document.getElementById('recordingStep').style.display = 'block';
+        }
         
         // Initialize user data
         document.addEventListener('DOMContentLoaded', function() {
@@ -1242,8 +1335,6 @@
                     audioPlayer.src = audioUrl;
                     audioPlayer.style.display = 'block';
                     
-                    document.getElementById('videoForm').style.display = 'block';
-                    
                     // Stop all tracks
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -1284,31 +1375,57 @@
                 
                 recordBtn.className = 'record-btn finished';
                 recordBtn.innerHTML = '<i class="fas fa-check"></i>';
-                statusDiv.textContent = 'Recording complete! Fill out the form below.';
+                statusDiv.textContent = 'Recording complete! Continue to next step.';
                 
                 // Stop timer
                 clearInterval(recordingTimer);
+                
+                // Show continue button
+                setTimeout(() => {
+                    document.getElementById('recordingStep').style.display = 'none';
+                    document.getElementById('finalStep').style.display = 'block';
+                }, 1000);
             }
         }
         
         function resetRecording() {
-            // Reset UI
+            // Reset all steps
+            document.getElementById('avatarSelection').style.display = 'block';
+            document.getElementById('formatSelection').style.display = 'none';
+            document.getElementById('recordingStep').style.display = 'none';
+            document.getElementById('finalStep').style.display = 'none';
+            
+            // Reset selections
+            selectedAvatarId = null;
+            selectedHeygenId = null;
+            selectedFormat = null;
+            selectedWidth = null;
+            selectedHeight = null;
+            
+            // Reset UI highlights
+            document.querySelectorAll('.avatar-option').forEach(el => {
+                el.style.borderColor = 'var(--gray-300)';
+                el.style.backgroundColor = 'transparent';
+            });
+            document.querySelectorAll('.format-option').forEach(el => {
+                el.style.borderColor = 'var(--gray-300)';
+                el.style.backgroundColor = 'transparent';
+            });
+            
+            // Reset recording UI
             const recordBtn = document.getElementById('recordBtn');
             const statusDiv = document.getElementById('recordingStatus');
             const timerDiv = document.getElementById('recordingTimer');
             const audioPlayer = document.getElementById('audioPlayer');
-            const videoForm = document.getElementById('videoForm');
             
             recordBtn.className = 'record-btn inactive';
             recordBtn.innerHTML = '<i class="fas fa-microphone"></i>';
             statusDiv.textContent = 'Click to start recording';
             timerDiv.textContent = '00:00';
             audioPlayer.style.display = 'none';
-            videoForm.style.display = 'none';
             
             // Reset form
             document.getElementById('videoTitle').value = '';
-            document.getElementById('avatarSelect').value = '';
             document.getElementById('videoDescription').value = '';
             
             // Clear recording data
@@ -1348,8 +1465,12 @@
             const formData = new FormData();
             formData.append('audio', audioBlob, 'recording.wav');
             formData.append('title', document.getElementById('videoTitle').value);
-            formData.append('avatar_id', document.getElementById('avatarSelect').value);
+            formData.append('avatar_id', selectedAvatarId);
+            formData.append('heygen_avatar_id', selectedHeygenId);
             formData.append('description', document.getElementById('videoDescription').value);
+            formData.append('aspect_ratio', selectedFormat);
+            formData.append('width', selectedWidth);
+            formData.append('height', selectedHeight);
             
             const createBtn = document.getElementById('createVideoBtn');
             createBtn.disabled = true;
