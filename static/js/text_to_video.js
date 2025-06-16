@@ -50,11 +50,25 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('avatar_id', avatarId);
             
             // Submit the form
-            fetch('/api/heygen/text', {
+            console.log('Submitting text-to-video form with data:', {
+                title: formData.get('title'),
+                text_length: formData.get('text')?.length,
+                avatar_id: formData.get('avatar_id'),
+                voice_id: formData.get('voice_id'),
+                video_format: formData.get('video_format')
+            });
+            
+            fetch('/api/videos/create-from-text', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json().catch(error => {
+                    console.error('Error parsing JSON:', error);
+                    return { success: false, error: 'Invalid JSON response' };
+                });
+            })
             .then(data => {
                 if (data.success) {
                     // Success - show message and reload or update UI
