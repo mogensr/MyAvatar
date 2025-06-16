@@ -234,9 +234,9 @@ async def dashboard(request: Request):
         fetch_all=True
     )
     
-    # Get user's avatars
+    # Get user's avatars - CORRECTED TABLE NAME
     avatars = execute_query(
-        "SELECT * FROM user_avatars WHERE user_id = ?",
+        "SELECT * FROM avatars WHERE user_id = ?",
         (user["id"],),
         fetch_all=True
     )
@@ -348,8 +348,9 @@ async def admin_dashboard(request: Request):
         fetch_one=True
     )
     
+    # CORRECTED TABLE NAME
     avatar_count = execute_query(
-        "SELECT COUNT(*) as count FROM user_avatars",
+        "SELECT COUNT(*) as count FROM avatars",
         fetch_one=True
     )
     
@@ -497,7 +498,7 @@ async def admin_edit_user_submit(request: Request, user_id: int):
 
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
 async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page"""
+    """Admin manage user avatars page - CORRECTED TABLE NAME"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -513,9 +514,9 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         if not user_to_manage:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
         
-        # Get user's avatars
+        # Get user's avatars - CORRECTED TABLE NAME
         avatars = execute_query(
-            "SELECT * FROM user_avatars WHERE user_id = ?",
+            "SELECT * FROM avatars WHERE user_id = ?",
             (user_id,),
             fetch_all=True
         )
@@ -533,24 +534,24 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
 
 @router.post("/admin/delete-avatar/{avatar_id}")
 async def admin_delete_avatar(request: Request, avatar_id: int):
-    """Admin delete avatar"""
+    """Admin delete avatar - CORRECTED TABLE NAME"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
     
     try:
-        # Get avatar info first
+        # Get avatar info first - CORRECTED TABLE NAME
         avatar = execute_query(
-            "SELECT user_id FROM user_avatars WHERE id = ?",
+            "SELECT user_id FROM avatars WHERE id = ?",
             (avatar_id,),
             fetch_one=True
         )
         
         if avatar:
             user_id = avatar["user_id"]
-            # Delete avatar
+            # Delete avatar - CORRECTED TABLE NAME
             execute_query(
-                "DELETE FROM user_avatars WHERE id = ?",
+                "DELETE FROM avatars WHERE id = ?",
                 (avatar_id,)
             )
             log_info(f"Admin {user['username']} deleted avatar {avatar_id}", "Admin")
@@ -564,7 +565,7 @@ async def admin_delete_avatar(request: Request, avatar_id: int):
 
 @router.post("/admin/upload-image/{user_id}")
 async def admin_upload_image(request: Request, user_id: int):
-    """Admin upload image for user - UPDATED WITHOUT WERKZEUG"""
+    """Admin upload image for user - CORRECTED TABLE AND COLUMN NAMES"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -598,14 +599,14 @@ async def admin_upload_image(request: Request, user_id: int):
             content = await image_file.read()
             buffer.write(content)
         
-        # Save to database
-        avatar_url = f"/static/uploads/avatars/{unique_filename}"
+        # Save to database - CORRECTED TABLE AND COLUMN NAMES
+        image_url = f"/static/uploads/avatars/{unique_filename}"
         execute_query(
             """
-            INSERT INTO user_avatars (user_id, avatar_name, avatar_url, created_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO avatars (user_id, name, image_path)
+            VALUES (?, ?, ?)
             """,
-            (user_id, unique_filename, avatar_url, datetime.now().isoformat())
+            (user_id, unique_filename, image_url)
         )
         
         log_info(f"Admin {user['username']} uploaded image for user {user_id}: {unique_filename}", "Admin")
@@ -617,7 +618,7 @@ async def admin_upload_image(request: Request, user_id: int):
 
 @router.post("/admin/fetch-heygen-avatar/{user_id}")
 async def admin_fetch_heygen_avatar(request: Request, user_id: int):
-    """Admin fetch avatar from HeyGen - WITH REAL API INTEGRATION"""
+    """Admin fetch avatar from HeyGen - CORRECTED TABLE AND COLUMN NAMES"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -654,15 +655,15 @@ async def admin_fetch_heygen_avatar(request: Request, user_id: int):
                 if avatar_data.get('code') == 100:  # Success code for HeyGen
                     avatar_info = avatar_data.get('data', {})
                     avatar_name = avatar_info.get('avatar_name', heygen_avatar_id)
-                    avatar_url = avatar_info.get('preview_image_url', '')
+                    avatar_preview_url = avatar_info.get('preview_image_url', '')
                     
-                    # Save avatar record to database
+                    # Save avatar record to database - CORRECTED TABLE AND COLUMN NAMES
                     execute_query(
                         """
-                        INSERT INTO user_avatars (user_id, heygen_avatar_id, avatar_name, avatar_url, created_at)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id)
+                        VALUES (?, ?, ?, ?)
                         """,
-                        (user_id, heygen_avatar_id, avatar_name, avatar_url, datetime.now().isoformat())
+                        (user_id, avatar_name, avatar_preview_url, heygen_avatar_id)
                     )
                     
                     log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
