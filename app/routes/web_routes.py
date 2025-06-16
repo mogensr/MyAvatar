@@ -234,19 +234,19 @@ async def dashboard(request: Request):
     
     # Use proper template rendering instead of .format() - THIS IS THE FIX!
     return templates.TemplateResponse(
-        "dashboard.html",
-        {
-            "request": request,
-            "user": user,
-            "username": user["username"],
-            "is_admin": user["is_admin"],
-            "avatar_id": user.get("avatar_id", ""),
-            "user_id": user["id"],
-            "api_key": user.get("api_key", os.getenv("HEYGEN_API_KEY", "")),
-            "videos": video_list,
-            "avatars": avatar_list
-        }
-    )
+    "dashboard.html",
+    {
+        "request": request,
+        "user": user,
+        "username": user.get("username", ""),
+        "is_admin": user.get("is_admin", 0), 
+        "avatar_id": user.get("avatar_id", ""),
+        "user_id": user.get("id", 0),
+        "api_key": user.get("api_key", "") or os.getenv("HEYGEN_API_KEY", ""),
+        "videos": video_list,
+        "avatars": avatar_list
+    }
+)
 
 # ============================================================================
 # ADMIN ROUTES
