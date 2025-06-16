@@ -70,9 +70,9 @@ google-api-python-client==2.169.0
 beautifulsoup4==4.13.3
 python-dateutil==2.9.0.post0
 
-# Video Processing for Background Replacement
-opencv-python==4.8.0.74
-torch==2.1.0
-torchvision==0.16.0
+# Video Processing for Background Replacement - CPU Only versions
+opencv-python-headless==4.8.0.74
+torch==2.1.0 --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.16.0 --extra-index-url https://download.pytorch.org/whl/cpu
 numpy==1.25.2
 scipy==1.11.3
