@@ -3,6 +3,8 @@ Web routes for MyAvatar
 """
 import os
 import uuid
+import requests
+from werkzeug.utils import secure_filename
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -538,23 +540,23 @@ async def admin_delete_avatar(request: Request, avatar_id: int):
         log_error(f"Error deleting avatar: {e}", "Admin", e)
         return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
 
-@router.post("/admin/upload-avatar/{user_id}")
-async def admin_upload_avatar(request: Request, user_id: int):
-    """Admin upload avatar for user"""
+@router.post("/admin/upload-image/{user_id}")
+async def admin_upload_image(request: Request, user_id: int):
+    """Admin upload image for user - UPDATED"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
     
     try:
         form = await request.form()
-        avatar_file = form.get("avatar_file")
+        image_file = form.get("image_file")  # Changed from "avatar_file"
         
-        if not avatar_file or not avatar_file.filename:
+        if not image_file or not image_file.filename:
             return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_file", status_code=303)
         
         # Check file type
-        allowed_types = ['.png', '.jpg', '.jpeg']
-        file_ext = os.path.splitext(avatar_file.filename)[1].lower()
+        allowed_types = ['.png', '.jpg', '.jpeg', '.gif']
+        file_ext = os.path.splitext(image_file.filename)[1].lower()
         if file_ext not in allowed_types:
             return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_file", status_code=303)
         
@@ -562,13 +564,15 @@ async def admin_upload_avatar(request: Request, user_id: int):
         upload_dir = "static/uploads/avatars"
         os.makedirs(upload_dir, exist_ok=True)
         
-        # Generate unique filename
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        # Generate secure filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        file_ext = os.path.splitext(image_file.filename)[1].lower()
+        unique_filename = f"user_{user_id}_{timestamp}{file_ext}"
         file_path = os.path.join(upload_dir, unique_filename)
         
         # Save file
         with open(file_path, "wb") as buffer:
-            content = await avatar_file.read()
+            content = await image_file.read()
             buffer.write(content)
         
         # Save to database
@@ -578,19 +582,19 @@ async def admin_upload_avatar(request: Request, user_id: int):
             INSERT INTO user_avatars (user_id, avatar_name, avatar_url, created_at)
             VALUES (?, ?, ?, ?)
             """,
-            (user_id, avatar_file.filename, avatar_url, datetime.now().isoformat())
+            (user_id, unique_filename, avatar_url, datetime.now().isoformat())
         )
         
-        log_info(f"Admin {user['username']} uploaded avatar for user {user_id}", "Admin")
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_uploaded", status_code=303)
+        log_info(f"Admin {user['username']} uploaded image for user {user_id}: {unique_filename}", "Admin")
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=image_uploaded", status_code=303)
         
     except Exception as e:
-        log_error(f"Error uploading avatar: {e}", "Admin", e)
+        log_error(f"Error uploading image: {e}", "Admin", e)
         return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=upload_failed", status_code=303)
 
 @router.post("/admin/fetch-heygen-avatar/{user_id}")
 async def admin_fetch_heygen_avatar(request: Request, user_id: int):
-    """Admin fetch avatar from HeyGen"""
+    """Admin fetch avatar from HeyGen - WITH REAL API INTEGRATION"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -602,22 +606,69 @@ async def admin_fetch_heygen_avatar(request: Request, user_id: int):
         if not heygen_avatar_id:
             return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_avatar_id", status_code=303)
         
-        # Here you would typically make an API call to HeyGen to get avatar details
-        # For now, we'll just save the ID
-        execute_query(
-            """
-            INSERT INTO user_avatars (user_id, heygen_avatar_id, avatar_name, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (user_id, heygen_avatar_id, f"HeyGen Avatar {heygen_avatar_id}", datetime.now().isoformat())
-        )
+        # Get HeyGen API key from environment
+        heygen_api_key = os.getenv("HEYGEN_API_KEY")
+        if not heygen_api_key:
+            log_error("HeyGen API key not configured", "Admin")
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=api_key_missing", status_code=303)
         
-        log_info(f"Admin {user['username']} added HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched", status_code=303)
+        # Make request to HeyGen API to get avatar details
+        headers = {
+            'X-Api-Key': heygen_api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        # HeyGen API endpoint to get avatar details
+        heygen_url = f"https://api.heygen.com/v1/avatar/{heygen_avatar_id}"
+        
+        try:
+            response = requests.get(heygen_url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                avatar_data = response.json()
+                
+                # Check if avatar exists and get details
+                if avatar_data.get('code') == 100:  # Success code for HeyGen
+                    avatar_info = avatar_data.get('data', {})
+                    avatar_name = avatar_info.get('avatar_name', heygen_avatar_id)
+                    avatar_url = avatar_info.get('preview_image_url', '')
+                    
+                    # Save avatar record to database
+                    execute_query(
+                        """
+                        INSERT INTO user_avatars (user_id, heygen_avatar_id, avatar_name, avatar_url, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (user_id, heygen_avatar_id, avatar_name, avatar_url, datetime.now().isoformat())
+                    )
+                    
+                    log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
+                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched", status_code=303)
+                else:
+                    error_msg = avatar_data.get('message', 'Unknown error')
+                    log_error(f"HeyGen API error: {error_msg}", "Admin")
+                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_api_error", status_code=303)
+            
+            elif response.status_code == 401:
+                log_error("Invalid HeyGen API key", "Admin")
+                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_api_key", status_code=303)
+            elif response.status_code == 404:
+                log_error(f"HeyGen avatar not found: {heygen_avatar_id}", "Admin")
+                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found", status_code=303)
+            else:
+                log_error(f"HeyGen API error: {response.status_code}", "Admin")
+                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_failed", status_code=303)
+                
+        except requests.exceptions.Timeout:
+            log_error("HeyGen API request timeout", "Admin")
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=timeout", status_code=303)
+        except requests.exceptions.RequestException as e:
+            log_error(f"HeyGen API request error: {e}", "Admin")
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=connection_failed", status_code=303)
         
     except Exception as e:
         log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_failed", status_code=303)
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
 
 # ============================================================================
 # END OF FILE
