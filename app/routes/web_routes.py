@@ -240,7 +240,7 @@ async def dashboard(request: Request):
             "user": user,
             "username": user["username"],
             "is_admin": user["is_admin"],
-            "avatar_id": user["avatar_id"],
+            "avatar_id": user.get("avatar_id", ""),
             "user_id": user["id"],
             "api_key": user.get("api_key", os.getenv("HEYGEN_API_KEY", "")),
             "videos": video_list,
