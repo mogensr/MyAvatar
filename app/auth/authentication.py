@@ -132,12 +132,12 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
             return None
 
         # DEBUG: Check if password key exists
-        if 'password' not in user:
+        if 'hashed password' not in user:
             log_error(f"Password key not found in user dict. Available keys: {list(user.keys()) if isinstance(user, dict) else 'Not a dict'}", "Auth")
             return None
 
         # Verify password
-        if not verify_password(password, user['password']):
+        if not verify_password(password, user['hashed password']):
             log_info(f"Authentication failed: Invalid password for user {username}", "Auth")
             return None
 
