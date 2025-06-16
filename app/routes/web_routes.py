@@ -5,8 +5,10 @@ import os
 import uuid
 import requests
 import re
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+import tempfile
+import base64
+from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime, timedelta
 from typing import Optional
@@ -300,6 +302,188 @@ async def dashboard(request: Request):
             "total_shares": total_shares,  # Will be 0 until share tracking is implemented
         }
     )
+
+# ============================================================================
+# VIDEO CREATION API ROUTES - HEYGEN INTEGRATION
+# ============================================================================
+
+@router.post("/api/create-video")
+async def create_video_from_audio(
+    request: Request,
+    audio: UploadFile = File(...),
+    title: str = Form(...),
+    avatar_id: str = Form(...),
+    description: str = Form(None)
+):
+    """Create video from audio recording using HeyGen API"""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        # Get HeyGen API key
+        heygen_api_key = os.getenv("HEYGEN_API_KEY")
+        if not heygen_api_key:
+            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
+        
+        # Get avatar details from database
+        avatar = execute_query(
+            "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
+            (avatar_id, user["id"]),
+            fetch_one=True
+        )
+        
+        if not avatar:
+            return JSONResponse(status_code=400, content={"error": "Avatar not found"})
+        
+        # Save audio file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+            audio_content = await audio.read()
+            temp_audio.write(audio_content)
+            temp_audio_path = temp_audio.name
+        
+        # Prepare HeyGen API request
+        heygen_url = "https://api.heygen.com/v2/video/generate"
+        
+        headers = {
+            "X-Api-Key": heygen_api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Convert audio to base64 for HeyGen
+        with open(temp_audio_path, "rb") as audio_file:
+            audio_base64 = base64.b64encode(audio_file.read()).decode('utf-8')
+        
+        # Prepare HeyGen payload
+        payload = {
+            "video_inputs": [
+                {
+                    "character": {
+                        "type": "avatar",
+                        "avatar_id": avatar.get("heygen_avatar_id") or "default_avatar_id",
+                        "avatar_style": "normal"
+                    },
+                    "voice": {
+                        "type": "audio",
+                        "audio_url": f"data:audio/wav;base64,{audio_base64}"
+                    },
+                    "background": {
+                        "type": "color",
+                        "value": "#ffffff"
+                    }
+                }
+            ],
+            "dimension": {
+                "width": 1920,
+                "height": 1080
+            },
+            "aspect_ratio": "16:9",
+            "test": False
+        }
+        
+        # Make request to HeyGen
+        response = requests.post(heygen_url, json=payload, headers=headers)
+        
+        if response.status_code == 200:
+            heygen_data = response.json()
+            
+            if heygen_data.get("code") == 100:  # Success
+                video_id = heygen_data.get("data", {}).get("video_id")
+                
+                # Save video record to database
+                execute_query(
+                    """
+                    INSERT INTO videos (user_id, title, description, heygen_video_id, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (user["id"], title, description, video_id, "processing", datetime.now().isoformat())
+                )
+                
+                log_info(f"Video creation started for user {user['username']}: {video_id}", "API")
+                
+                # Clean up temp file
+                os.unlink(temp_audio_path)
+                
+                return JSONResponse(content={
+                    "success": True,
+                    "video_id": video_id,
+                    "message": "Video creation started successfully"
+                })
+            else:
+                error_msg = heygen_data.get("message", "Unknown HeyGen error")
+                log_error(f"HeyGen API error: {error_msg}", "API")
+                return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
+        
+        else:
+            log_error(f"HeyGen API request failed: {response.status_code}", "API")
+            return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
+    
+    except Exception as e:
+        log_error(f"Error creating video: {e}", "API", e)
+        # Clean up temp file if it exists
+        try:
+            os.unlink(temp_audio_path)
+        except:
+            pass
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+@router.get("/api/video-status/{video_id}")
+async def check_video_status(request: Request, video_id: str):
+    """Check video processing status from HeyGen"""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE heygen_video_id = ? AND user_id = ?",
+            (video_id, user["id"]),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(status_code=404, content={"error": "Video not found"})
+        
+        # Check status with HeyGen
+        heygen_api_key = os.getenv("HEYGEN_API_KEY")
+        if not heygen_api_key:
+            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
+        
+        headers = {"X-Api-Key": heygen_api_key}
+        response = requests.get(f"https://api.heygen.com/v1/video_status.get?video_id={video_id}", headers=headers)
+        
+        if response.status_code == 200:
+            status_data = response.json()
+            
+            if status_data.get("code") == 100:
+                data = status_data.get("data", {})
+                status = data.get("status")
+                video_url = data.get("video_url")
+                
+                # Update database with new status
+                if status == "completed" and video_url:
+                    execute_query(
+                        "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
+                        ("completed", video_url, video_id)
+                    )
+                elif status == "failed":
+                    execute_query(
+                        "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
+                        ("failed", video_id)
+                    )
+                
+                return JSONResponse(content={
+                    "status": status,
+                    "video_url": video_url,
+                    "progress": data.get("progress", 0)
+                })
+        
+        return JSONResponse(status_code=400, content={"error": "Failed to get video status"})
+    
+    except Exception as e:
+        log_error(f"Error checking video status: {e}", "API", e)
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # ============================================================================
 # ADMIN ROUTES
