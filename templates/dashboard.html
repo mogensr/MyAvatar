@@ -1173,7 +1173,7 @@
             <!-- Step 4: Final Details -->
             <div id="finalStep" class="step" style="display: none;">
                 <h4 style="margin-bottom: 1rem;">Step 4: Video Details</h4>
-                <form id="videoForm">
+                <form id="videoForm" onsubmit="handleFormSubmit(event)">
                     <div class="form-group">
                         <label class="form-label">Video Title</label>
                         <input type="text" class="form-input" id="videoTitle" placeholder="Enter video title" required>
@@ -1289,8 +1289,7 @@
             if (method === 'voice') {
                 openRecordingModal();
             } else if (method === 'text') {
-                // Text to speech functionality would go here
-                alert('Text to Speech feature coming soon!');
+                window.location.href = '/text-to-video';
             }
         }
         
@@ -1442,19 +1441,8 @@
             }
         }
         
-        // Avatar selection change handler
-        document.getElementById('avatarSelect').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const imagePath = selectedOption.getAttribute('data-image');
-            if (imagePath) {
-                this.style.backgroundImage = `url(${imagePath})`;
-            } else {
-                this.style.backgroundImage = 'none';
-            }
-        });
-
-        // Form submission
-        document.getElementById('videoForm').addEventListener('submit', async function(e) {
+        // Form submission handler
+        function handleFormSubmit(e) {
             e.preventDefault();
             
             if (!audioBlob) {
@@ -1499,7 +1487,7 @@
                 createBtn.disabled = false;
                 createBtn.textContent = 'Create Video';
             }
-        });
+        }
         
         function showPremiumModal() {
             alert('Premium feature coming soon! Upgrade to access advanced features.');

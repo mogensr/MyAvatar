@@ -486,6 +486,49 @@ async def check_video_status(request: Request, video_id: str):
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # ============================================================================
+# TEXT TO VIDEO ROUTE
+# ============================================================================
+
+@router.get("/text-to-video", response_class=HTMLResponse)
+async def text_to_video_page(request: Request):
+    """
+    Text to video creation page
+    """
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Get user's avatars
+    avatars = execute_query(
+        "SELECT * FROM avatars WHERE user_id = ?",
+        (user["id"],),
+        fetch_all=True
+    )
+    
+    # Convert database results to list of dicts for avatars
+    avatar_list = []
+    for a in avatars:
+        if isinstance(a, dict):
+            avatar_list.append(a)
+        else:
+            # Handle SQLite Row objects
+            avatar_dict = {}
+            for key in a.keys():
+                avatar_dict[key] = a[key]
+            avatar_list.append(avatar_dict)
+    
+    return templates.TemplateResponse(
+        "text_video_component.html",
+        {
+            "request": request,
+            "user": user,
+            "username": user.get("username", ""),
+            "is_admin": user.get("is_admin", 0),
+            "avatars": avatar_list
+        }
+    )
+
+# ============================================================================
 # ADMIN ROUTES
 # ============================================================================
 
