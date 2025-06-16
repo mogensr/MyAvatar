@@ -19,17 +19,46 @@
             <p class="mb-0"><strong>Email:</strong> {{ user_to_manage.email }} | <strong>Created:</strong> {{ user_to_manage.created_at }}</p>
         </div>
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
+        <!-- Success/Error Messages - Using Query Parameters -->
+        {% if request.query_params.get('success') %}
+        <div class="alert alert-success alert-dismissible fade show">
+            {% if request.query_params.get('success') == 'image_uploaded' %}
+                Image uploaded successfully!
+            {% elif request.query_params.get('success') == 'avatar_fetched' %}
+                Avatar fetched from HeyGen successfully!
+            {% elif request.query_params.get('success') == 'avatar_deleted' %}
+                Avatar deleted successfully!
+            {% else %}
+                Operation completed successfully!
             {% endif %}
-        {% endwith %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        {% if request.query_params.get('error') %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            {% if request.query_params.get('error') == 'no_file' %}
+                No file selected. Please choose an image file.
+            {% elif request.query_params.get('error') == 'invalid_file' %}
+                Invalid file type. Only PNG, JPG, JPEG, and GIF files are allowed.
+            {% elif request.query_params.get('error') == 'upload_failed' %}
+                Image upload failed. Please try again.
+            {% elif request.query_params.get('error') == 'no_avatar_id' %}
+                Please enter a HeyGen Avatar ID.
+            {% elif request.query_params.get('error') == 'api_key_missing' %}
+                HeyGen API key not configured. Please contact administrator.
+            {% elif request.query_params.get('error') == 'heygen_failed' %}
+                Could not fetch avatar from HeyGen. Please check the Avatar ID.
+            {% elif request.query_params.get('error') == 'avatar_not_found' %}
+                Avatar not found on HeyGen. Please check the Avatar ID.
+            {% elif request.query_params.get('error') == 'timeout' %}
+                Request to HeyGen API timed out. Please try again.
+            {% else %}
+                An error occurred. Please try again.
+            {% endif %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
 
         <!-- Upload Section -->
         <div class="card mb-4">
@@ -91,10 +120,8 @@
                         {% for avatar in avatars %}
                             <tr>
                                 <td>
-                                    {% if avatar.file_path %}
-                                        <img src="{{ url_for('static', filename='uploads/avatars/' + avatar.filename) }}" alt="Image" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
-                                    {% elif avatar.avatar_url %}
-                                        <img src="{{ avatar.avatar_url }}" alt="Avatar" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
+                                    {% if avatar.avatar_url %}
+                                        <img src="{{ avatar.avatar_url }}" alt="Image" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
                                     {% else %}
                                         <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                                             <i class="text-muted">📁</i>
@@ -102,7 +129,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <strong>{{ avatar.filename or avatar.avatar_name or 'Unnamed' }}</strong>
+                                    <strong>{{ avatar.avatar_name or 'Unnamed' }}</strong>
                                     <br><small class="text-muted">ID: {{ avatar.id }}</small>
                                 </td>
                                 <td>
@@ -114,13 +141,15 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small>{{ avatar.created_at.strftime('%Y-%m-%d %H:%M') if avatar.created_at else 'Unknown' }}</small>
+                                    <small>{{ avatar.created_at or 'Unknown' }}</small>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="deleteImage('{{ avatar.id }}')">
-                                        🗑️ Delete
-                                    </button>
+                                    <form action="/admin/delete-avatar/{{ avatar.id }}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('Are you sure you want to delete this image?')">
+                                            🗑️ Delete
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -144,21 +173,5 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function deleteImage(imageId) {
-            if (confirm('Are you sure you want to delete this image?')) {
-                fetch(`/admin/delete-avatar/${imageId}`, {
-                    method: 'DELETE',
-                })
-                .then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('Error deleting image');
-                    }
-                });
-            }
-        }
-    </script>
 </body>
 </html>
