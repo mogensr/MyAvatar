@@ -50,6 +50,19 @@ router = APIRouter(prefix="", tags=["web"])
 templates = Jinja2Templates(directory="templates")
 
 # ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+
+@router.get("/logout")
+async def logout(request: Request):
+    """Log out the current user by clearing the authentication cookie"""
+    log_info(f"User logout requested")
+    response = RedirectResponse(url="/login", status_code=302)
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    return response
+
+# ============================================================================
 # MAIN PAGES - WITH ADMIN REDIRECT
 # ============================================================================
 
@@ -920,6 +933,44 @@ async def admin_fetch_heygen_avatar(request: Request, user_id: int):
     except Exception as e:
         log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
         return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
+
+# ============================================================================
+# VIDEO BACKGROUND REPLACEMENT ROUTES
+# ============================================================================
+
+@router.get("/videos/{video_id}/backgrounds", response_class=HTMLResponse)
+async def video_backgrounds_page(request: Request, video_id: int):
+    """
+    Video backgrounds page for selecting and applying backgrounds
+    """
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Check if video exists and belongs to user
+    video = execute_query(
+        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
+        (video_id, user["id"]),
+        fetch_one=True
+    )
+    
+    if not video:
+        return RedirectResponse(url="/dashboard?error=video_not_found", status_code=303)
+    
+    # Get video URL
+    video_url = f"/static/videos/{video.get('heygen_video_id')}.mp4"
+    if video.get('file_path'):
+        video_url = f"/static/videos/{os.path.basename(video['file_path'])}"
+    
+    return templates.TemplateResponse(
+        "video_backgrounds.html", 
+        {
+            "request": request,
+            "user": user,
+            "video": video,
+            "video_url": video_url
+        }
+    )
 
 # ============================================================================
 # END OF FILE
