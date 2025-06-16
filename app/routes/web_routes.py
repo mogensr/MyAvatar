@@ -2,6 +2,7 @@
 Web routes for MyAvatar
 """
 import os
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -536,6 +537,87 @@ async def admin_delete_avatar(request: Request, avatar_id: int):
     except Exception as e:
         log_error(f"Error deleting avatar: {e}", "Admin", e)
         return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
+
+@router.post("/admin/upload-avatar/{user_id}")
+async def admin_upload_avatar(request: Request, user_id: int):
+    """Admin upload avatar for user"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        form = await request.form()
+        avatar_file = form.get("avatar_file")
+        
+        if not avatar_file or not avatar_file.filename:
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_file", status_code=303)
+        
+        # Check file type
+        allowed_types = ['.png', '.jpg', '.jpeg']
+        file_ext = os.path.splitext(avatar_file.filename)[1].lower()
+        if file_ext not in allowed_types:
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_file", status_code=303)
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = "static/uploads/avatars"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        
+        # Save file
+        with open(file_path, "wb") as buffer:
+            content = await avatar_file.read()
+            buffer.write(content)
+        
+        # Save to database
+        avatar_url = f"/static/uploads/avatars/{unique_filename}"
+        execute_query(
+            """
+            INSERT INTO user_avatars (user_id, avatar_name, avatar_url, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, avatar_file.filename, avatar_url, datetime.now().isoformat())
+        )
+        
+        log_info(f"Admin {user['username']} uploaded avatar for user {user_id}", "Admin")
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_uploaded", status_code=303)
+        
+    except Exception as e:
+        log_error(f"Error uploading avatar: {e}", "Admin", e)
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=upload_failed", status_code=303)
+
+@router.post("/admin/fetch-heygen-avatar/{user_id}")
+async def admin_fetch_heygen_avatar(request: Request, user_id: int):
+    """Admin fetch avatar from HeyGen"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        form = await request.form()
+        heygen_avatar_id = form.get("heygen_avatar_id", "").strip()
+        
+        if not heygen_avatar_id:
+            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_avatar_id", status_code=303)
+        
+        # Here you would typically make an API call to HeyGen to get avatar details
+        # For now, we'll just save the ID
+        execute_query(
+            """
+            INSERT INTO user_avatars (user_id, heygen_avatar_id, avatar_name, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (user_id, heygen_avatar_id, f"HeyGen Avatar {heygen_avatar_id}", datetime.now().isoformat())
+        )
+        
+        log_info(f"Admin {user['username']} added HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched", status_code=303)
+        
+    except Exception as e:
+        log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_failed", status_code=303)
 
 # ============================================================================
 # END OF FILE
