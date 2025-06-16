@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Background Replacement - MyAvatar{% endblock %}
+
+{% block content %}
+<div class="container mx-auto py-8 px-4">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Enhance Your Video</h1>
+        <p class="text-gray-600 mt-2">Select a background to replace the current one in your video</p>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8">
+        <!-- Video Preview -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Your Video</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="w-full md:w-2/3">
+                    <div class="bg-gray-100 rounded-md aspect-video overflow-hidden relative">
+                        <video id="videoPreview" class="w-full h-full object-cover" controls>
+                            <source src="{{ video_url }}" type="video/mp4">
+                            Your browser doesn't support HTML5 video.
+                        </video>
+                        <div id="processingOverlay" class="hidden absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+                            <div class="text-white text-center">
+                                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+                                <p class="text-lg">Processing your video...</p>
+                                <p class="text-sm mt-2">This may take a few minutes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/3">
+                    <div class="bg-gray-50 rounded-md p-4">
+                        <h3 class="font-semibold text-lg mb-3">Video Details</h3>
+                        <div class="space-y-2">
+                            <p><span class="text-gray-500">Title:</span> {{ video.title or "Untitled Video" }}</p>
+                            <p><span class="text-gray-500">Format:</span> {{ video.format }}</p>
+                            <p><span class="text-gray-500">Status:</span> <span id="videoStatus" class="capitalize">{{ video.status }}</span></p>
+                            <p><span class="text-gray-500">Created:</span> {{ video.created_at }}</p>
+                        </div>
+
+                        <div class="mt-6">
+                            <h3 class="font-semibold text-lg mb-3">Processing Quality</h3>
+                            <select id="processingQuality" class="w-full px-3 py-2 border rounded-md">
+                                <option value="low">Low (Faster)</option>
+                                <option value="medium" selected>Medium (Balanced)</option>
+                                <option value="high">High (Slower)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Background Selection -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4">Select Background</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="backgroundsGrid">
+                <!-- Backgrounds will be populated here -->
+                <div class="animate-pulse bg-gray-200 rounded-md aspect-video"></div>
+                <div class="animate-pulse bg-gray-200 rounded-md aspect-video"></div>
+                <div class="animate-pulse bg-gray-200 rounded-md aspect-video"></div>
+                <div class="animate-pulse bg-gray-200 rounded-md aspect-video"></div>
+            </div>
+
+            <!-- Upload section (available to all users) -->
+            <div class="mt-8 pt-6 border-t">
+                <h3 class="text-lg font-semibold mb-4">Upload New Background</h3>
+                <form id="uploadBackgroundForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="bgName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input type="text" id="bgName" name="name" class="w-full px-3 py-2 border rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="bgCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <input type="text" id="bgCategory" name="category" class="w-full px-3 py-2 border rounded-md" value="Custom">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="bgDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="bgDescription" name="description" rows="2" class="w-full px-3 py-2 border rounded-md"></textarea>
+                    </div>
+                    <div>
+                        <label for="backgroundFile" class="block text-sm font-medium text-gray-700 mb-1">Background Image</label>
+                        <input type="file" id="backgroundFile" name="background_file" class="w-full" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Upload Background
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoId = "{{ video.id }}";
+        const videoPreview = document.getElementById('videoPreview');
+        const processingOverlay = document.getElementById('processingOverlay');
+        const backgroundsGrid = document.getElementById('backgroundsGrid');
+        const videoStatus = document.getElementById('videoStatus');
+        const qualitySelector = document.getElementById('processingQuality');
+        
+        // Load backgrounds
+        loadBackgrounds();
+        
+        // Check video status periodically if processing
+        if (videoStatus.textContent.includes('processing')) {
+            startStatusCheck();
+        }
+        
+        function loadBackgrounds() {
+            fetch('/api/backgrounds')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayBackgrounds(data.backgrounds);
+                    } else {
+                        console.error('Failed to load backgrounds:', data.error);
+                        backgroundsGrid.innerHTML = '<p class="col-span-full text-red-500">Failed to load backgrounds</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading backgrounds:', error);
+                    backgroundsGrid.innerHTML = '<p class="col-span-full text-red-500">Error loading backgrounds</p>';
+                });
+        }
+        
+        function displayBackgrounds(backgrounds) {
+            // Clear loading placeholders
+            backgroundsGrid.innerHTML = '';
+            
+            if (backgrounds.length === 0) {
+                backgroundsGrid.innerHTML = '<p class="col-span-full text-gray-500">No backgrounds available</p>';
+                return;
+            }
+            
+            // Add "Original" option first
+            const originalDiv = document.createElement('div');
+            originalDiv.className = 'bg-gray-100 rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition duration-200';
+            originalDiv.setAttribute('data-background-id', 'original');
+            originalDiv.innerHTML = `
+                <div class="aspect-video bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center">
+                    <span class="text-gray-600 font-medium">Original Video</span>
+                </div>
+                <div class="p-2">
+                    <p class="font-medium text-sm">Original</p>
+                </div>
+            `;
+            originalDiv.addEventListener('click', function() {
+                // Reset to original video (null background_id)
+                applyBackground(null);
+            });
+            backgroundsGrid.appendChild(originalDiv);
+            
+            // Add each background
+            backgrounds.forEach(bg => {
+                const backgroundDiv = document.createElement('div');
+                backgroundDiv.className = 'bg-white rounded-md overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition duration-200';
+                backgroundDiv.setAttribute('data-background-id', bg.id);
+                
+                let thumbnailUrl = bg.thumbnail_url || '/static/images/placeholder-bg.jpg';
+                
+                backgroundDiv.innerHTML = `
+                    <div class="aspect-video">
+                        <img src="${thumbnailUrl}" alt="${bg.name}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="p-2">
+                        <p class="font-medium text-sm">${bg.name}</p>
+                        <p class="text-xs text-gray-500">${bg.category}</p>
+                    </div>
+                `;
+                
+                backgroundDiv.addEventListener('click', function() {
+                    applyBackground(bg.id);
+                });
+                
+                backgroundsGrid.appendChild(backgroundDiv);
+            });
+        }
+        
+        function applyBackground(backgroundId) {
+            // Show processing overlay
+            processingOverlay.classList.remove('hidden');
+            
+            // Get selected quality
+            const quality = qualitySelector.value;
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('background_id', backgroundId === null ? 'null' : backgroundId);
+            formData.append('quality', quality);
+            
+            fetch(`/api/videos/${videoId}/replace-background`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    videoStatus.textContent = 'processing_background';
+                    startStatusCheck();
+                } else {
+                    processingOverlay.classList.add('hidden');
+                    alert('Failed to apply background: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                processingOverlay.classList.add('hidden');
+                console.error('Error applying background:', error);
+                alert('Error applying background. Please try again.');
+            });
+        }
+        
+        function startStatusCheck() {
+            const statusCheckInterval = setInterval(() => {
+                fetch(`/api/videos/${videoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const status = data.video.status;
+                            videoStatus.textContent = status;
+                            
+                            if (status === 'completed') {
+                                clearInterval(statusCheckInterval);
+                                processingOverlay.classList.add('hidden');
+                                
+                                // Reload video with new source (add timestamp to bypass cache)
+                                const timestamp = new Date().getTime();
+                                videoPreview.src = `${data.video.url}?t=${timestamp}`;
+                                videoPreview.load();
+                                videoPreview.play();
+                            } else if (status === 'error') {
+                                clearInterval(statusCheckInterval);
+                                processingOverlay.classList.add('hidden');
+                                alert('An error occurred while processing your video.');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking video status:', error);
+                    });
+            }, 3000); // Check every 3 seconds
+        }
+        
+        // Upload background form (for admins)
+        const uploadForm = document.getElementById('uploadBackgroundForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(uploadForm);
+                
+                fetch('/api/backgrounds/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Background uploaded successfully!');
+                        uploadForm.reset();
+                        loadBackgrounds(); // Reload backgrounds list
+                    } else {
+                        alert('Failed to upload background: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error uploading background:', error);
+                    alert('Error uploading background. Please try again.');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

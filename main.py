@@ -27,9 +27,11 @@ logger = logging.getLogger("MyAvatar")
 from app.logger.log_handler import log_handler, log_info, log_error, log_warning
 from app.db.database import init_database, update_database_schema
 from app.db.admin import create_admin_user
+from app.database.background_schema import initialize_backgrounds_schema, add_default_backgrounds
 from app.routes.api_routes import router as api_router
 from app.routes.web_routes import router as web_router
 from app.routes.finance_routes import router as finance_router
+from app.routes.background_routes import router as background_router
 
 # FASTAPI APP INITIALIZATION
 app = FastAPI(title="MyAvatar", description="AI Avatar Video Generation Platform - Premium Edition")
@@ -59,9 +61,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(web_router)
 app.include_router(finance_router)
+app.include_router(background_router)
 
 # Create necessary directories
-for directory in ["static/uploads/audio", "static/uploads/images", "output", "processed", "uploads", "temp_audio"]:
+for directory in ["static/uploads/audio", "static/uploads/images", "output", "processed", "uploads", "temp_audio", "static/backgrounds", "temp/background_processing", "temp/video_processing"]:
     os.makedirs(directory, exist_ok=True)
 
 # Startup event
@@ -76,6 +79,13 @@ async def startup_event():
         init_database()
         update_database_schema()
         create_admin_user()  # Create admin user if not exists
+        
+        # Initialize background replacement feature
+        db_path = os.path.join(os.getcwd(), 'database.db')
+        backgrounds_dir = os.path.join(os.getcwd(), 'static', 'backgrounds')
+        initialize_backgrounds_schema(db_path)
+        add_default_backgrounds(db_path, backgrounds_dir)
+        log_info("Background replacement feature initialized", "Server")
         log_info("[\n\n\n\n\n\n                                            [Server] MyAvatar Premium Edition is running  ")
     except Exception as e:
         log_error("Error during startup", "Server", e)
