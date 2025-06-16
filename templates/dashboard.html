@@ -1133,10 +1133,10 @@
                 
                 <div class="form-group">
                     <label class="form-label">Avatar</label>
-                    <select class="form-input" id="avatarSelect" required>
+                    <select class="form-input" id="avatarSelect" required style="background-repeat: no-repeat; background-position: 10px center; background-size: 30px 30px; padding-left: 50px;">
                         <option value="">Select an avatar</option>
                         {% for avatar in avatars %}
-                            <option value="{{ avatar.id }}">{{ avatar.name }}</option>
+                            <option value="{{ avatar.id }}" data-image="{{ avatar.image_path }}" data-heygen-id="{{ avatar.heygen_avatar_id }}">{{ avatar.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -1325,6 +1325,17 @@
             }
         }
         
+        // Avatar selection change handler
+        document.getElementById('avatarSelect').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const imagePath = selectedOption.getAttribute('data-image');
+            if (imagePath) {
+                this.style.backgroundImage = `url(${imagePath})`;
+            } else {
+                this.style.backgroundImage = 'none';
+            }
+        });
+
         // Form submission
         document.getElementById('videoForm').addEventListener('submit', async function(e) {
             e.preventDefault();
