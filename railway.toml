@@ -2,9 +2,10 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+startCommand = "export LOG_LEVEL=debug && python -m uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
 healthcheckPath = "/"
-healthcheckTimeout = 100
+healthcheckTimeout = 300
+enableCors = true
 
 [variables]
 ENABLE_SAFE_MODE = "true"
