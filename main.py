@@ -57,14 +57,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models for request validation (CORRECTED TO MATCH FRONTEND)
-class TextVideoRequest(BaseModel):
-    title: str
-    avatar_id: str
-    format: str = "16:9"  # Default format (stored in memory, not DB)
-    text: str
-    description: Optional[str] = ""
-
 # Exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -76,85 +68,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# TEXT-TO-VIDEO API ENDPOINT (CORRECTED FOR ACTUAL DATABASE SCHEMA)
-@app.post("/api/create-text-video")
-async def create_text_video(request: TextVideoRequest):
-    """
-    Create a new text-to-video with the provided text content
-    """
-    try:
-        # Validate required fields
-        if not request.title.strip():
-            raise HTTPException(status_code=400, detail="Title is required")
-        if not request.avatar_id:
-            raise HTTPException(status_code=400, detail="Avatar selection is required")
-        if not request.text.strip():
-            raise HTTPException(status_code=400, detail="Text content is required")
-        
-        # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Generate unique video ID (use integer for your database)
-        # Get next available ID from database
-        cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM videos")
-        video_id = cursor.fetchone()[0]
-        
-        # Insert video record into database (matching your actual table structure)
-        # Based on your logs, the videos table has: id, user_id, avatar_id, title, 
-        # audio_path (NOT NULL), video_path, heygen_video_id, status, created_at, etc.
-        query = """
-            INSERT INTO videos (id, user_id, avatar_id, title, audio_path, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
-        
-        # TODO: Get actual user_id from session - you'll need to add session handling
-        # For now using a default - replace this with proper session management
-        user_id = 3  # Based on your logs, user_id 3 exists
-        
-        # Placeholder audio path for text-to-video (will be updated when audio is generated)
-        placeholder_audio_path = f"text_to_video_placeholder_{video_id}"
-        
-        cursor.execute(query, (
-            video_id,
-            user_id,
-            request.avatar_id,
-            request.title.strip(),
-            placeholder_audio_path,
-            'processing',
-            datetime.now()
-        ))
-        conn.commit()
-        
-        # Close database connection
-        cursor.close()
-        conn.close()
-        
-        log_info(f"Text-to-video creation started - Video ID: {video_id}, Text: {request.text[:50]}...", "Video")
-        
-        # TODO: Add your video processing logic here
-        # This could involve:
-        # 1. Queuing the video for processing
-        # 2. Calling your text-to-speech service
-        # 3. Calling your avatar animation service
-        # 4. Combining audio and video
-        # 5. Store format and description in a separate table if needed
-        
-        return JSONResponse(
-            status_code=200,
-            content={
-                'success': True,
-                'video_id': video_id,
-                'message': 'Video creation started'
-            }
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log_error(f"Error creating text video: {str(e)}", "Video", e)
-        raise HTTPException(status_code=500, detail="Failed to create video")
 
 # Register routes
 app.include_router(api_router)
