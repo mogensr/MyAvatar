@@ -92,8 +92,10 @@ async def create_text_video(request: TextVideoRequest):
         if not request.text.strip():
             raise HTTPException(status_code=400, detail="Text content is required")
         
-        # Generate unique video ID
-        video_id = str(uuid.uuid4())
+        # Generate unique video ID (use integer for your database)
+        # Get next available ID from database
+        cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM videos")
+        video_id = cursor.fetchone()[0]
         
         # Get database connection
         conn = get_db_connection()
