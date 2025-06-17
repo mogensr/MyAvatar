@@ -92,14 +92,14 @@ async def create_text_video(request: TextVideoRequest):
         if not request.text.strip():
             raise HTTPException(status_code=400, detail="Text content is required")
         
+        # Get database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
         # Generate unique video ID (use integer for your database)
         # Get next available ID from database
         cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM videos")
         video_id = cursor.fetchone()[0]
-        
-        # Get database connection
-        conn = get_db_connection()
-        cursor = conn.cursor()
         
         # Insert video record into database (matching your actual table structure)
         # Based on your logs, the videos table has: id, user_id, avatar_id, title, 
