@@ -475,12 +475,14 @@ async def create_video_from_audio(
             log_error(f"HeyGen API request failed with exception: {e}", "API", e)
             return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
         
+ # REPLACE THIS ENTIRE BLOCK:
         if response.status_code == 200:
             try:
                 heygen_data = response.json()
                 log_info(f"HeyGen API Response JSON: {heygen_data}", "API")
                 
-                if heygen_data.get("code") == 100:  # Success
+                # Check if we have a video_id (new HeyGen API format)
+                if heygen_data.get("data") and heygen_data.get("data", {}).get("video_id"):
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
@@ -500,12 +502,37 @@ async def create_video_from_audio(
                         "video_id": video_id,
                         "message": "Video creation started successfully"
                     })
+                
+                # Check for legacy HeyGen API format (code == 100)
+                elif heygen_data.get("code") == 100:
+                    video_id = heygen_data.get("data", {}).get("video_id")
+                    log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
+                    
+                    # Save video record to database
+                    execute_query(
+                        """
+                        INSERT INTO videos (user_id, title, description, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                        (user["id"], title, description, video_id, "processing", datetime.now().isoformat())
+                    )
+                    
+                    log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
+                    
+                    return JSONResponse(content={
+                        "success": True,
+                        "video_id": video_id,
+                        "message": "Video creation started successfully"
+                    })
+                
+                # Handle error cases
                 else:
-                    error_msg = heygen_data.get("message", "Unknown HeyGen error")
+                    error_msg = heygen_data.get("error", {}).get("message") if heygen_data.get("error") else "Unknown HeyGen error"
                     error_code = heygen_data.get("code", "Unknown")
                     log_error(f"HeyGen API error: code={error_code}, message={error_msg}", "API")
                     log_error(f"Full HeyGen response: {heygen_data}", "API")
                     return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
+                    
             except Exception as e:
                 log_error(f"Failed to parse HeyGen response JSON: {e}", "API", e)
                 log_error(f"Raw response: {response.text}", "API")
