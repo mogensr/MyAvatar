@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install system dependencies including OpenGL libraries for OpenCV
+# Install system dependencies including OpenGL libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1-mesa-glx \
     libglib2.0-0 \
@@ -25,14 +25,14 @@ COPY . .
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV LOG_LEVEL=debug
-ENV PORT=8080
+ENV ENABLE_SAFE_MODE=true
 
-# Expose the hardcoded port
-EXPOSE 8080
+# Create a very simple shell script that handles PORT properly
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'PORT="${PORT:-8000}"' >> /app/start.sh && \
+    echo 'echo "Starting application on port: $PORT"' >> /app/start.sh && \
+    echo 'exec python -m uvicorn main:app --host 0.0.0.0 --port "$PORT" --log-level debug' >> /app/start.sh && \
+    chmod +x /app/start.sh
 
-# Copy start script to the container
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# Use the start script
-CMD ["/bin/bash", "/app/start.sh"]
+# Run the script
+CMD ["/app/start.sh"]
