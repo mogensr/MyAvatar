@@ -1,1252 +1,987 @@
-"""
-Web routes for MyAvatar - Enhanced with Cloudinary integration
-"""
-import os
-import uuid
-import requests
-import re
-import tempfile
-import base64
-import time
-import cloudinary
-import cloudinary.uploader
-from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from datetime import datetime, timedelta
-from typing import Optional
-from ..db.database import execute_query
-from ..auth.authentication import (get_current_user, authenticate_user, authenticate_user_by_email,
-                                  create_access_token, get_password_hash, is_admin)
-from ..logger.log_handler import log_info, log_error
-
-# ============================================================================
-# UTILITIES
-# ============================================================================
-
-def secure_filename(filename):
-    """
-    Secure a filename by removing dangerous characters.
-    Alternative to Werkzeug's secure_filename for FastAPI.
-    """
-    # Remove any path separators
-    filename = filename.replace('/', '').replace('\\', '')
-    # Remove any characters that aren't alphanumeric, dots, hyphens, or underscores
-    filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
-    # Remove multiple dots
-    filename = re.sub(r'\.+', '.', filename)
-    # Remove leading/trailing dots and spaces
-    filename = filename.strip('. ')
-    # If filename is empty or too long, generate a safe one
-    if not filename or len(filename) > 100:
-        return f"file_{uuid.uuid4().hex[:8]}.jpg"
-    return filename
-
-# ============================================================================
-# ROUTER SETUP
-# ============================================================================
-
-# Create router
-router = APIRouter(prefix="", tags=["web"])
-
-# Set up templates
-templates = Jinja2Templates(directory="templates")
-
-# ============================================================================
-# AUTHENTICATION ROUTES
-# ============================================================================
-
-@router.get("/logout")
-async def logout(request: Request):
-    """Log out the current user by clearing the authentication cookie"""
-    log_info(f"User logout requested")
-    response = RedirectResponse(url="/login", status_code=302)
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
-    return response
-
-# ============================================================================
-# MAIN PAGES - WITH ADMIN REDIRECT
-# ============================================================================
-
-@router.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """
-    Main page - redirects to appropriate dashboard if logged in, otherwise shows login page
-    """
-    user = get_current_user(request)
-    if user:
-        # Redirect admin users to admin dashboard
-        if user.get("is_admin", 0) == 1:
-            return RedirectResponse(url="/admin/dashboard", status_code=303)
-        else:
-            return RedirectResponse(url="/dashboard", status_code=303)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAvatar Studio - Professional AI Video Platform</title>
     
-    return templates.TemplateResponse("portal/login.html", {"request": request})
-
-# ============================================================================
-# AUTHENTICATION ROUTES - WITH ADMIN REDIRECT
-# ============================================================================
-
-@router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """
-    Login page
-    """
-    return templates.TemplateResponse("portal/login.html", {"request": request})
-
-@router.post("/auth/login", response_class=HTMLResponse)
-async def login_post(
-    request: Request,
-    username: str = Form(None),
-    email: str = Form(None),
-    password: str = Form(...)
-):
-    """
-    Process login - WITH ADMIN REDIRECT
-    """
-    try:
-        log_info(f"Login attempt: username={username}, email={email}", "Auth")
-        
-        # Try to authenticate by username or email
-        user = None
-        if username:
-            user = authenticate_user(username, password)
-            log_info(f"Username authentication result: {user is not None}", "Auth")
-        elif email:
-            user = authenticate_user_by_email(email, password)
-            log_info(f"Email authentication result: {user is not None}", "Auth")
-        
-        if not user:
-            log_error(f"Failed login attempt: username={username}, email={email}", "Auth")
-            return templates.TemplateResponse(
-                "portal/login.html", 
-                {
-                    "request": request, 
-                    "error": "Invalid username/email or password"
-                }
-            )
-        
-        # Create access token
-        access_token = create_access_token(
-            data={"sub": user["username"]},
-            expires_delta=timedelta(minutes=120)
-        )
-        
-        # Create response - redirect admin users to admin dashboard
-        if user.get("is_admin", 0) == 1:
-            log_info(f"Admin user {user['username']} logged in, redirecting to admin dashboard", "Auth")
-            response = RedirectResponse(url="/admin/dashboard", status_code=303)
-        else:
-            log_info(f"Regular user {user['username']} logged in, redirecting to dashboard", "Auth")
-            response = RedirectResponse(url="/dashboard", status_code=303)
-            
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True
-        )
-        
-        log_info(f"User {user['username']} logged in successfully", "Web")
-        return response
-        
-    except Exception as e:
-        log_error("Login error", "Web", e)
-        return templates.TemplateResponse(
-            "portal/login.html",
-            {
-                "request": request,
-                "error": "Login error"
-            }
-        )
-
-@router.get("/logout")
-async def logout(request: Request):
-    """
-    Logout user
-    """
-    response = RedirectResponse(url="/login", status_code=303)
-    response.delete_cookie("access_token")
-    return response
-
-# ============================================================================
-# REGISTRATION ROUTES
-# ============================================================================
-
-@router.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request):
-    """
-    Registration page
-    """
-    return templates.TemplateResponse("portal/register.html", {"request": request})
-
-@router.post("/register")
-async def register(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...)
-):
-    """
-    Process registration
-    """
-    try:
-        log_info(f"Registration attempt: username={username}, email={email}", "Web")
-        
-        # Check if user already exists
-        existing_user = execute_query(
-            "SELECT * FROM users WHERE username = ? OR email = ?",
-            (username, email),
-            fetch_one=True
-        )
-        
-        if existing_user:
-            log_error(f"Registration failed - user exists: username={username}, email={email}", "Web")
-            return templates.TemplateResponse(
-                "portal/register.html",
-                {
-                    "request": request,
-                    "error": "Username or email already exists"
-                }
-            )
-        
-        # Create user
-        hashed_password = get_password_hash(password)
-        execute_query(
-            """
-            INSERT INTO users (username, email, hashed_password, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (username, email, hashed_password, datetime.now().isoformat())
-        )
-        
-        log_info(f"User {username} registered successfully", "Web")
-        
-        # Redirect to login
-        return templates.TemplateResponse(
-            "portal/login.html",
-            {
-                "request": request,
-                "success": "Registration successful. Please log in."
-            }
-        )
-        
-    except Exception as e:
-        log_error("Registration error", "Web", e)
-        return templates.TemplateResponse(
-            "portal/register.html",
-            {
-                "request": request,
-                "error": "Registration error"
-            }
-        )
-
-# ============================================================================
-# DASHBOARD ROUTE - WITH REAL STATISTICS
-# ============================================================================
-
-@router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    """
-    User dashboard - With real statistics instead of mock data
-    """
-    # Check authentication
-    user = get_current_user(request)
-    if not user:
-        log_info("Unauthenticated dashboard access attempt", "Web")
-        return RedirectResponse(url="/login", status_code=303)
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    log_info(f"Dashboard access by user {user.get('username')}", "Web")
-    
-    try:
-        # Get user's videos
-        videos = execute_query(
-            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-            (user["id"],),
-            fetch_all=True
-        )
-        
-        # Get user's avatars
-        avatars = execute_query(
-            "SELECT * FROM avatars WHERE user_id = ?",
-            (user["id"],),
-            fetch_all=True
-        )
-        
-        log_info(f"Dashboard data loaded: {len(videos) if videos else 0} videos, {len(avatars) if avatars else 0} avatars", "Web")
-        
-        # DEBUG: Log actual video data to see what we have
-        log_info(f"Raw videos from database: {videos}", "Web")
-        
-        # Convert database results to list of dicts for videos
-        video_list = []
-        total_duration = 0
-        total_views = 0
-        total_shares = 0
-        
-        for v in videos:
-            if isinstance(v, dict):
-                video_dict = v
-            else:
-                # Handle SQLite Row objects
-                video_dict = {}
-                for key in v.keys():
-                    video_dict[key] = v[key]
+    <style>
+        /* ==================== DESIGN SYSTEM ==================== */
+        :root {
+            /* Premium Color Palette */
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
             
-            video_list.append(video_dict)
+            /* Neutral Colors */
+            --gray-900: #111827;
+            --gray-800: #1f2937;
+            --gray-700: #374151;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
             
-            # Calculate real statistics
-            if video_dict.get('duration'):
-                total_duration += float(video_dict['duration'])
-        
-        # Convert database results to list of dicts for avatars
-        avatar_list = []
-        for a in avatars:
-            if isinstance(a, dict):
-                avatar_list.append(a)
-            else:
-                # Handle SQLite Row objects
-                avatar_dict = {}
-                for key in a.keys():
-                    avatar_dict[key] = a[key]
-                avatar_list.append(avatar_dict)
-        
-        # Calculate real statistics
-        total_videos = len(video_list)
-        total_duration_hours = round(total_duration / 3600, 1) if total_duration > 0 else 0
-        
-        # Use proper template rendering with REAL statistics
-        return templates.TemplateResponse(
-            "dashboard.html",
-            {
-                "request": request,
-                "user": user,
-                "username": user.get("username", ""),
-                "is_admin": user.get("is_admin", 0), 
-                "avatar_id": user.get("avatar_id", ""),
-                "user_id": user.get("id", 0),
-                "api_key": user.get("api_key", "") or os.getenv("HEYGEN_API_KEY", ""),
-                "videos": video_list,
-                "avatars": avatar_list,
-                "total_videos": total_videos,
-                "total_duration": f"{total_duration_hours}h" if total_duration_hours > 0 else "0h",
-                "total_views": total_views,
-                "total_shares": total_shares,
-            }
-        )
-    except Exception as e:
-        log_error(f"Dashboard error for user {user.get('username')}", "Web", e)
-        return templates.TemplateResponse(
-            "portal/login.html",
-            {
-                "request": request,
-                "error": "Dashboard error"
-            }
-        )
-
-# ============================================================================
-# HEYGEN WEBHOOK ROUTES
-# ============================================================================
-
-@router.post("/api/heygen/webhook")
-async def heygen_webhook(request: Request):
-    """Handle HeyGen video completion webhook - All Events"""
-    try:
-        log_info("HeyGen webhook received", "Webhook")
-        
-        # Get JSON data from HeyGen
-        data = await request.json()
-        log_info(f"HeyGen webhook data: {data}", "Webhook")
-        
-        # HeyGen can send different formats, handle both
-        video_id = data.get("video_id") or data.get("data", {}).get("video_id")
-        status = data.get("status") or data.get("event", "").replace("video.", "")
-        video_url = data.get("video_url") or data.get("data", {}).get("video_url")
-        event = data.get("event", "unknown")
-        
-        if not video_id:
-            log_error("No video_id in webhook data", "Webhook")
-            return JSONResponse(status_code=400, content={"error": "Missing video_id"})
-        
-        log_info(f"Processing webhook - Event: {event}, Video: {video_id}, Status: {status}", "Webhook")
-        
-        # Handle different event types
-        if event in ["video.completed", "completed"] or status == "completed":
-            if video_url:
-                log_info(f"Video completed: {video_id}, URL: {video_url}", "Webhook")
-                execute_query(
-                    "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
-                    ("completed", video_url, video_id)
-                )
-                log_info(f"Database updated for completed video: {video_id}", "Webhook")
-            else:
-                log_error(f"Video completed but no URL provided: {video_id}", "Webhook")
-                
-        elif event in ["video.failed", "failed"] or status in ["failed", "error"]:
-            log_error(f"Video failed: {video_id}", "Webhook")
-            execute_query(
-                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                ("failed", video_id)
-            )
-            log_info(f"Database updated for failed video: {video_id}", "Webhook")
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-premium: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-dark: linear-gradient(135deg, #232526 0%, #414345 100%);
             
-        elif event in ["video.processing", "processing"] or status == "processing":
-            log_info(f"Video processing: {video_id}", "Webhook")
-            execute_query(
-                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                ("processing", video_id)
-            )
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
             
-        else:
-            log_info(f"Unknown event/status: {event}/{status} for video: {video_id}", "Webhook")
-            # Still update with whatever status we got
-            if status:
-                execute_query(
-                    "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                    (status, video_id)
-                )
-        
-        return JSONResponse(content={"status": "success", "message": f"Webhook processed: {event}"})
-        
-    except Exception as e:
-        log_error(f"HeyGen webhook error: {e}", "Webhook", e)
-        return JSONResponse(status_code=500, content={"error": "Webhook processing failed"})
-
-# ============================================================================
-# VIDEO CREATION API ROUTES - CLOUDINARY + HEYGEN INTEGRATION
-# ============================================================================
-
-@router.post("/api/create-video")
-async def create_video_from_audio(
-    request: Request,
-    audio: UploadFile = File(...),
-    title: str = Form(...),
-    avatar_id: str = Form(...),
-    description: str = Form(None)
-):
-    """Create video from audio recording using Cloudinary + HeyGen API"""
-    user = get_current_user(request)
-    if not user:
-        log_error("Unauthorized video creation attempt", "API")
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Video creation request by user {user['username']}: title='{title}', avatar_id={avatar_id}", "API")
-    
-    temp_audio_path = None
-    try:
-        # Get HeyGen API key
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured", "API")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        log_info(f"HeyGen API key found: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "API")
-        
-        # Get avatar details from database
-        log_info(f"Fetching avatar details for avatar_id={avatar_id}, user_id={user['id']}", "API")
-        avatar = execute_query(
-            "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
-            (avatar_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            log_error(f"Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "API")
-            return JSONResponse(status_code=400, content={"error": "Avatar not found"})
-        
-        log_info(f"Avatar found: {avatar}", "API")
-        
-        # Save audio file temporarily
-        log_info(f"Processing audio file: {audio.filename}, content_type={audio.content_type}", "API")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-            audio_content = await audio.read()
-            temp_audio.write(audio_content)
-            temp_audio_path = temp_audio.name
+            /* Animations */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
             
-        log_info(f"Audio saved to temporary file: {temp_audio_path}, size={len(audio_content)} bytes", "API")
-        
-        # Upload to Cloudinary
-        try:
-            log_info("Uploading audio to Cloudinary...", "API")
-            upload_result = cloudinary.uploader.upload(
-                temp_audio_path,
-                resource_type="video",  # Cloudinary treats audio as video resource
-                format="mp4",          # Convert to mp4 format for HeyGen compatibility
-                public_id=f"myavatar_audio_{user['id']}_{int(time.time())}"
-            )
-            cloudinary_url = upload_result.get('secure_url')
-            log_info(f"Audio uploaded to Cloudinary successfully: {cloudinary_url}", "API")
-            
-        except Exception as e:
-            log_error(f"Cloudinary upload failed: {str(e)}", "API", e)
-            if temp_audio_path:
-                os.unlink(temp_audio_path)
-            return JSONResponse(status_code=500, content={"error": "Audio upload to Cloudinary failed"})
-        
-        # Clean up temp file
-        if temp_audio_path:
-            os.unlink(temp_audio_path)
-            temp_audio_path = None
-        
-        # Get HeyGen avatar ID
-        heygen_avatar_id = avatar.get("heygen_avatar_id")
-        if not heygen_avatar_id:
-            log_error(f"No HeyGen avatar ID found for avatar: {avatar}", "API")
-            return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
-        
-        log_info(f"Using HeyGen avatar ID: {heygen_avatar_id}", "API")
-        
-        # Prepare HeyGen API request
-        heygen_url = "https://api.heygen.com/v2/video/generate"
-        
-        headers = {
-            "X-Api-Key": heygen_api_key,
-            "Content-Type": "application/json"
+            /* Layout */
+            --sidebar-width: 280px;
+            --header-height: 72px;
+            --content-max-width: 1400px;
         }
         
-        log_info(f"HeyGen API URL: {heygen_url}", "API")
-        
-        # Use Cloudinary URL instead of base64
-        payload = {
-            "video_inputs": [
-                {
-                    "character": {
-                        "type": "avatar",
-                        "avatar_id": heygen_avatar_id,
-                        "avatar_style": "normal"
-                    },
-                    "voice": {
-                        "type": "audio",
-                        "audio_url": cloudinary_url  # Use Cloudinary URL here!
-                    },
-                    "background": {
-                        "type": "color",
-                        "value": "#ffffff"
-                    }
-                }
-            ],
-            "dimension": {
-                "width": 1920,
-                "height": 1080
-            },
-            "aspect_ratio": "16:9",
-            "test": False
+        /* Dark Mode Variables */
+        [data-theme="dark"] {
+            --gray-900: #f9fafb;
+            --gray-800: #f3f4f6;
+            --gray-700: #e5e7eb;
+            --gray-600: #d1d5db;
+            --gray-500: #9ca3af;
+            --gray-400: #6b7280;
+            --gray-300: #4b5563;
+            --gray-200: #374151;
+            --gray-100: #1f2937;
+            --gray-50: #111827;
+            --white: #0f172a;
         }
         
-        log_info(f"HeyGen payload prepared with Cloudinary URL: {cloudinary_url}", "API")
-        
-        # Make request to HeyGen
-        log_info(f"Making request to HeyGen API...", "API")
-        try:
-            response = requests.post(heygen_url, json=payload, headers=headers, timeout=30)
-            log_info(f"HeyGen API Response Status: {response.status_code}", "API")
-            log_info(f"HeyGen API Response Headers: {dict(response.headers)}", "API")
-            log_info(f"HeyGen API Response Text: {response.text}", "API")
-        except Exception as e:
-            log_error(f"HeyGen API request failed with exception: {e}", "API", e)
-            return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
-        
-        # FIXED DATABASE INSERT - REMOVED DESCRIPTION COLUMN
-        if response.status_code == 200:
-            try:
-                heygen_data = response.json()
-                log_info(f"HeyGen API Response JSON: {heygen_data}", "API")
-                
-                # Check if we have a video_id (new HeyGen API format)
-                if heygen_data.get("data") and heygen_data.get("data", {}).get("video_id"):
-                    video_id = heygen_data.get("data", {}).get("video_id")
-                    log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
-                    
-                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
-                    execute_query(
-                        """
-                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                    )
-                    
-                    log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
-                    
-                    return JSONResponse(content={
-                        "success": True,
-                        "video_id": video_id,
-                        "message": "Video creation started successfully"
-                    })
-                
-                # Check for legacy HeyGen API format (code == 100)
-                elif heygen_data.get("code") == 100:
-                    video_id = heygen_data.get("data", {}).get("video_id")
-                    log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
-                    
-                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
-                    execute_query(
-                        """
-                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                    )
-                    
-                    log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
-                    
-                    return JSONResponse(content={
-                        "success": True,
-                        "video_id": video_id,
-                        "message": "Video creation started successfully"
-                    })
-                
-                # Handle error cases
-                else:
-                    error_msg = heygen_data.get("error", {}).get("message") if heygen_data.get("error") else "Unknown HeyGen error"
-                    error_code = heygen_data.get("code", "Unknown")
-                    log_error(f"HeyGen API error: code={error_code}, message={error_msg}", "API")
-                    log_error(f"Full HeyGen response: {heygen_data}", "API")
-                    return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
-                    
-            except Exception as e:
-                log_error(f"Failed to parse HeyGen response JSON: {e}", "API", e)
-                log_error(f"Raw response: {response.text}", "API")
-                return JSONResponse(status_code=500, content={"error": "HeyGen response parsing error"})
-        
-        else:
-            # Enhanced error logging for non-200 responses
-            try:
-                error_response = response.json()
-                log_error(f"HeyGen API request failed: {response.status_code} - {error_response}", "API")
-            except:
-                log_error(f"HeyGen API request failed: {response.status_code} - {response.text}", "API")
-            
-            return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
-    
-    except Exception as e:
-        log_error(f"Error creating video: {e}", "API", e)
-        # Clean up temp file if it exists
-        if temp_audio_path:
-            try:
-                os.unlink(temp_audio_path)
-            except:
-                pass
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-@router.get("/api/video-status/{video_id}")
-async def check_video_status(request: Request, video_id: str):
-    """Check video processing status from HeyGen"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Video status check by user {user['username']} for video_id: {video_id}", "API")
-    
-    try:
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE heygen_video_id = ? AND user_id = ?",
-            (video_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not video:
-            log_error(f"Video not found: video_id={video_id}, user_id={user['id']}", "API")
-            return JSONResponse(status_code=404, content={"error": "Video not found"})
-        
-        # Check status with HeyGen
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured for status check", "API")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        headers = {"X-Api-Key": heygen_api_key}
-        status_url = f"https://api.heygen.com/v1/video_status.get?video_id={video_id}"
-        
-        log_info(f"Checking HeyGen video status: {status_url}", "API")
-        response = requests.get(status_url, headers=headers)
-        
-        log_info(f"HeyGen status response: {response.status_code} - {response.text}", "API")
-        
-        if response.status_code == 200:
-            status_data = response.json()
-            
-            if status_data.get("code") == 100:
-                data = status_data.get("data", {})
-                status = data.get("status")
-                video_url = data.get("video_url")
-                
-                log_info(f"Video status: {status}, URL: {video_url}", "API")
-                
-                # Update database with new status
-                if status == "completed" and video_url:
-                    execute_query(
-                        "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
-                        ("completed", video_url, video_id)
-                    )
-                    log_info(f"Video completed and database updated: {video_id}", "API")
-                elif status == "failed":
-                    execute_query(
-                        "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                        ("failed", video_id)
-                    )
-                    log_error(f"Video failed: {video_id}", "API")
-                
-                return JSONResponse(content={
-                    "status": status,
-                    "video_url": video_url,
-                    "progress": data.get("progress", 0)
-                })
-        
-        log_error(f"Failed to get video status from HeyGen: {response.status_code}", "API")
-        return JSONResponse(status_code=400, content={"error": "Failed to get video status"})
-    
-    except Exception as e:
-        log_error(f"Error checking video status: {e}", "API", e)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-# ============================================================================
-# TEXT TO VIDEO ROUTE
-# ============================================================================
-
-@router.get("/text-to-video", response_class=HTMLResponse)
-async def text_to_video_page(request: Request):
-    """
-    Text to video creation page
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    log_info(f"Text-to-video page accessed by user {user.get('username')}", "Web")
-    
-    # Get user's avatars
-    avatars = execute_query(
-        "SELECT * FROM avatars WHERE user_id = ?",
-        (user["id"],),
-        fetch_all=True
-    )
-    
-    # Convert database results to list of dicts for avatars
-    avatar_list = []
-    for a in avatars:
-        if isinstance(a, dict):
-            avatar_list.append(a)
-        else:
-            # Handle SQLite Row objects
-            avatar_dict = {}
-            for key in a.keys():
-                avatar_dict[key] = a[key]
-            avatar_list.append(avatar_dict)
-    
-    return templates.TemplateResponse(
-        "text_video_component.html",
-        {
-            "request": request,
-            "user": user,
-            "username": user.get("username", ""),
-            "is_admin": user.get("is_admin", 0),
-            "avatars": avatar_list
+        /* ==================== GLOBAL STYLES ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-    )
-
-# ============================================================================
-# ADMIN ROUTES
-# ============================================================================
-
-@router.get("/admin/users", response_class=HTMLResponse)
-async def admin_users(request: Request):
-    """
-    Admin users page
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        log_error(f"Unauthorized admin access attempt by {user.get('username') if user else 'anonymous'}", "Admin")
-        return RedirectResponse(url="/login", status_code=303)
-    
-    log_info(f"Admin users page accessed by {user['username']}", "Admin")
-    
-    # Get all users
-    users = execute_query(
-        "SELECT * FROM users ORDER BY created_at DESC",
-        fetch_all=True
-    )
-    
-    return templates.TemplateResponse(
-        "portal/admin_users.html",
-        {
-            "request": request,
-            "users": users
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+            overflow-x: hidden;
+            transition: background var(--transition-base);
         }
-    )
-
-@router.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request):
-    """
-    Admin dashboard
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    log_info(f"Admin dashboard accessed by {user['username']}", "Admin")
-    
-    # Get stats
-    user_count = execute_query(
-        "SELECT COUNT(*) as count FROM users",
-        fetch_one=True
-    )
-    
-    video_count = execute_query(
-        "SELECT COUNT(*) as count FROM videos",
-        fetch_one=True
-    )
-    
-    avatar_count = execute_query(
-        "SELECT COUNT(*) as count FROM avatars",
-        fetch_one=True
-    )
-    
-    return templates.TemplateResponse(
-        "portal/admin_dashboard.html",
-        {
-            "request": request,
-            "user_count": user_count["count"] if user_count else 0,
-            "video_count": video_count["count"] if video_count else 0,
-            "avatar_count": avatar_count["count"] if avatar_count else 0
+        
+        /* ==================== LAYOUT ==================== */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
         }
-    )
-
-@router.get("/admin/create-user", response_class=HTMLResponse)
-async def admin_create_user_page(request: Request):
-    """
-    Admin create user page
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    return templates.TemplateResponse(
-        "portal/admin_create_user.html",
-        {"request": request}
-    )
-
-@router.post("/admin/create-user")
-async def admin_create_user(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    is_admin_user: bool = Form(False),
-    api_key: str = Form(None)
-):
-    """
-    Admin create user
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} creating user: {username}", "Admin")
         
-        # Check if user already exists
-        existing_user = execute_query(
-            "SELECT * FROM users WHERE username = ? OR email = ?",
-            (username, email),
-            fetch_one=True
-        )
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 40;
+            transform: translateX(0);
+            transition: transform var(--transition-base);
+        }
         
-        if existing_user:
-            log_error(f"Admin create user failed - user exists: {username}", "Admin")
-            return templates.TemplateResponse(
-                "portal/admin_create_user.html",
-                {
-                    "request": request,
-                    "error": "Username or email already exists"
-                }
-            )
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
         
-        # Create user
-        hashed_password = get_password_hash(password)
-        execute_query(
-            """
-            INSERT INTO users (username, email, hashed_password, created_at, is_admin, api_key)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (username, email, hashed_password, datetime.now().isoformat(), is_admin_user, api_key)
-        )
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            background: var(--gradient-primary);
+            color: white;
+        }
         
-        log_info(f"Admin {user['username']} created user {username} successfully", "Admin")
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
         
-        # Redirect to users list
-        return RedirectResponse(url="/admin/users", status_code=303)
+        .logo-icon {
+            font-size: 2rem;
+        }
         
-    except Exception as e:
-        log_error("Admin create user error", "Admin", e)
-        return templates.TemplateResponse(
-            "portal/admin_create_user.html",
-            {
-                "request": request,
-                "error": "Error creating user"
+        .nav-menu {
+            flex: 1;
+            padding: 1rem 0;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+        
+        .nav-section-title {
+            padding: 0 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--gray-500);
+            letter-spacing: 0.05em;
+        }
+        
+        .nav-item {
+            position: relative;
+            margin: 0.25rem 0.75rem;
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--gray-700);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav-link:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+            transform: translateX(2px);
+        }
+        
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: white;
+        }
+        
+        .nav-badge {
+            margin-left: auto;
+            padding: 0.125rem 0.5rem;
+            background: var(--danger);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 9999px;
+        }
+        
+        .premium-badge {
+            background: var(--gradient-premium);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .soon-badge {
+            background: var(--warning);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: margin-left var(--transition-base);
+        }
+        
+        .main-content.full-width {
+            margin-left: 0;
+        }
+        
+        /* Header */
+        .header {
+            height: var(--header-height);
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray-700);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .menu-toggle:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        .search-bar {
+            position: relative;
+            width: 400px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.625rem 1rem 0.625rem 3rem;
+            background: var(--gray-100);
+            border: 1px solid transparent;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .search-input:focus {
+            outline: none;
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header-btn {
+            position: relative;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            font-size: 1.25rem;
+            color: var(--gray-600);
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .header-btn:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        .notification-dot {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            width: 0.5rem;
+            height: 0.5rem;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--white);
+        }
+        
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .user-menu:hover {
+            background: var(--gray-100);
+        }
+        
+        .user-avatar {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .user-info {
+            text-align: left;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--gray-900);
+        }
+        
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        
+        /* Page Content */
+        .page-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        /* ==================== COMPONENTS ==================== */
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--white);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: var(--gradient-primary);
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+        
+        .stat-icon {
+            width: 3rem;
+            height: 3rem;
+            background: var(--gradient-primary);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        
+        .stat-change {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.75rem;
+            background: var(--success);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 9999px;
+        }
+        
+        .stat-change.negative {
+            background: var(--danger);
+        }
+        
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-card {
+            background: var(--white);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 2px solid var(--gray-200);
+            transition: all var(--transition-base);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: scaleX(0);
+            transition: transform var(--transition-base);
+        }
+        
+        .feature-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-4px);
+        }
+        
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .feature-card.premium {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-color: var(--secondary);
+        }
+        
+        .feature-card.premium::before {
+            background: var(--gradient-premium);
+        }
+        
+        .feature-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: var(--gradient-primary);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card.premium .feature-icon {
+            background: var(--gradient-premium);
+        }
+        
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .feature-description {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .tag.new {
+            background: var(--success);
+            color: white;
+        }
+        
+        .tag.coming-soon {
+            background: var(--warning);
+            color: white;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
             }
-        )
-
-@router.get("/admin/edit-user/{user_id}", response_class=HTMLResponse)
-async def admin_edit_user_page(request: Request, user_id: int):
-    """Admin edit user page"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        # Get the user to edit
-        user_to_edit = execute_query(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_edit:
-            log_error(f"Admin edit user - user not found: {user_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        log_info(f"Admin {user['username']} editing user {user_to_edit['username']}", "Admin")
-        
-        return templates.TemplateResponse("portal/admin_edit_user.html", {
-            "request": request,
-            "user": user,
-            "user_to_edit": user_to_edit,
-            "title": f"Edit User: {user_to_edit['username']}"
-        })
-    except Exception as e:
-        log_error(f"Error in admin_edit_user_page: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
-
-@router.post("/admin/edit-user/{user_id}")
-async def admin_edit_user_submit(request: Request, user_id: int):
-    """Handle admin edit user form submission"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        # Get form data
-        form = await request.form()
-        username = form.get("username", "").strip()
-        email = form.get("email", "").strip()
-        is_premium = 1 if form.get("is_premium") == "on" else 0
-        is_admin_user = 1 if form.get("is_admin") == "on" else 0
-        
-        log_info(f"Admin {user['username']} updating user {user_id}: {username}", "Admin")
-        
-        # Update user
-        execute_query(
-            """
-            UPDATE users 
-            SET username = ?, email = ?, is_premium = ?, is_admin = ?
-            WHERE id = ?
-            """,
-            (username, email, is_premium, is_admin_user, user_id)
-        )
-        
-        log_info(f"Admin {user['username']} updated user {username} successfully", "Admin")
-        return RedirectResponse(url=f"/admin/users?success=user_updated", status_code=303)
-    
-    except Exception as e:
-        log_error(f"Error updating user: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
-
-@router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
-async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page - FIXED to show proper names and images"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} managing avatars for user_id: {user_id}", "Admin")
-        
-        # Get the user to manage
-        user_to_manage = execute_query(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_manage:
-            log_error(f"User not found for avatar management: {user_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        # Get user's avatars
-        raw_avatars = execute_query(
-            "SELECT * FROM avatars WHERE user_id = ?",
-            (user_id,),
-            fetch_all=True
-        )
-        
-        log_info(f"Found {len(raw_avatars) if raw_avatars else 0} avatars for user {user_to_manage['username']}", "Admin")
-        
-        # Transform avatars to match template expectations
-        avatars = []
-        for avatar in raw_avatars:
-            # Convert database row to dict if needed
-            if not isinstance(avatar, dict):
-                avatar_dict = {}
-                for key in avatar.keys():
-                    avatar_dict[key] = avatar[key]
-                avatar = avatar_dict
             
-            # Map database fields to template expectations
-            processed_avatar = {
-                'id': avatar.get('id'),
-                'user_id': avatar.get('user_id'),
-                'avatar_name': avatar.get('name', 'Unnamed'),
-                'avatar_url': avatar.get('image_path'),
-                'heygen_avatar_id': avatar.get('heygen_avatar_id'),
-                'created_at': avatar.get('created_at')
+            .sidebar.open {
+                transform: translateX(0);
             }
             
-            # For HeyGen avatars, try to get a better display name
-            if processed_avatar['heygen_avatar_id'] and not processed_avatar['avatar_name']:
-                processed_avatar['avatar_name'] = f"HeyGen Avatar {processed_avatar['heygen_avatar_id'][:8]}..."
+            .main-content {
+                margin-left: 0;
+            }
             
-            avatars.append(processed_avatar)
-        
-        log_info(f"Processed {len(avatars)} avatars for display", "Admin")
-        
-        return templates.TemplateResponse("portal/admin_manage_avatars.html", {
-            "request": request,
-            "user": user,
-            "user_to_manage": user_to_manage,
-            "avatars": avatars,
-            "title": f"Manage Avatars: {user_to_manage['username']}"
-        })
-    except Exception as e:
-        log_error(f"Error in admin_manage_avatars_page: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
-
-@router.post("/admin/delete-avatar/{avatar_id}")
-async def admin_delete_avatar(request: Request, avatar_id: int):
-    """Admin delete avatar"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} attempting to delete avatar {avatar_id}", "Admin")
-        
-        # Get avatar info first
-        avatar = execute_query(
-            "SELECT user_id FROM avatars WHERE id = ?",
-            (avatar_id,),
-            fetch_one=True
-        )
-        
-        if avatar:
-            user_id = avatar["user_id"]
-            log_info(f"Avatar {avatar_id} belongs to user {user_id}", "Admin")
+            .menu-toggle {
+                display: block;
+            }
             
-            # Delete avatar
-            execute_query(
-                "DELETE FROM avatars WHERE id = ?",
-                (avatar_id,)
-            )
-            log_info(f"Admin {user['username']} deleted avatar {avatar_id} successfully", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted", status_code=303)
-        else:
-            log_error(f"Avatar not found for deletion: {avatar_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=avatar_not_found", status_code=303)
-            
-    except Exception as e:
-        log_error(f"Error deleting avatar {avatar_id}: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
-
-@router.post("/admin/upload-image/{user_id}")
-async def admin_upload_image(request: Request, user_id: int):
-    """Admin upload image for user"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} uploading image for user {user_id}", "Admin")
-        
-        form = await request.form()
-        image_file = form.get("image_file")
-        
-        if not image_file or not image_file.filename:
-            log_error("No file provided for upload", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_file", status_code=303)
-        
-        log_info(f"Processing image upload: {image_file.filename}", "Admin")
-        
-        # Check file type
-        allowed_types = ['.png', '.jpg', '.jpeg', '.gif']
-        file_ext = os.path.splitext(image_file.filename)[1].lower()
-        if file_ext not in allowed_types:
-            log_error(f"Invalid file type: {file_ext}", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_file", status_code=303)
-        
-        # Create uploads directory if it doesn't exist
-        upload_dir = "static/uploads/avatars"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Generate secure filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        secure_name = secure_filename(image_file.filename)
-        file_ext = os.path.splitext(secure_name)[1].lower()
-        unique_filename = f"user_{user_id}_{timestamp}{file_ext}"
-        file_path = os.path.join(upload_dir, unique_filename)
-        
-        # Save file
-        with open(file_path, "wb") as buffer:
-            content = await image_file.read()
-            buffer.write(content)
-        
-        log_info(f"Image saved to: {file_path}, size: {len(content)} bytes", "Admin")
-        
-        # Save to database
-        image_url = f"/static/uploads/avatars/{unique_filename}"
-        execute_query(
-            """
-            INSERT INTO avatars (user_id, name, image_path)
-            VALUES (?, ?, ?)
-            """,
-            (user_id, unique_filename, image_url)
-        )
-        
-        log_info(f"Admin {user['username']} uploaded image for user {user_id}: {unique_filename}", "Admin")
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=image_uploaded", status_code=303)
-        
-    except Exception as e:
-        log_error(f"Error uploading image: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=upload_failed", status_code=303)
-
-@router.post("/admin/fetch-heygen-avatar/{user_id}")
-async def admin_fetch_heygen_avatar(request: Request, user_id: int):
-    """Admin fetch avatar from HeyGen - WITH EXTENSIVE LOGGING"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} fetching HeyGen avatar for user {user_id}", "Admin")
-        
-        form = await request.form()
-        heygen_avatar_id = form.get("heygen_avatar_id", "").strip()
-        
-        if not heygen_avatar_id:
-            log_error("No HeyGen avatar ID provided", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_avatar_id", status_code=303)
-        
-        log_info(f"Fetching HeyGen avatar: {heygen_avatar_id}", "Admin")
-        
-        # Get HeyGen API key from environment
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=api_key_missing", status_code=303)
-        
-        log_info(f"Using HeyGen API key: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "Admin")
-        
-        # Make request to HeyGen API to get avatar details
-        headers = {
-            'X-Api-Key': heygen_api_key,
-            'Content-Type': 'application/json'
+            .search-bar {
+                width: 300px;
+            }
         }
         
-        # HeyGen API endpoint to get avatar details
-        heygen_url = f"https://api.heygen.com/v1/avatar/{heygen_avatar_id}"
-        log_info(f"HeyGen API request URL: {heygen_url}", "Admin")
-        
-        try:
-            response = requests.get(heygen_url, headers=headers, timeout=30)
-            log_info(f"HeyGen API response: {response.status_code} - {response.text}", "Admin")
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 1rem;
+            }
             
-            if response.status_code == 200:
-                avatar_data = response.json()
-                log_info(f"HeyGen avatar data: {avatar_data}", "Admin")
-                
-                # Check if avatar exists and get details
-                if avatar_data.get('code') == 100:  # Success code for HeyGen
-                    avatar_info = avatar_data.get('data', {})
-                    avatar_name = avatar_info.get('avatar_name', heygen_avatar_id)
-                    avatar_preview_url = avatar_info.get('preview_image_url', '')
-                    
-                    log_info(f"Avatar details: name={avatar_name}, preview_url={avatar_preview_url}", "Admin")
-                    
-                    # Save avatar record to database
-                    execute_query(
-                        """
-                        INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id)
-                        VALUES (?, ?, ?, ?)
-                        """,
-                        (user_id, avatar_name, avatar_preview_url, heygen_avatar_id)
-                    )
-                    
-                    log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
-                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched", status_code=303)
-                else:
-                    error_msg = avatar_data.get('message', 'Unknown error')
-                    log_error(f"HeyGen API error: {error_msg}", "Admin")
-                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_api_error", status_code=303)
+            .search-bar {
+                display: none;
+            }
             
-            elif response.status_code == 401:
-                log_error("Invalid HeyGen API key", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_api_key", status_code=303)
-            elif response.status_code == 404:
-                log_error(f"HeyGen avatar not found: {heygen_avatar_id}", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found", status_code=303)
-            else:
-                log_error(f"HeyGen API error: {response.status_code}", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_failed", status_code=303)
-                
-        except requests.exceptions.Timeout:
-            log_error("HeyGen API request timeout", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=timeout", status_code=303)
-        except requests.exceptions.RequestException as e:
-            log_error(f"HeyGen API request error: {e}", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=connection_failed", status_code=303)
-        
-    except Exception as e:
-        log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
-
-# ============================================================================
-# VIDEO BACKGROUND REPLACEMENT ROUTES
-# ============================================================================
-
-@router.get("/videos/{video_id}/backgrounds", response_class=HTMLResponse)
-async def video_backgrounds_page(request: Request, video_id: int):
-    """
-    Video backgrounds page for selecting and applying backgrounds
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check if video exists and belongs to user
-    video = execute_query(
-        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
-        (video_id, user["id"]),
-        fetch_one=True
-    )
-    
-    if not video:
-        return RedirectResponse(url="/dashboard?error=video_not_found", status_code=303)
-    
-    # Get video URL
-    video_url = f"/static/videos/{video.get('heygen_video_id')}.mp4"
-    if video.get('file_path'):
-        video_url = f"/static/videos/{os.path.basename(video['file_path'])}"
-    
-    return templates.TemplateResponse(
-        "video_backgrounds.html", 
-        {
-            "request": request,
-            "user": user,
-            "video": video,
-            "video_url": video_url
+            .user-info {
+                display: none;
+            }
+            
+            .page-content {
+                padding: 1rem;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
         }
-    )
-
-# ============================================================================
-# END OF FILE
-# ============================================================================
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .hidden { display: none !important; }
+        .mt-1 { margin-top: 0.5rem; }
+        .mt-2 { margin-top: 1rem; }
+        .mt-3 { margin-top: 1.5rem; }
+        .mt-4 { margin-top: 2rem; }
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+        .mb-4 { margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🎬</span>
+                    <span>MyAvatar</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <div class="nav-item">
+                        <a href="#dashboard" class="nav-link active">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#create" class="nav-link">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Create Video</span>
+                            <span class="nav-badge">New</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#videos" class="nav-link">
+                            <i class="fas fa-video"></i>
+                            <span>My Videos</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#templates" class="nav-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Templates</span>
+                            <span class="premium-badge">Premium</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Advanced</div>
+                    <div class="nav-item">
+                        <a href="#interactive" class="nav-link">
+                            <i class="fas fa-users"></i>
+                            <span>Interactive Avatars</span>
+                            <span class="tag coming-soon">Soon</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#backgrounds" class="nav-link">
+                            <i class="fas fa-image"></i>
+                            <span>Backgrounds</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#distribution" class="nav-link">
+                            <i class="fas fa-share-alt"></i>
+                            <span>Distribution</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#analytics" class="nav-link">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Analytics</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Account</div>
+                    <div class="nav-item">
+                        <a href="#subscription" class="nav-link">
+                            <i class="fas fa-crown"></i>
+                            <span>Subscription</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#settings" class="nav-link">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <div class="search-bar">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="search-input" placeholder="Search videos, templates...">
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <button class="header-btn" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <button class="header-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">{{ username }}</div>
+                            <div class="user-role">Pro Member</div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);"></i>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Stats Overview - REAL DATA -->
+                <div class="stats-grid mb-4">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="stat-value">{{ total_videos }}</div>
+                        <div class="stat-label">Total Videos</div>
+                        <span class="stat-change">+12%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--gradient-premium);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value">{{ total_duration }}</div>
+                        <div class="stat-label">Total Duration</div>
+                        <span class="stat-change">+8%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-value">{{ total_views }}</div>
+                        <div class="stat-label">Total Views</div>
+                        <span class="stat-change">+24%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                            <i class="fas fa-share"></i>
+                        </div>
+                        <div class="stat-value">{{ total_shares }}</div>
+                        <div class="stat-label">Shares</div>
+                        <span class="stat-change negative">-5%</span>
+                    </div>
+                </div>
+                
+                <!-- Feature Grid -->
+                <h2 class="mb-3">Choose Your Creation Method</h2>
+                <div class="feature-grid">
+                    <div class="feature-card" onclick="startCreation('voice')">
+                        <div class="feature-icon">
+                            <i class="fas fa-microphone"></i>
+                        </div>
+                        <h3 class="feature-title">Voice Recording</h3>
+                        <p class="feature-description">Record your voice and let our AI avatars speak for you. Perfect for personalized messages.</p>
+                        <div class="feature-tags">
+                            <span class="tag">Popular</span>
+                            <span class="tag">Easy</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card" onclick="startCreation('text')">
+                        <div class="feature-icon">
+                            <i class="fas fa-keyboard"></i>
+                        </div>
+                        <h3 class="feature-title">Text to Speech</h3>
+                        <p class="feature-description">Type your script and choose from multiple AI voices in different languages.</p>
+                        <div class="feature-tags">
+                            <span class="tag">Multiple Voices</span>
+                            <span class="tag new">New</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Templates
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Use pre-made templates for common scenarios like sales pitches, tutorials, and more.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Backgrounds
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Choose from professional backgrounds and environments for your avatar videos.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Interactive Avatars
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Create avatars that can interact with viewers in real-time conversations.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Videos -->
+                <div class="mt-4">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 style="display: flex; align-items: center; gap: 0.5rem; font-size: 1.25rem; font-weight: 700; color: var(--gray-900);">
+                            <i class="fas fa-history"></i>
+                            Recent Videos
+                        </h2>
+                        <a href="#videos" style="padding: 0.5rem 1rem; background: var(--gray-200); color: var(--gray-700); text-decoration: none; border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem;">View All</a>
+                    </div>
+                    
+                    <div id="recentVideos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                        {% if videos %}
+                            {% for video in videos[:3] %}
+                            <div style="background: var(--white); border-radius: 1rem; overflow: hidden; box-shadow: var(--shadow-md); transition: all var(--transition-base); cursor: pointer;">
+                                <div style="aspect-ratio: 16/9; background: var(--gray-200); position: relative; overflow: hidden;">
+                                    {% if video.status == 'completed' and video.video_path %}
+                                        <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/300x170' }}" alt="{{ video.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    {% else %}
+                                        <div style="width: 100%; height: 100%; background: linear-gradient(45deg, #f3f4f6, #e5e7eb); display: flex; align-items: center; justify-content: center; color: var(--gray-500);">
+                                            <i class="fas fa-video" style="font-size: 2rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                    <span style="position: absolute; top: 0.5rem; left: 0.5rem; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; background: {% if video.status == 'completed' %}var(--success){% elif video.status == 'processing' %}var(--warning){% else %}var(--danger){% endif %}; color: white;">{{ video.status }}</span>
+                                    {% if video.duration %}
+                                        <span style="position: absolute; bottom: 0.5rem; right: 0.5rem; background: rgba(0, 0, 0, 0.8); color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600;">{{ video.duration }}</span>
+                                    {% endif %}
+                                </div>
+                                <div style="padding: 1.5rem;">
+                                    <div style="font-weight: 700; color: var(--gray-900); margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ video.title or 'Untitled Video' }}</div>
+                                    <div style="display: flex; align-items: center; gap: 1rem; color: var(--gray-600); font-size: 0.875rem;">
+                                        <span><i class="fas fa-calendar"></i> {{ video.created_at.strftime('%m/%d/%Y') if video.created_at else 'Unknown' }}</span>
+                                        <span><i class="fas fa-film"></i> {{ video.video_format or '16:9' }}</span>
+                                    </div>
+                                </div>
+                                {% if video.status == 'completed' and video.video_path %}
+                                    <div style="display: flex; gap: 0.5rem; padding: 0 1.5rem 1.5rem;">
+                                        <a href="{{ video.video_path }}" target="_blank" style="padding: 0.5rem 1rem; background: var(--gradient-primary); color: white; text-decoration: none; border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fas fa-play"></i> Play
+                                        </a>
+                                        <button onclick="downloadVideo({{ video.id }})" style="padding: 0.5rem 1rem; background: var(--gray-200); color: var(--gray-700); border: none; border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem; cursor: pointer;">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--gray-500);">
+                                <i class="fas fa-video" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>No videos created yet. Start by creating your first video!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Initialize user data
+        document.addEventListener('DOMContentLoaded', function() {
+            const username = '{{ username }}';
+            if (username) {
+                document.getElementById('userName').textContent = username;
+                document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
+            }
+        });
+        
+        // UI Functions
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            sidebar.classList.toggle('open');
+            mainContent.classList.toggle('full-width');
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update theme icon
+            const themeBtn = document.querySelector('.header-btn i');
+            themeBtn.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+        
+        function startCreation(method) {
+            // This would open the creation modal
+            console.log('Starting creation with method:', method);
+            alert('Video creation feature coming soon!');
+        }
+        
+        function showPremiumModal() {
+            alert('Premium feature coming soon! Upgrade to access advanced features.');
+        }
+        
+        function downloadVideo(videoId) {
+            window.open(`/api/videos/${videoId}/download`, '_blank');
+        }
+        
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') {
+                document.querySelector('.header-btn i').className = 'fas fa-sun';
+            }
+        }
+    </script>
+</body>
+</html>
