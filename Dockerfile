@@ -26,12 +26,5 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 ENV LOG_LEVEL=debug
 
-# Create a simple shell script that handles PORT properly
-RUN echo '#!/bin/bash' > /app/start.sh && \
-    echo 'PORT="${PORT:-8000}"' >> /app/start.sh && \
-    echo 'echo "Starting application on port: $PORT"' >> /app/start.sh && \
-    echo 'exec python -m uvicorn main:app --host 0.0.0.0 --port "$PORT"' >> /app/start.sh && \
-    chmod +x /app/start.sh
-
-# Run the script
-CMD ["/app/start.sh"]
+# Handle PORT environment variable directly in CMD
+CMD python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
