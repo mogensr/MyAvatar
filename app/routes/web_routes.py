@@ -1,5 +1,5 @@
 """
-Web routes for MyAvatar - Enhanced with extensive error logging
+Web routes for MyAvatar - Enhanced with Cloudinary integration
 """
 import os
 import uuid
@@ -7,6 +7,9 @@ import requests
 import re
 import tempfile
 import base64
+import time
+import cloudinary
+import cloudinary.uploader
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -339,7 +342,7 @@ async def dashboard(request: Request):
         )
 
 # ============================================================================
-# VIDEO CREATION API ROUTES - HEYGEN INTEGRATION WITH EXTENSIVE LOGGING
+# VIDEO CREATION API ROUTES - CLOUDINARY + HEYGEN INTEGRATION
 # ============================================================================
 
 @router.post("/api/create-video")
@@ -350,7 +353,7 @@ async def create_video_from_audio(
     avatar_id: str = Form(...),
     description: str = Form(None)
 ):
-    """Create video from audio recording using HeyGen API - WITH EXTENSIVE LOGGING"""
+    """Create video from audio recording using Cloudinary + HeyGen API"""
     user = get_current_user(request)
     if not user:
         log_error("Unauthorized video creation attempt", "API")
@@ -358,6 +361,7 @@ async def create_video_from_audio(
     
     log_info(f"Video creation request by user {user['username']}: title='{title}', avatar_id={avatar_id}", "API")
     
+    temp_audio_path = None
     try:
         # Get HeyGen API key
         heygen_api_key = os.getenv("HEYGEN_API_KEY")
@@ -390,6 +394,37 @@ async def create_video_from_audio(
             
         log_info(f"Audio saved to temporary file: {temp_audio_path}, size={len(audio_content)} bytes", "API")
         
+        # Upload to Cloudinary
+        try:
+            log_info("Uploading audio to Cloudinary...", "API")
+            upload_result = cloudinary.uploader.upload(
+                temp_audio_path,
+                resource_type="video",  # Cloudinary treats audio as video resource
+                format="mp4",          # Convert to mp4 format for HeyGen compatibility
+                public_id=f"myavatar_audio_{user['id']}_{int(time.time())}"
+            )
+            cloudinary_url = upload_result.get('secure_url')
+            log_info(f"Audio uploaded to Cloudinary successfully: {cloudinary_url}", "API")
+            
+        except Exception as e:
+            log_error(f"Cloudinary upload failed: {str(e)}", "API", e)
+            if temp_audio_path:
+                os.unlink(temp_audio_path)
+            return JSONResponse(status_code=500, content={"error": "Audio upload to Cloudinary failed"})
+        
+        # Clean up temp file
+        if temp_audio_path:
+            os.unlink(temp_audio_path)
+            temp_audio_path = None
+        
+        # Get HeyGen avatar ID
+        heygen_avatar_id = avatar.get("heygen_avatar_id")
+        if not heygen_avatar_id:
+            log_error(f"No HeyGen avatar ID found for avatar: {avatar}", "API")
+            return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
+        
+        log_info(f"Using HeyGen avatar ID: {heygen_avatar_id}", "API")
+        
         # Prepare HeyGen API request
         heygen_url = "https://api.heygen.com/v2/video/generate"
         
@@ -400,26 +435,7 @@ async def create_video_from_audio(
         
         log_info(f"HeyGen API URL: {heygen_url}", "API")
         
-        # Convert audio to base64 for HeyGen
-        try:
-            with open(temp_audio_path, "rb") as audio_file:
-                audio_base64 = base64.b64encode(audio_file.read()).decode('utf-8')
-            log_info(f"Audio converted to base64, length: {len(audio_base64)} characters", "API")
-        except Exception as e:
-            log_error(f"Failed to convert audio to base64: {e}", "API", e)
-            os.unlink(temp_audio_path)
-            return JSONResponse(status_code=500, content={"error": "Audio processing error"})
-        
-        # Get HeyGen avatar ID
-        heygen_avatar_id = avatar.get("heygen_avatar_id")
-        if not heygen_avatar_id:
-            log_error(f"No HeyGen avatar ID found for avatar: {avatar}", "API")
-            os.unlink(temp_audio_path)
-            return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
-        
-        log_info(f"Using HeyGen avatar ID: {heygen_avatar_id}", "API")
-        
-        # Prepare HeyGen payload
+        # Use Cloudinary URL instead of base64
         payload = {
             "video_inputs": [
                 {
@@ -430,7 +446,7 @@ async def create_video_from_audio(
                     },
                     "voice": {
                         "type": "audio",
-                        "audio_url": f"data:audio/wav;base64,{audio_base64}"
+                        "audio_url": cloudinary_url  # Use Cloudinary URL here!
                     },
                     "background": {
                         "type": "color",
@@ -446,7 +462,7 @@ async def create_video_from_audio(
             "test": False
         }
         
-        log_info(f"HeyGen payload prepared: {payload}", "API")
+        log_info(f"HeyGen payload prepared with Cloudinary URL: {cloudinary_url}", "API")
         
         # Make request to HeyGen
         log_info(f"Making request to HeyGen API...", "API")
@@ -457,7 +473,6 @@ async def create_video_from_audio(
             log_info(f"HeyGen API Response Text: {response.text}", "API")
         except Exception as e:
             log_error(f"HeyGen API request failed with exception: {e}", "API", e)
-            os.unlink(temp_audio_path)
             return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
         
         if response.status_code == 200:
@@ -480,9 +495,6 @@ async def create_video_from_audio(
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
                     
-                    # Clean up temp file
-                    os.unlink(temp_audio_path)
-                    
                     return JSONResponse(content={
                         "success": True,
                         "video_id": video_id,
@@ -493,12 +505,10 @@ async def create_video_from_audio(
                     error_code = heygen_data.get("code", "Unknown")
                     log_error(f"HeyGen API error: code={error_code}, message={error_msg}", "API")
                     log_error(f"Full HeyGen response: {heygen_data}", "API")
-                    os.unlink(temp_audio_path)
                     return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
             except Exception as e:
                 log_error(f"Failed to parse HeyGen response JSON: {e}", "API", e)
                 log_error(f"Raw response: {response.text}", "API")
-                os.unlink(temp_audio_path)
                 return JSONResponse(status_code=500, content={"error": "HeyGen response parsing error"})
         
         else:
@@ -509,16 +519,16 @@ async def create_video_from_audio(
             except:
                 log_error(f"HeyGen API request failed: {response.status_code} - {response.text}", "API")
             
-            os.unlink(temp_audio_path)
             return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
     
     except Exception as e:
         log_error(f"Error creating video: {e}", "API", e)
         # Clean up temp file if it exists
-        try:
-            os.unlink(temp_audio_path)
-        except:
-            pass
+        if temp_audio_path:
+            try:
+                os.unlink(temp_audio_path)
+            except:
+                pass
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 @router.get("/api/video-status/{video_id}")
