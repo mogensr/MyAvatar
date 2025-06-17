@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recording - MyAvatar Studio</title>
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==================== DESIGN SYSTEM ==================== */
+        :root {
+            /* Premium Color Palette */
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            
+            /* Neutral Colors */
+            --gray-900: #111827;
+            --gray-800: #1f2937;
+            --gray-700: #374151;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-premium: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            
+            /* Animations */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* ==================== GLOBAL STYLES ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* ==================== HEADER ==================== */
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            text-decoration: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--gray-200);
+            transform: translateX(-2px);
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .user-avatar {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* ==================== MAIN CONTENT ==================== */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .recording-section {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .section-header {
+            margin-bottom: 3rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+        }
+        
+        /* ==================== RECORDING CONTROLS ==================== */
+        .recording-controls {
+            margin-bottom: 3rem;
+        }
+        
+        .record-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: var(--gradient-danger);
+            color: white;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .record-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.4);
+        }
+        
+        .record-button.recording {
+            background: var(--gradient-warning);
+            animation: pulse-recording 1.5s infinite;
+        }
+        
+        .record-button.recording::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, var(--danger), var(--warning), var(--danger));
+            animation: rotate 2s linear infinite;
+            z-index: -1;
+        }
+        
+        @keyframes pulse-recording {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .recording-status {
+            margin-top: 1.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .status-idle { color: var(--gray-500); }
+        .status-recording { color: var(--danger); }
+        .status-recorded { color: var(--success); }
+        
+        .recording-timer {
+            margin-top: 0.5rem;
+            font-size: 2rem;
+            font-weight: 800;
+            font-family: 'Courier New', monospace;
+            color: var(--danger);
+        }
+        
+        /* ==================== AUDIO PREVIEW ==================== */
+        .audio-preview {
+            background: var(--gray-50);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+            display: none;
+        }
+        
+        .audio-preview.show {
+            display: block;
+        }
+        
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .audio-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .play-btn {
+            background: var(--gradient-success);
+            color: white;
+        }
+        
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .delete-btn {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        
+        .delete-btn:hover {
+            background: var(--gradient-danger);
+            color: white;
+        }
+        
+        .waveform {
+            height: 80px;
+            background: var(--white);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-500);
+            border: 2px solid var(--gray-200);
+        }
+        
+        /* ==================== VIDEO FORM ==================== */
+        .video-form {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .form-group {
+            margin-bottom: 2rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.75rem;
+            font-size: 1.125rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+            background: var(--white);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .avatar-option {
+            border: 3px solid var(--gray-200);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+            background: var(--white);
+        }
+        
+        .avatar-option:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .avatar-option.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .avatar-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .avatar-name {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        
+        .avatar-id {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 1.25rem 2rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* ==================== PROGRESS MODAL ==================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: white;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-message {
+            color: var(--gray-600);
+            font-size: 1.125rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-container {
+            margin-top: 1.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 0.875rem;
+        }
+        
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .recording-section,
+            .video-form {
+                padding: 2rem;
+            }
+            
+            .record-button {
+                width: 100px;
+                height: 100px;
+                font-size: 2rem;
+            }
+            
+            .avatar-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .header-content {
+                padding: 0 1rem;
+            }
+            
+            .user-info span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/dashboard" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+            
+            <h1 class="page-title">Voice Recording</h1>
+            
+            <div class="user-info">
+                <div class="user-avatar">{{ username[0].upper() if username else 'U' }}</div>
+                <span>{{ username }}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Recording Section -->
+        <div class="recording-section">
+            <div class="section-header">
+                <h2 class="section-title">🎤 Record Your Voice</h2>
+                <p class="section-subtitle">Click the record button to start capturing your audio for AI video generation</p>
+            </div>
+            
+            <div class="recording-controls">
+                <button id="recordButton" class="record-button" onclick="toggleRecording()">
+                    <i class="fas fa-microphone" id="recordIcon"></i>
+                </button>
+                
+                <div class="recording-status">
+                    <div id="recordingStatus" class="status-idle">Ready to record</div>
+                    <div id="recordingTimer" class="recording-timer" style="display: none;">00:00</div>
+                </div>
+            </div>
+            
+            <!-- Audio Preview -->
+            <div id="audioPreview" class="audio-preview">
+                <h3 style="margin-bottom: 1rem; color: var(--gray-900);">🎵 Recording Preview</h3>
+                <div class="audio-controls">
+                    <button class="audio-btn play-btn" onclick="playRecording()">
+                        <i class="fas fa-play"></i> Play
+                    </button>
+                    <button class="audio-btn delete-btn" onclick="deleteRecording()">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+                <div class="waveform">
+                    <i class="fas fa-soundwave"></i>
+                    <span style="margin-left: 0.5rem;">Audio waveform will appear here</span>
+                </div>
+                <audio id="audioPlayback" controls style="width: 100%; margin-top: 1rem;" hidden></audio>
+            </div>
+        </div>
+
+        <!-- Video Creation Form -->
+        <form id="videoForm" class="video-form" style="display: none;">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--gray-900);">🎬 Create Your Video</h2>
+            
+            <div class="form-group">
+                <label for="videoTitle" class="form-label">Video Title *</label>
+                <input type="text" id="videoTitle" name="title" class="form-input" 
+                       placeholder="Enter a descriptive title for your video" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="videoDescription" class="form-label">Description (Optional)</label>
+                <textarea id="videoDescription" name="description" class="form-input form-textarea" 
+                          placeholder="Add a description for your video"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Choose Your Avatar *</label>
+                <div class="avatar-grid" id="avatarGrid">
+                    {% if avatars %}
+                        {% for avatar in avatars %}
+                        <div class="avatar-option" data-avatar-id="{{ avatar.id }}" onclick="selectAvatar(this)">
+                            <div class="avatar-image">
+                                {% if avatar.image_path %}
+                                    <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                {% else %}
+                                    <i class="fas fa-user"></i>
+                                {% endif %}
+                            </div>
+                            <div class="avatar-name">{{ avatar.name or 'Avatar' }}</div>
+                            <div class="avatar-id">ID: {{ avatar.id }}</div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray-500);">
+                            <i class="fas fa-user-plus" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p>No avatars available. Please contact admin to add avatars.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn" disabled>
+                <i class="fas fa-video"></i>
+                Create AI Video
+            </button>
+        </form>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <i class="fas fa-cog"></i>
+            </div>
+            <h3 class="modal-title">Creating Your Video</h3>
+            <p class="modal-message">Please wait while we process your audio and generate your AI video...</p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let recordingStartTime;
+        let timerInterval;
+        let recordedBlob = null;
+        let selectedAvatarId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkMicrophonePermission();
+        });
+
+        // Check microphone permission
+        async function checkMicrophonePermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                console.log('Microphone permission granted');
+            } catch (error) {
+                console.error('Microphone permission denied:', error);
+                alert('Microphone access is required for voice recording. Please allow microphone permissions and refresh the page.');
+            }
+        }
+
+        // Toggle recording
+        async function toggleRecording() {
+            if (!isRecording) {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+
+        // Start recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    } 
+                });
+                
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    recordedBlob = audioBlob;
+                    showAudioPreview(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                mediaRecorder.start();
+                isRecording = true;
+                recordingStartTime = Date.now();
+                
+                updateRecordingUI();
+                startTimer();
+                
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Could not start recording. Please check your microphone permissions.');
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                stopTimer();
+                updateRecordingUI();
+            }
+        }
+
+        // Update recording UI
+        function updateRecordingUI() {
+            const recordButton = document.getElementById('recordButton');
+            const recordIcon = document.getElementById('recordIcon');
+            const recordingStatus = document.getElementById('recordingStatus');
+            
+            if (isRecording) {
+                recordButton.classList.add('recording');
+                recordIcon.className = 'fas fa-stop';
+                recordingStatus.textContent = 'Recording... Click to stop';
+                recordingStatus.className = 'status-recording';
+            } else {
+                recordButton.classList.remove('recording');
+                recordIcon.className = 'fas fa-microphone';
+                if (recordedBlob) {
+                    recordingStatus.textContent = 'Recording complete!';
+                    recordingStatus.className = 'status-recorded';
+                } else {
+                    recordingStatus.textContent = 'Ready to record';
+                    recordingStatus.className = 'status-idle';
+                }
+            }
+        }
+
+        // Timer functions
+        function startTimer() {
+            const timerElement = document.getElementById('recordingTimer');
+            timerElement.style.display = 'block';
+            
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - recordingStartTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Auto-stop after 5 minutes
+                if (elapsed > 300000) {
+                    stopRecording();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('recordingTimer').style.display = 'none';
+        }
+
+        // Show audio preview
+        function showAudioPreview(audioBlob) {
+            const audioPreview = document.getElementById('audioPreview');
+            const audioPlayback = document.getElementById('audioPlayback');
+            const videoForm = document.getElementById('videoForm');
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayback.src = audioUrl;
+            
+            audioPreview.classList.add('show');
+            videoForm.style.display = 'block';
+            
+            // Scroll to form
+            videoForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Audio controls
+        function playRecording() {
+            const audioPlayback = document.getElementById('audioPlayback');
+            audioPlayback.play();
+        }
+
+        function deleteRecording() {
+            if (confirm('Are you sure you want to delete this recording?')) {
+                recordedBlob = null;
+                document.getElementById('audioPreview').classList.remove('show');
+                document.getElementById('videoForm').style.display = 'none';
+                updateRecordingUI();
+            }
+        }
+
+        // Avatar selection
+        function selectAvatar(element) {
+            // Remove previous selection
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Select current avatar
+            element.classList.add('selected');
+            selectedAvatarId = element.getAttribute('data-avatar-id');
+            
+            // Enable submit button if we have both recording and avatar
+            updateSubmitButton();
+        }
+
+        // Update submit button state
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submitBtn');
+            const title = document.getElementById('videoTitle').value.trim();
+            
+            if (recordedBlob && selectedAvatarId && title) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+
+        // Form validation
+        document.getElementById('videoTitle').addEventListener('input', updateSubmitButton);
+
+        // Form submission with progress tracking
+        document.getElementById('videoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!recordedBlob || !selectedAvatarId) {
+                alert('Please record audio and select an avatar before submitting.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('audio', recordedBlob, 'recording.wav');
+            formData.append('title', document.getElementById('videoTitle').value);
+            formData.append('description', document.getElementById('videoDescription').value);
+            formData.append('avatar_id', selectedAvatarId);
+            
+            // Show progress modal
+            document.getElementById('progressModal').classList.add('show');
+            updateProgressModal('Uploading audio...', 10);
+            
+            try {
+                const response = await fetch('/api/create-video', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateProgressModal('Video creation started!', 30);
+                    
+                    // Start polling for video status
+                    const videoId = result.video_id;
+                    pollVideoStatus(videoId);
+                    
+                } else {
+                    throw new Error(result.error || 'Unknown error occurred');
+                }
+                
+            } catch (error) {
+                console.error('Error creating video:', error);
+                document.getElementById('progressModal').classList.remove('show');
+                alert('❌ Error creating video: ' + error.message);
+            }
+        });
+
+        // Update progress modal
+        function updateProgressModal(message, progress = null) {
+            const modalMessage = document.querySelector('.modal-message');
+            modalMessage.textContent = message;
+            
+            if (progress !== null) {
+                // Add progress bar if it doesn't exist
+                let progressBar = document.querySelector('.progress-bar');
+                if (!progressBar) {
+                    const progressContainer = document.createElement('div');
+                    progressContainer.className = 'progress-container';
+                    progressContainer.innerHTML = `
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">0%</div>
+                    `;
+                    modalMessage.parentNode.appendChild(progressContainer);
+                    progressBar = progressContainer.querySelector('.progress-bar');
+                }
+                
+                const progressFill = document.querySelector('.progress-fill');
+                const progressText = document.querySelector('.progress-text');
+                
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${progress}%`;
+            }
+        }
+
+        // Poll video status
+        async function pollVideoStatus(videoId) {
+            const maxAttempts = 120; // 10 minutes max
+            let attempts = 0;
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`/api/video-status/${videoId}`);
+                    const status = await response.json();
+                    
+                    if (status.status === 'completed') {
+                        updateProgressModal('✅ Video completed successfully!', 100);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('🎉 Your AI video is ready! Redirecting to dashboard...');
+                            window.location.href = '/dashboard';
+                        }, 2000);
+                        
+                    } else if (status.status === 'failed') {
+                        updateProgressModal('❌ Video creation failed', 0);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('❌ Video creation failed. Please try again.');
+                        }, 2000);
+                        
+                    } else if (status.status === 'processing') {
+                        const progress = Math.min(30 + (attempts * 2), 90); // Gradual progress
+                        updateProgressModal('🔄 HeyGen is creating your video...', progress);
+                        
+                    } else {
+                        const progress = Math.min(30 + (attempts * 1), 70);
+                        updateProgressModal('⏳ Processing your request...', progress);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error checking video status:', error);
+                }
+                
+                // Timeout after max attempts
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    updateProgressModal('⏰ Processing is taking longer than expected', 90);
+                    
+                    setTimeout(() => {
+                        document.getElementById('progressModal').classList.remove('show');
+                        alert('Video creation is taking longer than expected. Please check your dashboard in a few minutes.');
+                        window.location.href = '/dashboard';
+                    }, 3000);
+                }
+                
+            }, 5000); // Check every 5 seconds
+        }
+    </script>
+</body>
+</html>
