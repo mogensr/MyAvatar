@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 import logging
 import traceback
+from app.services.notifications import send_alert, notify_service_status
 
 # Load environment variables
 load_dotenv()
@@ -70,15 +71,59 @@ app.include_router(finance_router)
 
 # Conditionally register background routes
 if ENABLE_BACKGROUND_REPLACEMENT:
-    app.include_router(background_router)
+    app.include_router(background_router, prefix="/background", tags=["background"])
+    
+    # Report successful startup
+    notify_service_status("MyAvatar", "up", "Application started successfully")
 
 # Create necessary directories
 for directory in ["static/uploads/audio", "static/uploads/images", "output", "processed", "uploads", "temp_audio", "static/backgrounds", "temp/background_processing", "temp/video_processing"]:
     os.makedirs(directory, exist_ok=True)
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    # Check that all required services are available
+    try:
+        # You could add additional service checks here
+        # For example, check database connection, external API accessibility
+        
+        # Check BackgroundFX service if configured
+        from app.services.backgroundfx_client import BackgroundFXClient
+        backgroundfx_url = os.environ.get("BACKGROUNDFX_URL")
+        
+        if backgroundfx_url:
+            client = BackgroundFXClient()
+            backgroundfx_health = await client.health_check()
+            
+            if backgroundfx_health.get("status") != "ok":
+                send_alert(
+                    title="BackgroundFX Health Check Failed",
+                    message=f"BackgroundFX service is not responding correctly: {backgroundfx_health}", 
+                    severity="warning"
+                )
+                return {"status": "warning", "details": "BackgroundFX service degraded"}
+        
+        return {"status": "ok"}
+    except Exception as e:
+        send_alert(
+            title="Health Check Failed",
+            message=f"Error during health check: {str(e)}",
+            severity="error"
+        )
+        return {"status": "error", "details": str(e)}
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():
+    # Initialize the notification system
+    try:
+        from app.services.notifications import notify_service_status
+        notify_service_status("MyAvatar", "up", "Application started successfully")
+        logging.info("Notification system initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize notification system: {str(e)}")
+
     """
     Initialize database and update schema on startup
     """
@@ -93,11 +138,7 @@ async def startup_event():
         
         # Initialize background replacement feature only if not in safe mode
         if ENABLE_BACKGROUND_REPLACEMENT:
-            db_path = os.path.join(os.getcwd(), 'database.db')
-            backgrounds_dir = os.path.join(os.getcwd(), 'static', 'backgrounds')
-            initialize_backgrounds_schema(db_path)
-            add_default_backgrounds(db_path, backgrounds_dir)
-            log_info("Background replacement feature initialized", "Server")
+            logger.info("Background replacement functionality enabled via BackgroundFX microservice")
     except Exception as e:
         log_error(f"Error during startup: {str(e)}", "Server", e)
         log_warning("Application may not function correctly due to startup error", "Server")
@@ -105,6 +146,9 @@ async def startup_event():
     # Successfully started
     edition_name = "Premium Edition" if not ENABLE_SAFE_MODE else "Premium Edition (Safe Mode)"
     log_info(f"MyAvatar {edition_name} is running", "Server")
+
+from app.routes import background as background_routes
+app.include_router(background_routes.router)
 
 if __name__ == "__main__":
     import uvicorn

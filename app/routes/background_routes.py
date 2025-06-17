@@ -14,7 +14,8 @@ from pathlib import Path
 
 from app.auth.authentication import get_current_user
 from app.db.database import execute_query
-from app.video_enhancer.background_replacer import BackgroundReplacer
+# Using BackgroundFX microservice instead of local background replacement
+from app.services.backgroundfx_client_v2 import BackgroundFXClient
 from app.video_enhancer.video_processor import VideoProcessor
 
 # Configure router
@@ -260,11 +261,21 @@ async def process_video_background(
         
         # Initialize components
         video_processor = VideoProcessor({"temp_dir": TEMP_DIR})
-        background_replacer = BackgroundReplacer(enable_timing=True)
         
-        # Load video and background
+        # Initialize BackgroundFX client instead of local replacer
+        background_client = BackgroundFXClient()
+        
+        # Check if service is available
+        if not background_client.check_connection():
+            logger.error("BackgroundFX service is not available")
+            execute_query(
+                "UPDATE videos SET status = 'error' WHERE id = ?",
+                (video_id,)
+            )
+            return
+        
+        # Load video
         capture, width, height, fps, frame_count = video_processor.load_video(video_path)
-        bg_image = cv2.imread(background_path)
         
         # Process frames
         processed_frames = []
@@ -275,9 +286,18 @@ async def process_video_background(
             if not ret:
                 break
             
-            # Replace background in this frame
-            processed_frame = background_replacer.replace_background(frame, bg_image, quality=quality)
-            processed_frames.append(processed_frame)
+            # Replace background in this frame using the client
+            try:
+                processed_frame, _ = background_client.replace_background(
+                    image=frame,
+                    background_image=background_path,
+                    quality=quality
+                )
+                processed_frames.append(processed_frame)
+            except Exception as e:
+                logger.error(f"Error processing frame {frame_idx}: {e}")
+                # Use original frame if processing fails
+                processed_frames.append(frame)
             
             # Log progress
             frame_idx += 1
