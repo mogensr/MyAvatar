@@ -160,15 +160,6 @@ async def login_post(
             }
         )
 
-@router.get("/logout")
-async def logout(request: Request):
-    """
-    Logout user
-    """
-    response = RedirectResponse(url="/login", status_code=303)
-    response.delete_cookie("access_token")
-    return response
-
 # ============================================================================
 # REGISTRATION ROUTES
 # ============================================================================
@@ -274,6 +265,9 @@ async def dashboard(request: Request):
         )
         
         log_info(f"Dashboard data loaded: {len(videos) if videos else 0} videos, {len(avatars) if avatars else 0} avatars", "Web")
+        
+        # DEBUG: Log actual video data to see what we have
+        log_info(f"Raw videos from database: {videos}", "Web")
         
         # Convert database results to list of dicts for videos
         video_list = []
