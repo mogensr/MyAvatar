@@ -1,16 +1,10 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "Dockerfile.test"
 
 [deploy]
-startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT} --log-level debug"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
 healthcheckEnabled = true
-healthcheckPath = "/simple-health"
-healthcheckTimeout = 300
-enableCors = true
-
-[variables]
-ENABLE_SAFE_MODE = "true"
-
-[deploy.nixpacks]
-aptPkgs = ["libgl1-mesa-glx", "libglib2.0-0", "libsm6", "libxext6", "libxrender1", "libfontconfig1"]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
