@@ -738,7 +738,7 @@ async def admin_edit_user_submit(request: Request, user_id: int):
 
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
 async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page - CORRECTED TABLE NAME"""
+    """Admin manage user avatars page - FIXED to show proper names and images"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -754,12 +754,38 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         if not user_to_manage:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
         
-        # Get user's avatars - CORRECTED TABLE NAME
-        avatars = execute_query(
+        # Get user's avatars
+        raw_avatars = execute_query(
             "SELECT * FROM avatars WHERE user_id = ?",
             (user_id,),
             fetch_all=True
         )
+        
+        # Transform avatars to match template expectations
+        avatars = []
+        for avatar in raw_avatars:
+            # Convert database row to dict if needed
+            if not isinstance(avatar, dict):
+                avatar_dict = {}
+                for key in avatar.keys():
+                    avatar_dict[key] = avatar[key]
+                avatar = avatar_dict
+            
+            # Map database fields to template expectations
+            processed_avatar = {
+                'id': avatar.get('id'),
+                'user_id': avatar.get('user_id'),
+                'avatar_name': avatar.get('name', 'Unnamed'),  # Map 'name' to 'avatar_name'
+                'avatar_url': avatar.get('image_path'),         # Map 'image_path' to 'avatar_url'
+                'heygen_avatar_id': avatar.get('heygen_avatar_id'),
+                'created_at': avatar.get('created_at')
+            }
+            
+            # For HeyGen avatars, try to get a better display name
+            if processed_avatar['heygen_avatar_id'] and not processed_avatar['avatar_name']:
+                processed_avatar['avatar_name'] = f"HeyGen Avatar {processed_avatar['heygen_avatar_id'][:8]}..."
+            
+            avatars.append(processed_avatar)
         
         return templates.TemplateResponse("portal/admin_manage_avatars.html", {
             "request": request,
