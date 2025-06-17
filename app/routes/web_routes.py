@@ -742,6 +742,10 @@ async def create_video_from_text_input(
     format: str = Form("16:9")
 ):
     """Create video from text using HeyGen text-to-speech"""
+    
+    # Debug logging - add this to see what we're getting
+    log_info(f"[Video] Received form data - Title: '{title}', Avatar: '{avatar_id}', Text length: {len(text) if text else 0}, Format: '{format}'", "Video")
+    
     user = get_current_user(request)
     if not user:
         log_error("Unauthorized text-to-video creation attempt", "Video")
