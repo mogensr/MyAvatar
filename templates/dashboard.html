@@ -1330,22 +1330,28 @@
             themeBtn.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
         
-        function startCreation(method) {
-            // Enhanced creation flow
-            console.log('Starting creation with method:', method);
-            
-            // Show enhanced modal or navigate to creation page
-            const messages = {
-                'voice': 'Ready to record your voice? Let\'s create an amazing AI video!',
-                'text': 'Ready to convert text to speech? Choose your voice and let\'s begin!'
-            };
-            
-            if (confirm(messages[method] + '\n\nWould you like to proceed?')) {
-                // Navigate to creation page or open modal
-                window.location.href = '/create-video?method=' + method;
-            }
+       function startCreation(method) {
+    // Enhanced creation flow
+    console.log('Starting creation with method:', method);
+    
+    // Show enhanced modal or navigate to creation page
+    const messages = {
+        'voice': 'Ready to record your voice? Let\'s create an amazing AI video!',
+        'text': 'Ready to convert text to speech? Choose your voice and let\'s begin!'
+    };
+    
+    if (confirm(messages[method] + '\n\nWould you like to proceed?')) {
+        // Navigate to appropriate creation page based on method
+        if (method === 'voice') {
+            window.location.href = '/voice-recording';  // Voice recording page
+        } else if (method === 'text') {
+            window.location.href = '/text-to-video';    // Text-to-speech page (existing route)
+        } else {
+            // Fallback for any other methods
+            window.location.href = '/text-to-video';
         }
-        
+    }
+}
         function showPremiumModal() {
             const features = [
                 '✨ Premium Templates',
