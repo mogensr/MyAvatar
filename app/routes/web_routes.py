@@ -732,7 +732,7 @@ async def create_video_from_audio(
 # TEXT-TO-VIDEO API ROUTE - NEW ADDITION
 # ============================================================================
 
-@router.post("/api/create-text-video-working")
+@router.post("/api/create-text-video")
 async def create_video_from_text_input(
     request: Request,
     title: str = Form(...),
