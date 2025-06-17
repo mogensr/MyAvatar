@@ -342,6 +342,74 @@ async def dashboard(request: Request):
         )
 
 # ============================================================================
+# HEYGEN WEBHOOK ROUTES
+# ============================================================================
+
+@router.post("/api/heygen/webhook")
+async def heygen_webhook(request: Request):
+    """Handle HeyGen video completion webhook - All Events"""
+    try:
+        log_info("HeyGen webhook received", "Webhook")
+        
+        # Get JSON data from HeyGen
+        data = await request.json()
+        log_info(f"HeyGen webhook data: {data}", "Webhook")
+        
+        # HeyGen can send different formats, handle both
+        video_id = data.get("video_id") or data.get("data", {}).get("video_id")
+        status = data.get("status") or data.get("event", "").replace("video.", "")
+        video_url = data.get("video_url") or data.get("data", {}).get("video_url")
+        event = data.get("event", "unknown")
+        
+        if not video_id:
+            log_error("No video_id in webhook data", "Webhook")
+            return JSONResponse(status_code=400, content={"error": "Missing video_id"})
+        
+        log_info(f"Processing webhook - Event: {event}, Video: {video_id}, Status: {status}", "Webhook")
+        
+        # Handle different event types
+        if event in ["video.completed", "completed"] or status == "completed":
+            if video_url:
+                log_info(f"Video completed: {video_id}, URL: {video_url}", "Webhook")
+                execute_query(
+                    "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
+                    ("completed", video_url, video_id)
+                )
+                log_info(f"Database updated for completed video: {video_id}", "Webhook")
+            else:
+                log_error(f"Video completed but no URL provided: {video_id}", "Webhook")
+                
+        elif event in ["video.failed", "failed"] or status in ["failed", "error"]:
+            log_error(f"Video failed: {video_id}", "Webhook")
+            execute_query(
+                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
+                ("failed", video_id)
+            )
+            log_info(f"Database updated for failed video: {video_id}", "Webhook")
+            
+        elif event in ["video.processing", "processing"] or status == "processing":
+            log_info(f"Video processing: {video_id}", "Webhook")
+            execute_query(
+                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
+                ("processing", video_id)
+            )
+            
+        else:
+            log_info(f"Unknown event/status: {event}/{status} for video: {video_id}", "Webhook")
+            # Still update with whatever status we got
+            if status:
+                execute_query(
+                    "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
+                    (status, video_id)
+                )
+        
+        return JSONResponse(content={"status": "success", "message": f"Webhook processed: {event}"})
+        
+    except Exception as e:
+        log_error(f"HeyGen webhook error: {e}", "Webhook", e)
+        return JSONResponse(status_code=500, content={"error": "Webhook processing failed"})
+
+# ============================================================================
 # VIDEO CREATION API ROUTES - CLOUDINARY + HEYGEN INTEGRATION
 # ============================================================================
 
@@ -486,13 +554,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: ADDED AVATAR_ID COLUMN
+                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, avatar_id, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, avatar_id, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
@@ -508,13 +576,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: ADDED AVATAR_ID COLUMN
+                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, avatar_id, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, avatar_id, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
