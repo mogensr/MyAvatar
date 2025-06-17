@@ -486,13 +486,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: REMOVED DESCRIPTION COLUMN
+                    # Save video record to database - FIXED: ADDED AVATAR_ID COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, avatar_id, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, avatar_id, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
@@ -508,13 +508,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: REMOVED DESCRIPTION COLUMN
+                    # Save video record to database - FIXED: ADDED AVATAR_ID COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, avatar_id, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, avatar_id, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
