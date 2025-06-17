@@ -560,17 +560,19 @@ async def create_video_from_audio(
             
         log_info(f"Audio saved to temporary file: {temp_audio_path}, size={len(audio_content)} bytes", "API")
         
-        # Upload to Cloudinary
+        # Upload to Cloudinary as M4A (MP4A) for HeyGen compatibility
         try:
-            log_info("Uploading audio to Cloudinary...", "API")
+            log_info("Uploading audio to Cloudinary as M4A...", "API")
             upload_result = cloudinary.uploader.upload(
                 temp_audio_path,
-                resource_type="video",  # Cloudinary treats audio as video resource
-                format="mp4",          # Convert to mp4 format for HeyGen compatibility
+                resource_type="video",           # Cloudinary treats audio as video resource
+                format="m4a",                   # Convert to M4A (MP4A) format for HeyGen
+                flags="audio_codec:aac",        # Force AAC audio codec
+                audio_codec="aac",              # Ensure AAC encoding
                 public_id=f"myavatar_audio_{user['id']}_{int(time.time())}"
             )
             cloudinary_url = upload_result.get('secure_url')
-            log_info(f"Audio uploaded to Cloudinary successfully: {cloudinary_url}", "API")
+            log_info(f"Audio uploaded to Cloudinary as M4A successfully: {cloudinary_url}", "API")
             
         except Exception as e:
             log_error(f"Cloudinary upload failed: {str(e)}", "API", e)
