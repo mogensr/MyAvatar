@@ -103,21 +103,25 @@ async def create_text_video(request: TextVideoRequest):
         
         # Insert video record into database (matching your actual table structure)
         # Based on your logs, the videos table has: id, user_id, avatar_id, title, 
-        # audio_path, video_path, heygen_video_id, status, created_at, etc.
+        # audio_path (NOT NULL), video_path, heygen_video_id, status, created_at, etc.
         query = """
-            INSERT INTO videos (id, user_id, avatar_id, title, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO videos (id, user_id, avatar_id, title, audio_path, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         
         # TODO: Get actual user_id from session - you'll need to add session handling
         # For now using a default - replace this with proper session management
         user_id = 3  # Based on your logs, user_id 3 exists
         
+        # Placeholder audio path for text-to-video (will be updated when audio is generated)
+        placeholder_audio_path = f"text_to_video_placeholder_{video_id}"
+        
         cursor.execute(query, (
             video_id,
             user_id,
             request.avatar_id,
             request.title.strip(),
+            placeholder_audio_path,
             'processing',
             datetime.now()
         ))
