@@ -475,7 +475,7 @@ async def create_video_from_audio(
             log_error(f"HeyGen API request failed with exception: {e}", "API", e)
             return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
         
- # REPLACE THIS ENTIRE BLOCK:
+        # FIXED DATABASE INSERT - REMOVED DESCRIPTION COLUMN
         if response.status_code == 200:
             try:
                 heygen_data = response.json()
@@ -486,13 +486,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
-                    # Save video record to database
+                    # Save video record to database - FIXED: REMOVED DESCRIPTION COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, description, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, description, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
@@ -508,13 +508,13 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
                     
-                    # Save video record to database
+                    # Save video record to database - FIXED: REMOVED DESCRIPTION COLUMN
                     execute_query(
                         """
-                        INSERT INTO videos (user_id, title, description, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        INSERT INTO videos (user_id, title, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?)
                         """,
-                        (user["id"], title, description, video_id, "processing", datetime.now().isoformat())
+                        (user["id"], title, video_id, "processing", datetime.now().isoformat())
                     )
                     
                     log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
