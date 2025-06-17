@@ -28,8 +28,8 @@ ENV PYTHONUNBUFFERED=1
 
 # Create a simple startup script for Railway
 RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'echo "Starting application on port $PORT"' >> /app/start.sh && \
-    echo 'exec python -m uvicorn main:app --host 0.0.0.0 --port "$PORT"' >> /app/start.sh && \
+    echo 'echo "Starting application on port ${PORT}"' >> /app/start.sh && \
+    echo 'exec python -m uvicorn main:app --host 0.0.0.0 --port ${PORT}' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Run the script
