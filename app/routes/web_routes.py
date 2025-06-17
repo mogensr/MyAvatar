@@ -729,7 +729,7 @@ async def create_video_from_audio(
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # ============================================================================
-# TEXT-TO-VIDEO API ROUTE - NEW ADDITION
+# TEXT-TO-VIDEO API ROUTE - HEYGEN INTEGRATION
 # ============================================================================
 
 @router.post("/api/create-text-video")
@@ -744,22 +744,22 @@ async def create_video_from_text_input(
     """Create video from text using HeyGen text-to-speech"""
     user = get_current_user(request)
     if not user:
-        log_error("Unauthorized text-to-video creation attempt", "API")
+        log_error("Unauthorized text-to-video creation attempt", "Video")
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
     
-    log_info(f"Text-to-video creation request by user {user['username']}: title='{title}', avatar_id={avatar_id}, text='{text[:50]}...'", "API")
+    log_info(f"[Video] Text-to-video creation started - User: {user['username']}, Title: '{title}', Avatar: {avatar_id}", "Video")
     
     try:
         # Get HeyGen API key
         heygen_api_key = os.getenv("HEYGEN_API_KEY")
         if not heygen_api_key:
-            log_error("HeyGen API key not configured", "API")
+            log_error("[Video] HeyGen API key not configured", "Video")
             return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
         
-        log_info(f"HeyGen API key found: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "API")
+        log_info(f"[Video] HeyGen API key found: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "Video")
         
         # Get avatar details from database
-        log_info(f"Fetching avatar details for avatar_id={avatar_id}, user_id={user['id']}", "API")
+        log_info(f"[Video] Fetching avatar details for avatar_id={avatar_id}, user_id={user['id']}", "Video")
         avatar = execute_query(
             "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
             (avatar_id, user["id"]),
@@ -767,21 +767,21 @@ async def create_video_from_text_input(
         )
         
         if not avatar:
-            log_error(f"Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "API")
+            log_error(f"[Video] Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "Video")
             return JSONResponse(status_code=400, content={"error": "Avatar not found"})
         
-        log_info(f"Avatar found: {avatar}", "API")
+        log_info(f"[Video] Avatar found: {avatar}", "Video")
         
         # Get HeyGen avatar ID
         heygen_avatar_id = avatar.get("heygen_avatar_id")
         if not heygen_avatar_id:
-            log_error(f"No HeyGen avatar ID found for avatar: {avatar}", "API")
+            log_error(f"[Video] No HeyGen avatar ID found for avatar: {avatar}", "Video")
             return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
         
-        log_info(f"Using HeyGen avatar ID: {heygen_avatar_id}", "API")
+        log_info(f"[Video] Using HeyGen avatar ID: {heygen_avatar_id}", "Video")
         
         # Use the create_video_from_text function from heygen.py
-        log_info(f"Calling HeyGen create_video_from_text function", "API")
+        log_info(f"[Video] Calling HeyGen create_video_from_text function", "Video")
         heygen_result = create_video_from_text(
             api_key=heygen_api_key,
             avatar_id=heygen_avatar_id,
@@ -789,25 +789,22 @@ async def create_video_from_text_input(
             video_format=format
         )
         
-        log_info(f"HeyGen create_video_from_text result: {heygen_result}", "API")
+        log_info(f"[Video] HeyGen create_video_from_text result: {heygen_result}", "Video")
         
         if heygen_result.get("success"):
             video_id = heygen_result.get("video_id")
-            log_info(f"HeyGen text-to-video creation successful, video_id: {video_id}", "API")
+            log_info(f"[Video] HeyGen text-to-video creation successful, video_id: {video_id}", "Video")
             
-            # Create placeholder audio path for text-to-video
-            placeholder_audio_path = f"text_to_speech_{video_id}"
-            
-            # Save video record to database
-            execute_query(
+            # Save video record to database with unique identifier
+            db_video_id = execute_query(
                 """
                 INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (user["id"], title, avatar_id, placeholder_audio_path, video_id, "processing", datetime.now().isoformat())
+                (user["id"], title, avatar_id, f"text_to_speech_{video_id}", video_id, "processing", datetime.now().isoformat())
             )
             
-            log_info(f"Text-to-video record saved to database for user {user['username']}: {video_id}", "API")
+            log_info(f"[Video] Text-to-video record saved to database - DB ID: {db_video_id}, HeyGen ID: {video_id}", "Video")
             
             return JSONResponse(content={
                 "success": True,
@@ -817,11 +814,11 @@ async def create_video_from_text_input(
         
         else:
             error_msg = heygen_result.get("error", "Unknown HeyGen error")
-            log_error(f"HeyGen text-to-video creation failed: {error_msg}", "API")
+            log_error(f"[Video] HeyGen text-to-video creation failed: {error_msg}", "Video")
             return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
     
     except Exception as e:
-        log_error(f"Error creating text-to-video: {e}", "API", e)
+        log_error(f"[Video] Error creating text-to-video: {e}", "Video", e)
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 @router.get("/api/video-status/{video_id}")
