@@ -22,9 +22,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Set environment variables
+# Set default environment variables
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 
-# Run the application directly with Python
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Create a simple startup script for Railway
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'echo "Starting application on port $PORT"' >> /app/start.sh && \
+    echo 'exec python -m uvicorn main:app --host 0.0.0.0 --port "$PORT"' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Run the script
+CMD ["/app/start.sh"]
