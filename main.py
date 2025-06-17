@@ -61,7 +61,7 @@ app.add_middleware(
 class TextVideoRequest(BaseModel):
     title: str
     avatar_id: str
-    format: str = "16:9"  # Default format
+    format: str = "16:9"  # Default format (stored in memory, not DB)
     text: str
     description: Optional[str] = ""
 
@@ -77,7 +77,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# TEXT-TO-VIDEO API ENDPOINT (CORRECTED)
+# TEXT-TO-VIDEO API ENDPOINT (CORRECTED FOR ACTUAL DATABASE SCHEMA)
 @app.post("/api/create-text-video")
 async def create_text_video(request: TextVideoRequest):
     """
@@ -99,19 +99,23 @@ async def create_text_video(request: TextVideoRequest):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Insert video record into database
+        # Insert video record into database (matching your actual table structure)
+        # Based on your logs, the videos table has: id, user_id, avatar_id, title, 
+        # audio_path, video_path, heygen_video_id, status, created_at, etc.
         query = """
-            INSERT INTO videos (id, title, avatar_id, format, text_content, description, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO videos (id, user_id, avatar_id, title, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
+        
+        # TODO: Get actual user_id from session - you'll need to add session handling
+        # For now using a default - replace this with proper session management
+        user_id = 3  # Based on your logs, user_id 3 exists
         
         cursor.execute(query, (
             video_id,
-            request.title.strip(),
+            user_id,
             request.avatar_id,
-            request.format,
-            request.text.strip(),
-            request.description.strip() if request.description else "",
+            request.title.strip(),
             'processing',
             datetime.now()
         ))
@@ -121,7 +125,7 @@ async def create_text_video(request: TextVideoRequest):
         cursor.close()
         conn.close()
         
-        log_info(f"Text-to-video creation started - Video ID: {video_id}", "Video")
+        log_info(f"Text-to-video creation started - Video ID: {video_id}, Text: {request.text[:50]}...", "Video")
         
         # TODO: Add your video processing logic here
         # This could involve:
@@ -129,6 +133,7 @@ async def create_text_video(request: TextVideoRequest):
         # 2. Calling your text-to-speech service
         # 3. Calling your avatar animation service
         # 4. Combining audio and video
+        # 5. Store format and description in a separate table if needed
         
         return JSONResponse(
             status_code=200,
