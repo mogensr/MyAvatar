@@ -338,6 +338,45 @@
             gap: 1rem;
         }
         
+        .format-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .format-option {
+            border: 3px solid var(--gray-200);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+            background: var(--white);
+        }
+        
+        .format-option:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .format-option.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .format-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .format-description {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
         .avatar-option {
             border: 3px solid var(--gray-200);
             border-radius: 1rem;
@@ -547,20 +586,86 @@
 
     <!-- Main Content -->
     <div class="main-container">
+        <!-- Video Setup Section -->
+        <div class="video-form">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--gray-900);">🎬 Setup Your Video</h2>
+            
+            <form id="videoSetupForm">
+                <div class="form-group">
+                    <label for="videoTitle" class="form-label">Video Title *</label>
+                    <input type="text" id="videoTitle" name="title" class="form-input" 
+                           placeholder="Enter a descriptive title for your video" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoFormat" class="form-label">Video Format *</label>
+                    <div class="format-options">
+                        <div class="format-option selected" data-format="16:9" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 16/9; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem;"></div>
+                            <div class="format-name">Landscape (16:9)</div>
+                            <div class="format-description">Perfect for YouTube, presentations</div>
+                        </div>
+                        <div class="format-option" data-format="9:16" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 9/16; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem; height: 60px;"></div>
+                            <div class="format-name">Portrait (9:16)</div>
+                            <div class="format-description">Perfect for TikTok, Instagram Stories</div>
+                        </div>
+                        <div class="format-option" data-format="1:1" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 1/1; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem; height: 60px;"></div>
+                            <div class="format-name">Square (1:1)</div>
+                            <div class="format-description">Perfect for Instagram posts</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Choose Your Avatar *</label>
+                    <div class="avatar-grid" id="avatarGrid">
+                        {% if avatars %}
+                            {% for avatar in avatars %}
+                            <div class="avatar-option" data-avatar-id="{{ avatar.id }}" onclick="selectAvatar(this)">
+                                <div class="avatar-image">
+                                    {% if avatar.image_path %}
+                                        <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                    {% else %}
+                                        <i class="fas fa-user"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="avatar-name">{{ avatar.name or 'Avatar' }}</div>
+                                <div class="avatar-id">ID: {{ avatar.id }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray-500);">
+                                <i class="fas fa-user-plus" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>No avatars available. Please contact admin to add avatars.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoDescription" class="form-label">Description (Optional)</label>
+                    <textarea id="videoDescription" name="description" class="form-input form-textarea" 
+                              placeholder="Add a description for your video"></textarea>
+                </div>
+            </form>
+        </div>
+
         <!-- Recording Section -->
-        <div class="recording-section">
+        <div class="recording-section" id="recordingSection" style="opacity: 0.5; pointer-events: none;">
             <div class="section-header">
                 <h2 class="section-title">🎤 Record Your Voice</h2>
-                <p class="section-subtitle">Click the record button to start capturing your audio for AI video generation</p>
+                <p class="section-subtitle">Complete the setup above, then record your audio for AI video generation</p>
             </div>
             
             <div class="recording-controls">
-                <button id="recordButton" class="record-button" onclick="toggleRecording()">
+                <button id="recordButton" class="record-button" onclick="toggleRecording()" disabled>
                     <i class="fas fa-microphone" id="recordIcon"></i>
                 </button>
                 
                 <div class="recording-status">
-                    <div id="recordingStatus" class="status-idle">Ready to record</div>
+                    <div id="recordingStatus" class="status-idle">Complete setup first</div>
                     <div id="recordingTimer" class="recording-timer" style="display: none;">00:00</div>
                 </div>
             </div>
@@ -573,64 +678,24 @@
                         <i class="fas fa-play"></i> Play
                     </button>
                     <button class="audio-btn delete-btn" onclick="deleteRecording()">
-                        <i class="fas fa-trash"></i> Delete
+                        <i class="fas fa-trash"></i> Delete & Re-record
                     </button>
                 </div>
                 <div class="waveform">
                     <i class="fas fa-soundwave"></i>
-                    <span style="margin-left: 0.5rem;">Audio waveform will appear here</span>
+                    <span style="margin-left: 0.5rem;">Audio waveform preview</span>
                 </div>
                 <audio id="audioPlayback" controls style="width: 100%; margin-top: 1rem;" hidden></audio>
             </div>
+            
+            <!-- Submit Button -->
+            <div style="margin-top: 2rem;">
+                <button type="submit" class="submit-btn" id="submitBtn" onclick="submitVideo()" disabled>
+                    <i class="fas fa-video"></i>
+                    Create AI Video
+                </button>
+            </div>
         </div>
-
-        <!-- Video Creation Form -->
-        <form id="videoForm" class="video-form" style="display: none;">
-            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--gray-900);">🎬 Create Your Video</h2>
-            
-            <div class="form-group">
-                <label for="videoTitle" class="form-label">Video Title *</label>
-                <input type="text" id="videoTitle" name="title" class="form-input" 
-                       placeholder="Enter a descriptive title for your video" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="videoDescription" class="form-label">Description (Optional)</label>
-                <textarea id="videoDescription" name="description" class="form-input form-textarea" 
-                          placeholder="Add a description for your video"></textarea>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Choose Your Avatar *</label>
-                <div class="avatar-grid" id="avatarGrid">
-                    {% if avatars %}
-                        {% for avatar in avatars %}
-                        <div class="avatar-option" data-avatar-id="{{ avatar.id }}" onclick="selectAvatar(this)">
-                            <div class="avatar-image">
-                                {% if avatar.image_path %}
-                                    <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                                {% else %}
-                                    <i class="fas fa-user"></i>
-                                {% endif %}
-                            </div>
-                            <div class="avatar-name">{{ avatar.name or 'Avatar' }}</div>
-                            <div class="avatar-id">ID: {{ avatar.id }}</div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray-500);">
-                            <i class="fas fa-user-plus" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                            <p>No avatars available. Please contact admin to add avatars.</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <button type="submit" class="submit-btn" id="submitBtn" disabled>
-                <i class="fas fa-video"></i>
-                Create AI Video
-            </button>
-        </form>
     </div>
 
     <!-- Progress Modal -->
@@ -653,11 +718,54 @@
         let timerInterval;
         let recordedBlob = null;
         let selectedAvatarId = null;
+        let selectedFormat = "16:9"; // Default format
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkMicrophonePermission();
+            checkSetupComplete();
         });
+
+        // Check if setup is complete
+        function checkSetupComplete() {
+            const title = document.getElementById('videoTitle').value.trim();
+            const recordingSection = document.getElementById('recordingSection');
+            const recordButton = document.getElementById('recordButton');
+            const recordingStatus = document.getElementById('recordingStatus');
+            
+            if (title && selectedAvatarId && selectedFormat) {
+                // Enable recording section
+                recordingSection.style.opacity = '1';
+                recordingSection.style.pointerEvents = 'auto';
+                recordButton.disabled = false;
+                recordingStatus.textContent = 'Ready to record';
+                recordingStatus.className = 'status-idle';
+            } else {
+                // Disable recording section
+                recordingSection.style.opacity = '0.5';
+                recordingSection.style.pointerEvents = 'none';
+                recordButton.disabled = true;
+                recordingStatus.textContent = 'Complete setup first';
+                recordingStatus.className = 'status-idle';
+            }
+            
+            updateSubmitButton();
+        }
+
+        // Format selection
+        function selectFormat(element) {
+            // Remove previous selection
+            document.querySelectorAll('.format-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Select current format
+            element.classList.add('selected');
+            selectedFormat = element.getAttribute('data-format');
+            
+            console.log('Selected format:', selectedFormat);
+            checkSetupComplete();
+        }
 
         // Check microphone permission
         async function checkMicrophonePermission() {
@@ -782,16 +890,12 @@
         function showAudioPreview(audioBlob) {
             const audioPreview = document.getElementById('audioPreview');
             const audioPlayback = document.getElementById('audioPlayback');
-            const videoForm = document.getElementById('videoForm');
             
             const audioUrl = URL.createObjectURL(audioBlob);
             audioPlayback.src = audioUrl;
             
             audioPreview.classList.add('show');
-            videoForm.style.display = 'block';
-            
-            // Scroll to form
-            videoForm.scrollIntoView({ behavior: 'smooth' });
+            checkSetupComplete();
         }
 
         // Audio controls
@@ -804,8 +908,8 @@
             if (confirm('Are you sure you want to delete this recording?')) {
                 recordedBlob = null;
                 document.getElementById('audioPreview').classList.remove('show');
-                document.getElementById('videoForm').style.display = 'none';
                 updateRecordingUI();
+                checkSetupComplete();
             }
         }
 
@@ -820,8 +924,8 @@
             element.classList.add('selected');
             selectedAvatarId = element.getAttribute('data-avatar-id');
             
-            // Enable submit button if we have both recording and avatar
-            updateSubmitButton();
+            console.log('Selected avatar:', selectedAvatarId);
+            checkSetupComplete();
         }
 
         // Update submit button state
@@ -829,7 +933,7 @@
             const submitBtn = document.getElementById('submitBtn');
             const title = document.getElementById('videoTitle').value.trim();
             
-            if (recordedBlob && selectedAvatarId && title) {
+            if (recordedBlob && selectedAvatarId && selectedFormat && title) {
                 submitBtn.disabled = false;
             } else {
                 submitBtn.disabled = true;
@@ -837,14 +941,12 @@
         }
 
         // Form validation
-        document.getElementById('videoTitle').addEventListener('input', updateSubmitButton);
+        document.getElementById('videoTitle').addEventListener('input', checkSetupComplete);
 
         // Form submission with progress tracking
-        document.getElementById('videoForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!recordedBlob || !selectedAvatarId) {
-                alert('Please record audio and select an avatar before submitting.');
+        function submitVideo() {
+            if (!recordedBlob || !selectedAvatarId || !selectedFormat) {
+                alert('Please complete all setup steps and record audio before submitting.');
                 return;
             }
             
@@ -853,19 +955,19 @@
             formData.append('title', document.getElementById('videoTitle').value);
             formData.append('description', document.getElementById('videoDescription').value);
             formData.append('avatar_id', selectedAvatarId);
+            formData.append('video_format', selectedFormat);
             
             // Show progress modal
             document.getElementById('progressModal').classList.add('show');
             updateProgressModal('Uploading audio...', 10);
             
-            try {
-                const response = await fetch('/api/create-video', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
+            // Submit to API
+            fetch('/api/create-video', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
                 if (result.success) {
                     updateProgressModal('Video creation started!', 30);
                     
@@ -876,13 +978,13 @@
                 } else {
                     throw new Error(result.error || 'Unknown error occurred');
                 }
-                
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error creating video:', error);
                 document.getElementById('progressModal').classList.remove('show');
                 alert('❌ Error creating video: ' + error.message);
-            }
-        });
+            });
+        }
 
         // Update progress modal
         function updateProgressModal(message, progress = null) {
