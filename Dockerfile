@@ -26,5 +26,9 @@ COPY . .
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 
-# Run the application
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+# Add startup script and make it executable
+COPY startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
+# Run the application using bash
+CMD ["/bin/bash", "/app/startup.sh"]
