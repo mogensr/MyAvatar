@@ -276,19 +276,37 @@ async def dashboard(request: Request):
         total_shares = 0
         
         for v in videos:
-            if isinstance(v, dict):
-                video_dict = v
-            else:
-                # Handle SQLite Row objects
-                video_dict = {}
-                for key in v.keys():
-                    video_dict[key] = v[key]
-            
-            video_list.append(video_dict)
-            
-            # Calculate real statistics
-            if video_dict.get('duration'):
-                total_duration += float(video_dict['duration'])
+            try:
+                if isinstance(v, dict):
+                    video_dict = v
+                else:
+                    # Handle SQLite/PostgreSQL Row objects
+                    video_dict = {}
+                    for key in v.keys():
+                        video_dict[key] = v[key]
+                
+                # Ensure safe access to fields and convert datetime to string
+                safe_video = {
+                    'id': video_dict.get('id'),
+                    'title': video_dict.get('title', 'Untitled'),
+                    'status': video_dict.get('status', 'unknown'),
+                    'created_at': video_dict.get('created_at').strftime('%m/%d/%Y') if video_dict.get('created_at') else 'Unknown',
+                    'video_path': video_dict.get('video_path'),
+                    'thumbnail_url': video_dict.get('thumbnail_url'),
+                    'duration': video_dict.get('duration'),
+                    'heygen_video_id': video_dict.get('heygen_video_id'),
+                    'video_format': '16:9'  # Default format
+                }
+                
+                video_list.append(safe_video)
+                
+                # Calculate real statistics
+                if video_dict.get('duration'):
+                    total_duration += float(video_dict['duration'])
+                    
+            except Exception as e:
+                log_error(f"Error processing video {v}: {e}", "Web")
+                continue
         
         # Convert database results to list of dicts for avatars
         avatar_list = []
