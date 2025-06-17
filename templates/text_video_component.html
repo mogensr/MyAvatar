@@ -578,34 +578,6 @@
             margin-bottom: 1.5rem;
         }
         
-        .progress-container {
-            margin-top: 1.5rem;
-        }
-        
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: var(--gray-200);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: var(--gradient-primary);
-            width: 0%;
-            transition: width 0.3s ease;
-            border-radius: 4px;
-        }
-        
-        .progress-text {
-            text-align: center;
-            font-weight: 600;
-            color: var(--primary);
-            font-size: 0.875rem;
-        }
-        
         /* ==================== RESPONSIVE ==================== */
         @media (max-width: 768px) {
             .main-container {
@@ -989,7 +961,7 @@
             reader.readAsText(file);
         }
 
-        // Form submission with enhanced validation and progress tracking
+        // Form submission with enhanced validation (FIXED TO MATCH BACKEND)
         function submitVideo() {
             // Validate required fields with specific alerts
             const title = document.getElementById('videoTitle').value.trim();
@@ -1026,15 +998,14 @@
             
             // Show progress modal
             document.getElementById('progressModal').classList.add('show');
-            updateProgressModal('Sending text to HeyGen...', 10);
             
-            // Prepare data for text-to-video API
+            // Prepare data for text-to-video API (CORRECTED FIELD NAMES)
             const videoData = {
                 title: title,
-                description: description,
                 avatar_id: selectedAvatarId,
-                video_format: selectedFormat,
-                text_content: textContent
+                format: selectedFormat,
+                text: textContent,
+                description: description
             };
             
             // Submit to text-to-video API endpoint
@@ -1048,12 +1019,8 @@
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    updateProgressModal('Video creation started!', 30);
-                    
-                    // Start polling for video status
-                    const videoId = result.video_id;
-                    pollVideoStatus(videoId);
-                    
+                    // Redirect to progress page (same as voice-to-video)
+                    window.location.href = `/video-progress/${result.video_id}`;
                 } else {
                     throw new Error(result.detail || result.error || 'Unknown error occurred');
                 }
@@ -1063,98 +1030,6 @@
                 document.getElementById('progressModal').classList.remove('show');
                 showAlert(`❌ Error creating video: ${error.message}`, 'error');
             });
-        }
-
-        // Update progress modal
-        function updateProgressModal(message, progress = null) {
-            const modalMessage = document.querySelector('.modal-message');
-            modalMessage.textContent = message;
-            
-            if (progress !== null) {
-                // Add progress bar if it doesn't exist
-                let progressBar = document.querySelector('.progress-bar');
-                if (!progressBar) {
-                    const progressContainer = document.createElement('div');
-                    progressContainer.className = 'progress-container';
-                    progressContainer.innerHTML = `
-                        <div class="progress-bar">
-                            <div class="progress-fill"></div>
-                        </div>
-                        <div class="progress-text">0%</div>
-                    `;
-                    modalMessage.parentNode.appendChild(progressContainer);
-                    progressBar = progressContainer.querySelector('.progress-bar');
-                }
-                
-                const progressFill = document.querySelector('.progress-fill');
-                const progressText = document.querySelector('.progress-text');
-                
-                progressFill.style.width = `${progress}%`;
-                progressText.textContent = `${progress}%`;
-            }
-        }
-
-        // Poll video status
-        async function pollVideoStatus(videoId) {
-            const maxAttempts = 120; // 10 minutes max
-            let attempts = 0;
-            
-            const pollInterval = setInterval(async () => {
-                attempts++;
-                
-                try {
-                    const response = await fetch(`/api/video-status/${videoId}`);
-                    const status = await response.json();
-                    
-                    if (status.status === 'completed') {
-                        updateProgressModal('✅ Video completed successfully!', 100);
-                        clearInterval(pollInterval);
-                        
-                        setTimeout(() => {
-                            document.getElementById('progressModal').classList.remove('show');
-                            showAlert('🎉 Your AI video is ready! Redirecting to dashboard...', 'success');
-                            setTimeout(() => {
-                                window.location.href = '/dashboard';
-                            }, 2000);
-                        }, 2000);
-                        
-                    } else if (status.status === 'failed') {
-                        updateProgressModal('❌ Video creation failed', 0);
-                        clearInterval(pollInterval);
-                        
-                        setTimeout(() => {
-                            document.getElementById('progressModal').classList.remove('show');
-                            showAlert('❌ Video creation failed. Please try again.', 'error');
-                        }, 2000);
-                        
-                    } else if (status.status === 'processing') {
-                        const progress = Math.min(30 + (attempts * 2), 90); // Gradual progress
-                        updateProgressModal('🔄 HeyGen is creating your video...', progress);
-                        
-                    } else {
-                        const progress = Math.min(30 + (attempts * 1), 70);
-                        updateProgressModal('⏳ Processing your request...', progress);
-                    }
-                    
-                } catch (error) {
-                    console.error('Error checking video status:', error);
-                }
-                
-                // Timeout after max attempts
-                if (attempts >= maxAttempts) {
-                    clearInterval(pollInterval);
-                    updateProgressModal('⏰ Processing is taking longer than expected', 90);
-                    
-                    setTimeout(() => {
-                        document.getElementById('progressModal').classList.remove('show');
-                        showAlert('Video creation is taking longer than expected. Please check your dashboard in a few minutes.', 'warning');
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 3000);
-                    }, 3000);
-                }
-                
-            }, 5000); // Check every 5 seconds
         }
     </script>
 </body>

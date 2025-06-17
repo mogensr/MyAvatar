@@ -57,11 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic models for request validation
+# Pydantic models for request validation (CORRECTED TO MATCH FRONTEND)
 class TextVideoRequest(BaseModel):
     title: str
     avatar_id: str
-    format: str = "mp4"
+    format: str = "16:9"  # Default format
     text: str
     description: Optional[str] = ""
 
@@ -77,7 +77,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# TEXT-TO-VIDEO API ENDPOINT
+# TEXT-TO-VIDEO API ENDPOINT (CORRECTED)
 @app.post("/api/create-text-video")
 async def create_text_video(request: TextVideoRequest):
     """
