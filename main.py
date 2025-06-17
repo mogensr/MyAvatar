@@ -3,15 +3,19 @@ MyAvatar - Complete AI Avatar Video Generation Platform
 ========================================================
 Modular version with enhanced organization
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 import logging
 import traceback
+import uuid
+from datetime import datetime
+from typing import Optional
 from app.services.notifications import send_alert, notify_service_status
 
 # Load environment variables
@@ -29,7 +33,7 @@ from app.compatibility import ENABLE_SAFE_MODE, ENABLE_BACKGROUND_REPLACEMENT, l
 
 # Import modular components
 from app.logger.log_handler import log_handler, log_info, log_error, log_warning
-from app.db.database import init_database, update_database_schema
+from app.db.database import init_database, update_database_schema, get_db_connection
 from app.db.admin import create_admin_user
 from app.routes.api_routes import router as api_router
 from app.routes.web_routes import router as web_router
@@ -53,6 +57,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Pydantic models for request validation
+class TextVideoRequest(BaseModel):
+    title: str
+    avatar_id: str
+    format: str = "mp4"
+    text: str
+    description: Optional[str] = ""
+
 # Exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -64,6 +76,74 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# TEXT-TO-VIDEO API ENDPOINT
+@app.post("/api/create-text-video")
+async def create_text_video(request: TextVideoRequest):
+    """
+    Create a new text-to-video with the provided text content
+    """
+    try:
+        # Validate required fields
+        if not request.title.strip():
+            raise HTTPException(status_code=400, detail="Title is required")
+        if not request.avatar_id:
+            raise HTTPException(status_code=400, detail="Avatar selection is required")
+        if not request.text.strip():
+            raise HTTPException(status_code=400, detail="Text content is required")
+        
+        # Generate unique video ID
+        video_id = str(uuid.uuid4())
+        
+        # Get database connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Insert video record into database
+        query = """
+            INSERT INTO videos (id, title, avatar_id, format, text_content, description, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        
+        cursor.execute(query, (
+            video_id,
+            request.title.strip(),
+            request.avatar_id,
+            request.format,
+            request.text.strip(),
+            request.description.strip() if request.description else "",
+            'processing',
+            datetime.now()
+        ))
+        conn.commit()
+        
+        # Close database connection
+        cursor.close()
+        conn.close()
+        
+        log_info(f"Text-to-video creation started - Video ID: {video_id}", "Video")
+        
+        # TODO: Add your video processing logic here
+        # This could involve:
+        # 1. Queuing the video for processing
+        # 2. Calling your text-to-speech service
+        # 3. Calling your avatar animation service
+        # 4. Combining audio and video
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                'success': True,
+                'video_id': video_id,
+                'message': 'Video creation started'
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(f"Error creating text video: {str(e)}", "Video", e)
+        raise HTTPException(status_code=500, detail="Failed to create video")
 
 # Register routes
 app.include_router(api_router)
