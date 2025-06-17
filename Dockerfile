@@ -26,9 +26,5 @@ COPY . .
 ENV PORT=8000
 ENV PYTHONUNBUFFERED=1
 
-# Add startup script and make it executable
-COPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
-
-# Run the application using bash
-CMD ["/bin/bash", "/app/startup.sh"]
+# Run the application directly with Python
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
