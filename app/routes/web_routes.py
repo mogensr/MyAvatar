@@ -21,7 +21,7 @@ from ..auth.authentication import (get_current_user, authenticate_user, authenti
 from ..logger.log_handler import log_info, log_error
 
 # Import HeyGen functions
-from app.heygen import create_video_from_text
+from app.api.heygen import create_video_from_text
 
 # ============================================================================
 # UTILITIES
