@@ -961,7 +961,7 @@
             reader.readAsText(file);
         }
 
-        // Form submission with enhanced validation (FIXED TO MATCH BACKEND)
+        // Form submission with FormData (FIXED TO MATCH BACKEND)
         function submitVideo() {
             // Validate required fields with specific alerts
             const title = document.getElementById('videoTitle').value.trim();
@@ -999,28 +999,27 @@
             // Show progress modal
             document.getElementById('progressModal').classList.add('show');
             
-            // Prepare data for text-to-video API (CORRECTED FIELD NAMES)
-            const videoData = {
-                title: title,
-                avatar_id: selectedAvatarId,
-                format: selectedFormat,
-                text: textContent,
-                description: description
-            };
+            // Prepare FormData for text-to-video API (CORRECTED TO USE FORM DATA)
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('avatar_id', selectedAvatarId);
+            formData.append('format', selectedFormat);
+            formData.append('text', textContent);
+            if (description) {
+                formData.append('description', description);
+            }
             
-            // Submit to text-to-video API endpoint
+            // Submit to text-to-video API endpoint with FormData
             fetch('/api/create-text-video', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(videoData)
+                // Don't set Content-Type header - let browser set it for FormData
+                body: formData
             })
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    // Redirect to progress page (same as voice-to-video)
-                    window.location.href = `/video-progress/${result.video_id}`;
+                    // Redirect to dashboard with success message
+                    window.location.href = `/dashboard?success=video_created`;
                 } else {
                     throw new Error(result.detail || result.error || 'Unknown error occurred');
                 }
