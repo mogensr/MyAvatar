@@ -555,7 +555,6 @@ async def create_video_from_audio(
             log_error(f"HeyGen API request failed with exception: {e}", "API", e)
             return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
         
-        # FIXED DATABASE INSERT - REMOVED DESCRIPTION COLUMN
         if response.status_code == 200:
             try:
                 heygen_data = response.json()
@@ -566,7 +565,7 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
+                    # Save video record to database
                     execute_query(
                         """
                         INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
@@ -588,7 +587,7 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
                     
-                    # Save video record to database - FIXED: ADDED AUDIO_PATH COLUMN
+                    # Save video record to database
                     execute_query(
                         """
                         INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
@@ -964,7 +963,7 @@ async def admin_edit_user_submit(request: Request, user_id: int):
 
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
 async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page - FIXED to show proper names and images"""
+    """Admin manage user avatars page"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1130,7 +1129,7 @@ async def admin_upload_image(request: Request, user_id: int):
 
 @router.post("/admin/fetch-heygen-avatar/{user_id}")
 async def admin_fetch_heygen_avatar(request: Request, user_id: int):
-    """Admin fetch avatar from HeyGen - WITH EXTENSIVE LOGGING"""
+    """Admin fetch avatar from HeyGen"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
