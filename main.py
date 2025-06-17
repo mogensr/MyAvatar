@@ -34,6 +34,7 @@ from app.db.admin import create_admin_user
 from app.routes.api_routes import router as api_router
 from app.routes.web_routes import router as web_router
 from app.routes.finance_routes import router as finance_router
+from app.routes.health_routes import router as health_router
 
 # Conditionally import background replacement components
 if ENABLE_BACKGROUND_REPLACEMENT:
@@ -68,6 +69,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(api_router)
 app.include_router(web_router)
 app.include_router(finance_router)
+app.include_router(health_router)
 
 # Conditionally register background routes
 if ENABLE_BACKGROUND_REPLACEMENT:
