@@ -1405,6 +1405,21 @@ async def video_backgrounds_page(request: Request, video_id: int):
         }
     )
 
+@router.get("/admin/fix-sequence")
+async def fix_video_sequence(request: Request):
+    """Temporary route to fix video ID sequence"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        execute_query("SELECT setval(pg_get_serial_sequence('videos', 'id'), (SELECT MAX(id) FROM videos))")
+        log_info("Video sequence fixed by admin", "Admin")
+        return JSONResponse(content={"success": True, "message": "Video ID sequence fixed successfully!"})
+    except Exception as e:
+        log_error(f"Error fixing sequence: {e}", "Admin", e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 # ============================================================================
 # END OF FILE
 # ============================================================================
