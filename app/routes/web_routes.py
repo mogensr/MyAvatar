@@ -1418,7 +1418,7 @@ async def video_backgrounds_page(request: Request, video_id: int):
     )
 
 # ============================================================================
-# DATABASE SEQUENCE FIX ROUTE
+# ADMIN UTILITY ROUTES
 # ============================================================================
 
 @router.get("/admin/fix-sequence")
@@ -1434,6 +1434,21 @@ async def fix_video_sequence(request: Request):
         return JSONResponse(content={"success": True, "message": "Video ID sequence fixed successfully!"})
     except Exception as e:
         log_error(f"Error fixing sequence: {e}", "Admin", e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@router.get("/admin/clear-videos")
+async def clear_videos(request: Request):
+    """Admin route to clear all videos from database"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        execute_query("DELETE FROM videos")
+        log_info("All videos deleted by admin", "Admin")
+        return JSONResponse(content={"success": True, "message": "All videos deleted successfully"})
+    except Exception as e:
+        log_error(f"Error deleting videos: {e}", "Admin", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ============================================================================
