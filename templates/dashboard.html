@@ -409,6 +409,7 @@
             border-radius: 0.75rem;
             cursor: pointer;
             transition: all var(--transition-fast);
+            position: relative;
         }
         
         .user-menu:hover {
@@ -442,6 +443,57 @@
         .user-role {
             font-size: 0.75rem;
             color: var(--gray-500);
+        }
+        
+        /* User Dropdown Menu */
+        .user-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-xl);
+            padding: 0.5rem 0;
+            min-width: 200px;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all var(--transition-fast);
+        }
+        
+        .user-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--gray-700);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+        
+        .dropdown-item:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        .dropdown-divider {
+            height: 1px;
+            background: var(--gray-200);
+            margin: 0.5rem 0;
         }
         
         /* Page Content */
@@ -1087,13 +1139,35 @@
                         <span class="notification-dot"></span>
                     </button>
                     
-                    <div class="user-menu">
+                    <!-- Updated User Menu with Dropdown -->
+                    <div class="user-menu" onclick="toggleUserDropdown()">
                         <div class="user-avatar" id="userAvatar">U</div>
                         <div class="user-info">
                             <div class="user-name" id="userName">{{ username }}</div>
                             <div class="user-role">Pro Member</div>
                         </div>
-                        <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);"></i>
+                        <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);" id="dropdownIcon"></i>
+                        
+                        <!-- Dropdown Menu -->
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="#profile" class="dropdown-item">
+                                <i class="fas fa-user"></i>
+                                <span>Profile</span>
+                            </a>
+                            <a href="#settings" class="dropdown-item">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                            <a href="#subscription" class="dropdown-item">
+                                <i class="fas fa-crown"></i>
+                                <span>Subscription</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button onclick="logout()" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Logout</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -1330,28 +1404,71 @@
             themeBtn.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
         
-       function startCreation(method) {
-    // Enhanced creation flow
-    console.log('Starting creation with method:', method);
-    
-    // Show enhanced modal or navigate to creation page
-    const messages = {
-        'voice': 'Ready to record your voice? Let\'s create an amazing AI video!',
-        'text': 'Ready to convert text to speech? Choose your voice and let\'s begin!'
-    };
-    
-    if (confirm(messages[method] + '\n\nWould you like to proceed?')) {
-        // Navigate to appropriate creation page based on method
-        if (method === 'voice') {
-            window.location.href = '/voice-recording';  // Voice recording page
-        } else if (method === 'text') {
-            window.location.href = '/text-to-video';    // Text-to-speech page (existing route)
-        } else {
-            // Fallback for any other methods
-            window.location.href = '/text-to-video';
+        // User dropdown functionality
+        function toggleUserDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            const icon = document.getElementById('dropdownIcon');
+            
+            dropdown.classList.toggle('show');
+            
+            if (dropdown.classList.contains('show')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
         }
-    }
-}
+        
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/logout';
+            }
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.querySelector('.user-menu');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (!userMenu.contains(event.target)) {
+                dropdown.classList.remove('show');
+                document.getElementById('dropdownIcon').style.transform = 'rotate(0deg)';
+            }
+        });
+        
+        // Prevent dropdown from closing when clicking inside
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdown = document.getElementById('userDropdown');
+            if (dropdown) {
+                dropdown.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+            }
+        });
+        
+        function startCreation(method) {
+            // Enhanced creation flow
+            console.log('Starting creation with method:', method);
+            
+            // Show enhanced modal or navigate to creation page
+            const messages = {
+                'voice': 'Ready to record your voice? Let\'s create an amazing AI video!',
+                'text': 'Ready to convert text to speech? Choose your voice and let\'s begin!'
+            };
+            
+            if (confirm(messages[method] + '\n\nWould you like to proceed?')) {
+                // Navigate to appropriate creation page based on method
+                if (method === 'voice') {
+                    window.location.href = '/voice-recording';  // Voice recording page
+                } else if (method === 'text') {
+                    window.location.href = '/text-to-video';    // Text-to-speech page (existing route)
+                } else {
+                    // Fallback for any other methods
+                    window.location.href = '/text-to-video';
+                }
+            }
+        }
+        
         function showPremiumModal() {
             const features = [
                 '✨ Premium Templates',
