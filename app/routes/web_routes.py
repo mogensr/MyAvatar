@@ -121,7 +121,69 @@ async def login_post(
             log_info(f"Email authentication result: {user is not None}", "Auth")
         
         if not user:
-            log_error(f"Failed login attempt: username={username}, email={email}", "Auth")
+            log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
+        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
+
+# ============================================================================
+# VIDEO BACKGROUND REPLACEMENT ROUTES
+# ============================================================================
+
+@router.get("/videos/{video_id}/backgrounds", response_class=HTMLResponse)
+async def video_backgrounds_page(request: Request, video_id: int):
+    """
+    Video backgrounds page for selecting and applying backgrounds
+    """
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Check if video exists and belongs to user
+    video = execute_query(
+        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
+        (video_id, user["id"]),
+        fetch_one=True
+    )
+    
+    if not video:
+        return RedirectResponse(url="/dashboard?error=video_not_found", status_code=303)
+    
+    # Get video URL
+    video_url = f"/static/videos/{video.get('heygen_video_id')}.mp4"
+    if video.get('file_path'):
+        video_url = f"/static/videos/{os.path.basename(video['file_path'])}"
+    
+    return templates.TemplateResponse(
+        "video_backgrounds.html", 
+        {
+            "request": request,
+            "user": user,
+            "video": video,
+            "video_url": video_url
+        }
+    )
+
+# ============================================================================
+# DATABASE SEQUENCE FIX ROUTE
+# ============================================================================
+
+@router.get("/admin/fix-sequence")
+async def fix_video_sequence(request: Request):
+    """Temporary route to fix video ID sequence"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        execute_query("SELECT setval(pg_get_serial_sequence('videos', 'id'), (SELECT MAX(id) FROM videos))")
+        log_info("Video sequence fixed by admin", "Admin")
+        return JSONResponse(content={"success": True, "message": "Video ID sequence fixed successfully!"})
+    except Exception as e:
+        log_error(f"Error fixing sequence: {e}", "Admin", e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# ============================================================================
+# END OF FILE
+# ============================================================================f"Failed login attempt: username={username}, email={email}", "Auth")
             return templates.TemplateResponse(
                 "portal/login.html", 
                 {
@@ -656,16 +718,35 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
                     
-                    # Save video record to database
-                    execute_query(
-                        """
-                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                    )
-                    
-                    log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
+                    # Save video record to database with better error handling
+                    try:
+                        result = execute_query(
+                            """
+                            INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            RETURNING id
+                            """,
+                            (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat()),
+                            fetch_one=True
+                        )
+                        
+                        log_info(f"Video record saved to database for user {user['username']}: {video_id}, DB ID: {result['id'] if result else 'unknown'}", "API")
+                        
+                    except Exception as db_error:
+                        log_error(f"Database insert error: {db_error}", "API", db_error)
+                        # Try alternative insert without RETURNING
+                        try:
+                            execute_query(
+                                """
+                                INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
+                            )
+                            log_info(f"Video record saved to database (alternative method) for user {user['username']}: {video_id}", "API")
+                        except Exception as db_error2:
+                            log_error(f"Alternative database insert also failed: {db_error2}", "API", db_error2)
+                            return JSONResponse(status_code=500, content={"error": "Database error - video created but not saved"})
                     
                     return JSONResponse(content={
                         "success": True,
@@ -678,16 +759,35 @@ async def create_video_from_audio(
                     video_id = heygen_data.get("data", {}).get("video_id")
                     log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
                     
-                    # Save video record to database
-                    execute_query(
-                        """
-                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                    )
-                    
-                    log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
+                    # Save video record to database with better error handling
+                    try:
+                        result = execute_query(
+                            """
+                            INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            RETURNING id
+                            """,
+                            (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat()),
+                            fetch_one=True
+                        )
+                        
+                        log_info(f"Video record saved to database for user {user['username']}: {video_id}, DB ID: {result['id'] if result else 'unknown'}", "API")
+                        
+                    except Exception as db_error:
+                        log_error(f"Database insert error: {db_error}", "API", db_error)
+                        # Try alternative insert without RETURNING
+                        try:
+                            execute_query(
+                                """
+                                INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
+                            )
+                            log_info(f"Video record saved to database (alternative method) for user {user['username']}: {video_id}", "API")
+                        except Exception as db_error2:
+                            log_error(f"Alternative database insert also failed: {db_error2}", "API", db_error2)
+                            return JSONResponse(status_code=500, content={"error": "Database error - video created but not saved"})
                     
                     return JSONResponse(content={
                         "success": True,
@@ -729,7 +829,7 @@ async def create_video_from_audio(
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # ============================================================================
-# TEXT-TO-VIDEO API ROUTE - HEYGEN VOICE INTEGRATION
+# TEXT-TO-VIDEO API ROUTE - HEYGEN VOICE INTEGRATION WITH IMPROVED DATABASE HANDLING
 # ============================================================================
 
 @router.post("/api/create-text-video")
@@ -806,16 +906,38 @@ async def create_video_from_text_input(
             video_id = heygen_result.get("video_id")
             log_info(f"[Video] HeyGen text-to-video creation successful, video_id: {video_id}", "Video")
             
-            # Save video record to database
-            execute_query(
-                """
-                INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (user["id"], title, avatar_id, f"voice_{heygen_voice_id}", video_id, "processing", datetime.now().isoformat())
-            )
-            
-            log_info(f"[Video] Text-to-video record saved - HeyGen ID: {video_id}, Voice: {heygen_voice_id}", "Video")
+            # Save video record to database with improved error handling
+            try:
+                log_info(f"[Video] Attempting to save video record to database", "Video")
+                result = execute_query(
+                    """
+                    INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    RETURNING id
+                    """,
+                    (user["id"], title, avatar_id, f"voice_{heygen_voice_id}", video_id, "processing", datetime.now().isoformat()),
+                    fetch_one=True
+                )
+                
+                log_info(f"[Video] Text-to-video record saved - HeyGen ID: {video_id}, Voice: {heygen_voice_id}, DB ID: {result['id'] if result else 'unknown'}", "Video")
+                
+            except Exception as db_error:
+                log_error(f"[Video] Database insert error: {db_error}", "Video", db_error)
+                # Try alternative insert without RETURNING clause
+                try:
+                    log_info(f"[Video] Trying alternative database insert method", "Video")
+                    execute_query(
+                        """
+                        INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (user["id"], title, avatar_id, f"voice_{heygen_voice_id}", video_id, "processing", datetime.now().isoformat())
+                    )
+                    log_info(f"[Video] Text-to-video record saved (alternative method) - HeyGen ID: {video_id}, Voice: {heygen_voice_id}", "Video")
+                    
+                except Exception as db_error2:
+                    log_error(f"[Video] Alternative database insert also failed: {db_error2}", "Video", db_error2)
+                    return JSONResponse(status_code=500, content={"error": "Database error - video created but not saved to database"})
             
             return JSONResponse(content={
                 "success": True,
@@ -1364,62 +1486,4 @@ async def admin_fetch_heygen_avatar(request: Request, user_id: int):
             return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=connection_failed", status_code=303)
         
     except Exception as e:
-        log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
-
-# ============================================================================
-# VIDEO BACKGROUND REPLACEMENT ROUTES
-# ============================================================================
-
-@router.get("/videos/{video_id}/backgrounds", response_class=HTMLResponse)
-async def video_backgrounds_page(request: Request, video_id: int):
-    """
-    Video backgrounds page for selecting and applying backgrounds
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check if video exists and belongs to user
-    video = execute_query(
-        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
-        (video_id, user["id"]),
-        fetch_one=True
-    )
-    
-    if not video:
-        return RedirectResponse(url="/dashboard?error=video_not_found", status_code=303)
-    
-    # Get video URL
-    video_url = f"/static/videos/{video.get('heygen_video_id')}.mp4"
-    if video.get('file_path'):
-        video_url = f"/static/videos/{os.path.basename(video['file_path'])}"
-    
-    return templates.TemplateResponse(
-        "video_backgrounds.html", 
-        {
-            "request": request,
-            "user": user,
-            "video": video,
-            "video_url": video_url
-        }
-    )
-
-@router.get("/admin/fix-sequence")
-async def fix_video_sequence(request: Request):
-    """Temporary route to fix video ID sequence"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    try:
-        execute_query("SELECT setval(pg_get_serial_sequence('videos', 'id'), (SELECT MAX(id) FROM videos))")
-        log_info("Video sequence fixed by admin", "Admin")
-        return JSONResponse(content={"success": True, "message": "Video ID sequence fixed successfully!"})
-    except Exception as e:
-        log_error(f"Error fixing sequence: {e}", "Admin", e)
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
-# ============================================================================
-# END OF FILE
-# ============================================================================
+        log_error(
