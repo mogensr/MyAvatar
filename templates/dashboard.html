@@ -1326,7 +1326,10 @@
                         <div class="video-card">
                             <div class="video-thumbnail">
                                 {% if video.status == 'completed' and video.video_path %}
-                                    <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
+                                    <video controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="{{ video.video_path }}" type="video/mp4">
+                                        <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
+                                    </video>
                                 {% else %}
                                     <div class="video-placeholder">
                                         <i class="fas fa-video" style="font-size: 3rem;"></i>
