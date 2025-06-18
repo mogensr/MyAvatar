@@ -1019,7 +1019,7 @@
             .then(result => {
                 if (result.success) {
                     // Redirect to dashboard with success message
-                    window.location.href = `/dashboard?success=video_created`;
+                    window.location.href = `/dashboard`;
                 } else {
                     throw new Error(result.detail || result.error || 'Unknown error occurred');
                 }
