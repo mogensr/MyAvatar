@@ -636,7 +636,6 @@ async def create_video_from_audio(
                 temp_audio_path,
                 resource_type="video",           # Cloudinary treats audio as video resource
                 format="m4a",                   # Convert to M4A (MP4A) format for HeyGen
-                flags="audio_codec:aac",        # Force AAC audio codec
                 audio_codec="aac",              # Ensure AAC encoding
                 public_id=f"myavatar_audio_{user['id']}_{int(time.time())}"
             )
