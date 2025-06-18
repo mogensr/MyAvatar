@@ -457,7 +457,7 @@ async def heygen_webhook(request: Request):
         log_info(f"HeyGen webhook data: {data}", "Webhook")
         
         # HeyGen can send different formats, handle both
-        video_id = data.get("video_id") or data.get("data", {}).get("video_id")
+        video_id = data.get("video_id") or data.get("data", {}).get("video_id") or data.get("event_data", {}).get("video_id")
         status = data.get("status") or data.get("event", "").replace("video.", "")
         video_url = data.get("video_url") or data.get("data", {}).get("video_url")
         event = data.get("event", "unknown")
