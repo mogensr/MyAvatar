@@ -21,6 +21,9 @@ from ..auth.authentication import (
 )
 from ..logger.log_handler import log_info, log_error, log_warning
 from app.api.heygen import create_video_from_text
+import json
+import os
+from app.auth.authentication import SECRET_KEY, ALGORITHM
 
 # UTILITIES
 def secure_filename(filename):
@@ -49,6 +52,58 @@ async def logout(request: Request):
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
     return response
+
+# ============================================================================  
+# DIAGNOSTIC ROUTE - ONLY FOR TROUBLESHOOTING
+# ============================================================================  
+
+@router.get("/auth-diagnostics", response_class=JSONResponse)
+async def auth_diagnostics(request: Request):
+    """Diagnostic route to troubleshoot authentication (secure - doesn't expose secrets)"""
+    # Only allow access in development mode
+    is_production = os.environ.get("PRODUCTION", "false").lower() == "true"
+    if is_production:
+        return JSONResponse({"error": "Diagnostics disabled in production"}, status_code=403)
+        
+    try:
+        # Get database info
+        db_type = "PostgreSQL" if os.environ.get("DATABASE_URL") else "SQLite"
+        
+        # Check if JWT secret is properly set
+        jwt_status = "Environment variable set" if os.environ.get("JWT_SECRET_KEY") else "Using default random value"
+        
+        # Check templates directory
+        templates_path = os.path.join(os.getcwd(), "templates")
+        templates_exists = os.path.exists(templates_path)
+        template_files = os.listdir(templates_path) if templates_exists else []
+        login_template_exists = os.path.exists(os.path.join(templates_path, "portal/login.html"))
+        
+        # Collect diagnostic information without exposing secrets
+        diagnostics = {
+            "database": {
+                "type": db_type,
+                "connection": "Configured" if db_type == "PostgreSQL" else "Using SQLite fallback"
+            },
+            "jwt": {
+                "status": jwt_status,
+                "algorithm": ALGORITHM
+            },
+            "templates": {
+                "directory_exists": templates_exists,
+                "num_templates": len(template_files) if templates_exists else 0,
+                "login_template_exists": login_template_exists
+            },
+            "env": {
+                "deployment_environment": os.environ.get("DEPLOYMENT_ENVIRONMENT", "not set"),
+                "production": is_production
+            }
+        }
+        
+        log_info("Auth diagnostics requested", "Diagnostics")
+        return JSONResponse(diagnostics)
+    except Exception as e:
+        log_error(f"Error in diagnostics: {str(e)}", "Diagnostics", e)
+        return JSONResponse({"error": "Diagnostic error", "message": str(e)}, status_code=500)
 
 # ============================================================================  
 # LOGIN ROUTES  
