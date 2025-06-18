@@ -105,7 +105,7 @@ async def health_check():
         if backgroundfx_url:
             try:
                 client = BackgroundFXClient()
-                backgroundfx_health = await client.health_check()
+                backgroundfx_health = client.check_connection()
                 
                 if backgroundfx_health.get("status") != "ok":
                     send_alert(
