@@ -36,6 +36,11 @@ def secure_filename(filename):
 router = APIRouter(prefix="", tags=["web"])
 templates = Jinja2Templates(directory="templates")
 
+# ROOT ROUTE - REDIRECT TO DASHBOARD
+@router.get("/", response_class=RedirectResponse, status_code=302)
+async def root():
+    return "/dashboard"
+
 # LOGOUT ROUTE
 @router.get("/logout")
 async def logout(request: Request):
