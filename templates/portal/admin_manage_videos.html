@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrer Videoer - {{ user_to_manage.username }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            margin: -20px -20px 20px -20px;
+            padding: 30px 20px;
+        }
+        .video-thumbnail {
+            width: 120px;
+            height: 68px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+        .video-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-processing { background: #fff3cd; color: #856404; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .btn-sm { border-radius: 20px; padding: 5px 15px; }
+        .table { border-radius: 10px; overflow: hidden; }
+        .table thead th { background: #f8f9fa; border: none; }
+        .alert { border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container my-5 p-4">
+        <div class="header-gradient">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-1">
+                        <i class="fas fa-video me-2"></i>
+                        Videoer for {{ user_to_manage.username }}
+                    </h1>
+                    <p class="mb-0 opacity-90">Administrer alle videoer for denne bruger</p>
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark fs-6">{{ total_videos }} Videoer</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        {% if request.query_params.get('success') == 'video_deleted' %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Video blev slettet succesfuldt!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% elif request.query_params.get('success') == 'all_videos_cleared' %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Alle videoer blev ryddet succesfuldt!
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% elif request.query_params.get('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {% if request.query_params.get('error') == 'video_not_found' %}
+                Video ikke fundet.
+            {% elif request.query_params.get('error') == 'delete_failed' %}
+                Fejl ved sletning af video.
+            {% elif request.query_params.get('error') == 'clear_failed' %}
+                Fejl ved rydning af videoer.
+            {% else %}
+                Der opstod en fejl.
+            {% endif %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <a href="/admin/users" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Tilbage til brugere
+                </a>
+            </div>
+            <div class="col-md-6 text-end">
+                {% if videos %}
+                <button class="btn btn-danger me-2" onclick="clearAllVideos()">
+                    <i class="fas fa-trash-alt me-2"></i>Ryd alle videoer
+                </button>
+                {% endif %}
+                <button onclick="location.reload()" class="btn btn-outline-primary">
+                    <i class="fas fa-sync-alt me-2"></i>Opdater
+                </button>
+            </div>
+        </div>
+
+        {% if videos %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Thumbnail</th>
+                        <th>Titel</th>
+                        <th>Status</th>
+                        <th>HeyGen ID</th>
+                        <th>Oprettet</th>
+                        <th>Video URL</th>
+                        <th>Handlinger</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for video in videos %}
+                    <tr>
+                        <td class="align-middle">
+                            <span class="badge bg-light text-dark">{{ video.id }}</span>
+                        </td>
+                        <td class="align-middle">
+                            <div class="video-thumbnail">
+                                {% if video.status == 'completed' and video.video_path %}
+                                    <video muted>
+                                        <source src="{{ video.video_path }}" type="video/mp4">
+                                    </video>
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                        <i class="fas fa-video"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="align-middle">
+                            <strong>{{ video.title or 'Untitled' }}</strong>
+                        </td>
+                        <td class="align-middle">
+                            <span class="status-badge status-{{ video.status }}">
+                                {{ video.status }}
+                            </span>
+                        </td>
+                        <td class="align-middle">
+                            {% if video.heygen_video_id %}
+                                <code class="small">{{ video.heygen_video_id[:16] }}...</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            <small class="text-muted">{{ video.created_at }}</small>
+                        </td>
+                        <td class="align-middle">
+                            {% if video.video_path %}
+                                <a href="{{ video.video_path }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            <div class="btn-group" role="group">
+                                {% if video.status == 'completed' and video.video_path %}
+                                <a href="{{ video.video_path }}" target="_blank" class="btn btn-success btn-sm" title="Afspil video">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-danger btn-sm" onclick="deleteVideo({{ video.id }}, '{{ video.title or 'Untitled' }}')" title="Slet video">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-video fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted">Ingen videoer fundet</h3>
+            <p class="text-muted">Denne bruger har ikke oprettet nogen videoer endnu.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Delete Video Modal -->
+    <div class="modal fade" id="deleteVideoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash me-2"></i>Slet Video
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Er du sikker på, at du vil slette denne video?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Video titel:</strong> <span id="videoTitleToDelete"></span><br>
+                        <small>Denne handling kan ikke fortrydes.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuller</button>
+                    <form id="deleteVideoForm" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Slet Video
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear All Videos Modal -->
+    <div class="modal fade" id="clearAllVideosModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash-alt me-2"></i>Ryd Alle Videoer
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Er du sikker på, at du vil slette <strong>alle videoer</strong> for {{ user_to_manage.username }}?</p>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Advarsel:</strong> Dette vil permanent slette alle {{ total_videos }} videoer.<br>
+                        <small>Denne handling kan ikke fortrydes.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuller</button>
+                    <form action="/admin/clear-user-videos/{{ user_to_manage.id }}" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash-alt me-2"></i>Slet Alle Videoer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function deleteVideo(videoId, videoTitle) {
+            document.getElementById('videoTitleToDelete').textContent = videoTitle;
+            document.getElementById('deleteVideoForm').action = `/admin/delete-video/${videoId}`;
+            new bootstrap.Modal(document.getElementById('deleteVideoModal')).show();
+        }
+
+        function clearAllVideos() {
+            new bootstrap.Modal(document.getElementById('clearAllVideosModal')).show();
+        }
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+</body>
+</html>
