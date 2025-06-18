@@ -11,7 +11,7 @@ import time
 import cloudinary
 import cloudinary.uploader
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime, timedelta
 from typing import Optional
@@ -1246,9 +1246,13 @@ async def admin_edit_user_submit(request: Request, user_id: int):
         log_error(f"Error updating user: {e}", "Admin", e)
         return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
 
+# ============================================================================
+# AVATAR MANAGEMENT ROUTES - FIXED TO MATCH YOUR TEMPLATE
+# ============================================================================
+
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
 async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page"""
+    """Admin manage user avatars page - Fixed to match template expectations"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1276,7 +1280,7 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         
         log_info(f"Found {len(raw_avatars) if raw_avatars else 0} avatars for user {user_to_manage['username']}", "Admin")
         
-        # Transform avatars to match template expectations
+        # Transform avatars to match template expectations (admin_user_avatars.html)
         avatars = []
         for avatar in raw_avatars:
             # Convert database row to dict if needed
@@ -1290,8 +1294,8 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
             processed_avatar = {
                 'id': avatar.get('id'),
                 'user_id': avatar.get('user_id'),
-                'avatar_name': avatar.get('name', 'Unnamed'),
-                'avatar_url': avatar.get('image_path'),
+                'avatar_name': avatar.get('name', 'Unnamed Avatar'),  # Template expects avatar_name
+                'avatar_url': avatar.get('image_path'),                # Template expects avatar_url
                 'heygen_avatar_id': avatar.get('heygen_avatar_id'),
                 'created_at': avatar.get('created_at')
             }
@@ -1304,7 +1308,8 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         
         log_info(f"Processed {len(avatars)} avatars for display", "Admin")
         
-        return templates.TemplateResponse("portal/admin_manage_avatars.html", {
+        # Use the correct template name (portal/admin_user_avatars.html)
+        return templates.TemplateResponse("portal/admin_user_avatars.html", {
             "request": request,
             "user": user,
             "user_to_manage": user_to_manage,
@@ -1315,192 +1320,229 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         log_error(f"Error in admin_manage_avatars_page: {e}", "Admin", e)
         return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
 
-@router.post("/admin/delete-avatar/{avatar_id}")
-async def admin_delete_avatar(request: Request, avatar_id: int):
-    """Admin delete avatar"""
+@router.post("/admin/upload-avatar/{user_id}")
+async def admin_upload_avatar(
+    request: Request,
+    user_id: int,
+    avatar_file: UploadFile = File(...)
+):
+    """Upload avatar file for user - matches your template form action"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
     
-    try:
-        log_info(f"Admin {user['username']} attempting to delete avatar {avatar_id}", "Admin")
-        
-        # Get avatar info first
-        avatar = execute_query(
-            "SELECT user_id FROM avatars WHERE id = ?",
-            (avatar_id,),
-            fetch_one=True
+    # Validate user exists
+    target_user = execute_query(
+        "SELECT id FROM users WHERE id = ?",
+        (user_id,),
+        fetch_one=True
+    )
+    if not target_user:
+        return RedirectResponse(
+            url=f"/admin/users?error=user_not_found",
+            status_code=303
         )
-        
-        if avatar:
-            user_id = avatar["user_id"]
-            log_info(f"Avatar {avatar_id} belongs to user {user_id}", "Admin")
-            
-            # Delete avatar
-            execute_query(
-                "DELETE FROM avatars WHERE id = ?",
-                (avatar_id,)
-            )
-            log_info(f"Admin {user['username']} deleted avatar {avatar_id} successfully", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted", status_code=303)
-        else:
-            log_error(f"Avatar not found for deletion: {avatar_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=avatar_not_found", status_code=303)
-            
-    except Exception as e:
-        log_error(f"Error deleting avatar {avatar_id}: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
-
-@router.post("/admin/upload-image/{user_id}")
-async def admin_upload_image(request: Request, user_id: int):
-    """Admin upload image for user"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
     
     try:
-        log_info(f"Admin {user['username']} uploading image for user {user_id}", "Admin")
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg'}
+        file_extension = avatar_file.filename.split('.')[-1].lower()
         
-        form = await request.form()
-        image_file = form.get("image_file")
-        
-        if not image_file or not image_file.filename:
-            log_error("No file provided for upload", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_file", status_code=303)
-        
-        log_info(f"Processing image upload: {image_file.filename}", "Admin")
-        
-        # Check file type
-        allowed_types = ['.png', '.jpg', '.jpeg', '.gif']
-        file_ext = os.path.splitext(image_file.filename)[1].lower()
-        if file_ext not in allowed_types:
-            log_error(f"Invalid file type: {file_ext}", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_file", status_code=303)
+        if file_extension not in allowed_extensions:
+            return RedirectResponse(
+                url=f"/admin/manage-avatars/{user_id}?error=invalid_file",
+                status_code=303
+            )
         
         # Create uploads directory if it doesn't exist
         upload_dir = "static/uploads/avatars"
         os.makedirs(upload_dir, exist_ok=True)
         
-        # Generate secure filename with timestamp
+        # Generate secure filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        secure_name = secure_filename(image_file.filename)
+        secure_name = secure_filename(avatar_file.filename)
         file_ext = os.path.splitext(secure_name)[1].lower()
         unique_filename = f"user_{user_id}_{timestamp}{file_ext}"
         file_path = os.path.join(upload_dir, unique_filename)
         
-        # Save file
+        # Save the file
         with open(file_path, "wb") as buffer:
-            content = await image_file.read()
+            content = await avatar_file.read()
             buffer.write(content)
         
-        log_info(f"Image saved to: {file_path}, size: {len(content)} bytes", "Admin")
-        
-        # Save to database
+        # Create avatar record in database
         image_url = f"/static/uploads/avatars/{unique_filename}"
         execute_query(
             """
-            INSERT INTO avatars (user_id, name, image_path)
-            VALUES (?, ?, ?)
+            INSERT INTO avatars (user_id, name, image_path, created_at)
+            VALUES (?, ?, ?, ?)
             """,
-            (user_id, unique_filename, image_url)
+            (user_id, avatar_file.filename, image_url, datetime.now().isoformat())
         )
         
-        log_info(f"Admin {user['username']} uploaded image for user {user_id}: {unique_filename}", "Admin")
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=image_uploaded", status_code=303)
+        log_info(f"Admin {user['username']} uploaded avatar for user {user_id}: {unique_filename}", "Admin")
+        return RedirectResponse(
+            url=f"/admin/manage-avatars/{user_id}?success=avatar_uploaded",
+            status_code=303
+        )
         
     except Exception as e:
-        log_error(f"Error uploading image: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=upload_failed", status_code=303)
+        log_error(f"Avatar upload error: {e}", "Admin", e)
+        return RedirectResponse(
+            url=f"/admin/manage-avatars/{user_id}?error=upload_failed",
+            status_code=303
+        )
 
 @router.post("/admin/fetch-heygen-avatar/{user_id}")
-async def admin_fetch_heygen_avatar(request: Request, user_id: int):
-    """Admin fetch avatar from HeyGen"""
+async def admin_fetch_heygen_avatar(
+    request: Request,
+    user_id: int,
+    heygen_avatar_id: str = Form(...)
+):
+    """Fetch avatar from HeyGen by ID - matches your template form action"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Validate user exists
+    target_user = execute_query(
+        "SELECT id FROM users WHERE id = ?",
+        (user_id,),
+        fetch_one=True
+    )
+    if not target_user:
+        return RedirectResponse(
+            url=f"/admin/users?error=user_not_found",
+            status_code=303
+        )
+    
+    try:
+        # Check if avatar already exists
+        existing_avatar = execute_query(
+            "SELECT id FROM avatars WHERE user_id = ? AND heygen_avatar_id = ?",
+            (user_id, heygen_avatar_id),
+            fetch_one=True
+        )
+        
+        if existing_avatar:
+            return RedirectResponse(
+                url=f"/admin/manage-avatars/{user_id}?error=avatar_exists",
+                status_code=303
+            )
+        
+        # Get HeyGen API key
+        heygen_api_key = os.getenv("HEYGEN_API_KEY")
+        if not heygen_api_key:
+            log_error("HeyGen API key not configured", "Admin")
+            return RedirectResponse(
+                url=f"/admin/manage-avatars/{user_id}?error=api_key_missing",
+                status_code=303
+            )
+        
+        # Fetch avatar details from HeyGen API
+        headers = {
+            "X-Api-Key": heygen_api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Get avatar details from HeyGen
+        response = requests.get(
+            f"https://api.heygen.com/v2/avatars/{heygen_avatar_id}",
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            avatar_data = response.json()
+            
+            # Create avatar record
+            avatar_name = avatar_data.get('data', {}).get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
+            avatar_preview_url = avatar_data.get('data', {}).get('preview_image_url', '')
+            
+            execute_query(
+                """
+                INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (user_id, avatar_name, avatar_preview_url, heygen_avatar_id, datetime.now().isoformat())
+            )
+            
+            log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
+            return RedirectResponse(
+                url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched",
+                status_code=303
+            )
+        else:
+            log_error(f"HeyGen API error: {response.status_code}", "Admin")
+            return RedirectResponse(
+                url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
+                status_code=303
+            )
+        
+    except Exception as e:
+        log_error(f"HeyGen avatar fetch error: {e}", "Admin", e)
+        return RedirectResponse(
+            url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
+            status_code=303
+        )
+
+@router.post("/admin/delete-avatar/{avatar_id}")
+async def admin_delete_avatar(request: Request, avatar_id: int):
+    """Delete avatar - matches your template form action"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
     
     try:
-        log_info(f"Admin {user['username']} fetching HeyGen avatar for user {user_id}", "Admin")
+        # Get the avatar
+        avatar = execute_query(
+            "SELECT user_id, image_path FROM avatars WHERE id = ?",
+            (avatar_id,),
+            fetch_one=True
+        )
         
-        form = await request.form()
-        heygen_avatar_id = form.get("heygen_avatar_id", "").strip()
+        if not avatar:
+            return RedirectResponse(
+                url="/admin/users?error=avatar_not_found",
+                status_code=303
+            )
         
-        if not heygen_avatar_id:
-            log_error("No HeyGen avatar ID provided", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=no_avatar_id", status_code=303)
+        user_id = avatar["user_id"]
         
-        log_info(f"Fetching HeyGen avatar: {heygen_avatar_id}", "Admin")
+        # Delete file if it exists locally
+        if avatar.get("image_path") and avatar["image_path"].startswith('/static/'):
+            file_path = avatar["image_path"][1:]  # Remove leading slash
+            if os.path.exists(file_path):
+                os.remove(file_path)
         
-        # Get HeyGen API key from environment
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=api_key_missing", status_code=303)
+        # Delete from database
+        execute_query(
+            "DELETE FROM avatars WHERE id = ?",
+            (avatar_id,)
+        )
         
-        log_info(f"Using HeyGen API key: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "Admin")
-        
-        # Make request to HeyGen API to get avatar details
-        headers = {
-            'X-Api-Key': heygen_api_key,
-            'Content-Type': 'application/json'
-        }
-        
-        # HeyGen API endpoint to get avatar details
-        heygen_url = f"https://api.heygen.com/v1/avatar/{heygen_avatar_id}"
-        log_info(f"HeyGen API request URL: {heygen_url}", "Admin")
-        
-        try:
-            response = requests.get(heygen_url, headers=headers, timeout=30)
-            log_info(f"HeyGen API response: {response.status_code} - {response.text}", "Admin")
-            
-            if response.status_code == 200:
-                avatar_data = response.json()
-                log_info(f"HeyGen avatar data: {avatar_data}", "Admin")
-                
-                # Check if avatar exists and get details
-                if avatar_data.get('code') == 100:  # Success code for HeyGen
-                    avatar_info = avatar_data.get('data', {})
-                    avatar_name = avatar_info.get('avatar_name', heygen_avatar_id)
-                    avatar_preview_url = avatar_info.get('preview_image_url', '')
-                    
-                    log_info(f"Avatar details: name={avatar_name}, preview_url={avatar_preview_url}", "Admin")
-                    
-                    # Save avatar record to database
-                    execute_query(
-                        """
-                        INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id)
-                        VALUES (?, ?, ?, ?)
-                        """,
-                        (user_id, avatar_name, avatar_preview_url, heygen_avatar_id)
-                    )
-                    
-                    log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
-                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched", status_code=303)
-                else:
-                    error_msg = avatar_data.get('message', 'Unknown error')
-                    log_error(f"HeyGen API error: {error_msg}", "Admin")
-                    return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_api_error", status_code=303)
-            
-            elif response.status_code == 401:
-                log_error("Invalid HeyGen API key", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=invalid_api_key", status_code=303)
-            elif response.status_code == 404:
-                log_error(f"HeyGen avatar not found: {heygen_avatar_id}", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found", status_code=303)
-            else:
-                log_error(f"HeyGen API error: {response.status_code}", "Admin")
-                return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=heygen_failed", status_code=303)
-                
-        except requests.exceptions.Timeout:
-            log_error("HeyGen API request timeout", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=timeout", status_code=303)
-        except requests.exceptions.RequestException as e:
-            log_error(f"HeyGen API request error: {e}", "Admin")
-            return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=connection_failed", status_code=303)
+        log_info(f"Admin {user['username']} deleted avatar {avatar_id}", "Admin")
+        return RedirectResponse(
+            url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
+            status_code=303
+        )
         
     except Exception as e:
-        log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
+        log_error(f"Avatar deletion error: {e}", "Admin", e)
+        return RedirectResponse(
+            url="/admin/users?error=delete_failed",
+            status_code=303
+        )
+
+# Also add this route to serve uploaded avatar files
+@router.get("/static/uploads/avatars/{filename}")
+async def serve_avatar_file(filename: str):
+    """Serve uploaded avatar files"""
+    file_path = f"static/uploads/avatars/{filename}"
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
 
 # ============================================================================
 # ADMIN VIDEO MANAGEMENT ROUTES
