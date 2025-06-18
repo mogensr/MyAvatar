@@ -49,6 +49,46 @@ async def logout(request: Request):
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
     return response
+
+# ============================================================================  
+# LOGIN ROUTES  
+# ============================================================================  
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Login page"""
+    return templates.TemplateResponse("portal/login.html", {"request": request})
+
+@router.post("/login")
+async def login_post(request: Request, username: str = Form(...), password: str = Form(...)):
+    """Process login"""
+    try:
+        user = authenticate_user(username, password)
+        if not user:
+            return templates.TemplateResponse(
+                "portal/login.html",
+                {
+                    "request": request,
+                    "error": "Invalid username or password"
+                }
+            )
+        
+        access_token = create_access_token(data={"sub": user["username"]})
+        response = RedirectResponse(url="/dashboard", status_code=303)
+        response.set_cookie(key="access_token", value=access_token, httponly=True)
+        
+        log_info(f"User {username} logged in successfully", "Web")
+        return response
+        
+    except Exception as e:
+        log_error(f"Login error: {str(e)}", "Web", e)
+        return templates.TemplateResponse(
+            "portal/login.html",
+            {
+                "request": request,
+                "error": "Login error"
+            }
+        )
 # ============================================================================  
 # REGISTRATION ROUTES  
 # ============================================================================  
