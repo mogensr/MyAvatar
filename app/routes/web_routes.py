@@ -329,7 +329,7 @@ async def dashboard(request: Request):
         
         # Use proper template rendering with REAL statistics
         return templates.TemplateResponse(
-            "portal/dashboard.html",
+            "dashboard.html",
             {
                 "request": request,
                 "user": user,
