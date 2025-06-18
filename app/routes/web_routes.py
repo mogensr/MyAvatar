@@ -732,6 +732,9 @@ async def create_video_from_audio(
 # TEXT-TO-VIDEO API ROUTE - HEYGEN INTEGRATION
 # ============================================================================
 
+# Add this new endpoint to your web_routes.py 
+# Replace the existing /api/create-text-video endpoint with this enhanced version
+
 @router.post("/api/create-text-video")
 async def create_video_from_text_input(
     request: Request,
@@ -741,29 +744,38 @@ async def create_video_from_text_input(
     description: str = Form(None),
     format: str = Form("16:9")
 ):
-    """Create video from text using HeyGen text-to-speech"""
+    """Create video from text using ElevenLabs TTS + HeyGen"""
     
-    # Debug logging - add this to see what we're getting
-    log_info(f"[Video] Received form data - Title: '{title}', Avatar: '{avatar_id}', Text length: {len(text) if text else 0}, Format: '{format}'", "Video")
+    log_info(f"[Video] Text-to-video request - User: {request.cookies.get('username')}, Title: '{title}', Avatar: '{avatar_id}'", "Video")
     
     user = get_current_user(request)
     if not user:
         log_error("Unauthorized text-to-video creation attempt", "Video")
         return JSONResponse(status_code=401, content={"error": "Unauthorized"})
     
-    log_info(f"[Video] Text-to-video creation started - User: {user['username']}, Title: '{title}', Avatar: {avatar_id}", "Video")
-    
     try:
+        # Get user's ElevenLabs API key from database
+        user_data = execute_query(
+            "SELECT elevenlabs_api_key FROM users WHERE id = ?",
+            (user["id"],),
+            fetch_one=True
+        )
+        
+        elevenlabs_api_key = user_data.get("elevenlabs_api_key") if user_data else None
+        
+        if not elevenlabs_api_key:
+            log_error(f"[Video] No ElevenLabs API key found for user {user['username']}", "Video")
+            return JSONResponse(status_code=400, content={"error": "No ElevenLabs API key configured. Please contact admin."})
+        
+        log_info(f"[Video] ElevenLabs API key found: {elevenlabs_api_key[:10]}...{elevenlabs_api_key[-4:]}", "Video")
+        
         # Get HeyGen API key
         heygen_api_key = os.getenv("HEYGEN_API_KEY")
         if not heygen_api_key:
             log_error("[Video] HeyGen API key not configured", "Video")
             return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
         
-        log_info(f"[Video] HeyGen API key found: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "Video")
-        
         # Get avatar details from database
-        log_info(f"[Video] Fetching avatar details for avatar_id={avatar_id}, user_id={user['id']}", "Video")
         avatar = execute_query(
             "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
             (avatar_id, user["id"]),
@@ -774,127 +786,189 @@ async def create_video_from_text_input(
             log_error(f"[Video] Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "Video")
             return JSONResponse(status_code=400, content={"error": "Avatar not found"})
         
-        log_info(f"[Video] Avatar found: {avatar}", "Video")
-        
-        # Get HeyGen avatar ID
         heygen_avatar_id = avatar.get("heygen_avatar_id")
         if not heygen_avatar_id:
             log_error(f"[Video] No HeyGen avatar ID found for avatar: {avatar}", "Video")
             return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
         
-        log_info(f"[Video] Using HeyGen avatar ID: {heygen_avatar_id}", "Video")
+        # Get user's cloned voice from ElevenLabs
+        log_info(f"[Video] Fetching ElevenLabs voices for user {user['username']}", "Video")
         
-        # Use the create_video_from_text function from heygen.py
-        log_info(f"[Video] Calling HeyGen create_video_from_text function", "Video")
-        heygen_result = create_video_from_text(
-            api_key=heygen_api_key,
-            avatar_id=heygen_avatar_id,
-            text=text,
-            video_format=format
+        elevenlabs_headers = {
+            "Accept": "application/json",
+            "xi-api-key": elevenlabs_api_key
+        }
+        
+        # Get user's voices from ElevenLabs
+        voices_response = requests.get("https://api.elevenlabs.io/v1/voices", headers=elevenlabs_headers)
+        
+        if voices_response.status_code != 200:
+            log_error(f"[Video] ElevenLabs API error: {voices_response.status_code}", "Video")
+            return JSONResponse(status_code=400, content={"error": "Failed to access ElevenLabs voices"})
+        
+        voices_data = voices_response.json()
+        cloned_voices = [v for v in voices_data.get("voices", []) if v.get("category") == "cloned"]
+        
+        if not cloned_voices:
+            log_error(f"[Video] No cloned voices found for user {user['username']}", "Video")
+            return JSONResponse(status_code=400, content={"error": "No cloned voices found. Please clone your voice in ElevenLabs first."})
+        
+        # Use the first cloned voice (or you could add logic to select specific voice)
+        voice_id = cloned_voices[0]["voice_id"]
+        voice_name = cloned_voices[0]["name"]
+        
+        log_info(f"[Video] Using cloned voice: {voice_name} ({voice_id})", "Video")
+        
+        # Step 1: Generate audio using ElevenLabs TTS
+        log_info(f"[Video] Generating audio with ElevenLabs TTS", "Video")
+        
+        tts_payload = {
+            "text": text,
+            "model_id": "eleven_monolingual_v1",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.75,
+                "style": 0.0,
+                "use_speaker_boost": True
+            }
+        }
+        
+        tts_response = requests.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+            headers={
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json", 
+                "xi-api-key": elevenlabs_api_key
+            },
+            json=tts_payload
         )
         
-        log_info(f"[Video] HeyGen create_video_from_text result: {heygen_result}", "Video")
+        if tts_response.status_code != 200:
+            log_error(f"[Video] ElevenLabs TTS failed: {tts_response.status_code}", "Video")
+            return JSONResponse(status_code=400, content={"error": "Voice generation failed"})
         
-        if heygen_result.get("success"):
-            video_id = heygen_result.get("video_id")
-            log_info(f"[Video] HeyGen text-to-video creation successful, video_id: {video_id}", "Video")
-            
-            # Save video record to database with unique identifier
-            db_video_id = execute_query(
-                """
-                INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (user["id"], title, avatar_id, f"text_to_speech_{video_id}", video_id, "processing", datetime.now().isoformat())
+        audio_content = tts_response.content
+        log_info(f"[Video] Audio generated successfully, size: {len(audio_content)} bytes", "Video")
+        
+        # Step 2: Upload audio to Cloudinary as M4A
+        log_info(f"[Video] Uploading audio to Cloudinary as M4A", "Video")
+        
+        # Save to temp file first
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio:
+            temp_audio.write(audio_content)
+            temp_audio_path = temp_audio.name
+        
+        try:
+            upload_result = cloudinary.uploader.upload(
+                temp_audio_path,
+                resource_type="video",
+                format="m4a",
+                flags="audio_codec:aac",
+                audio_codec="aac",
+                public_id=f"myavatar_tts_{user['id']}_{int(time.time())}"
             )
+            audio_url = upload_result.get('secure_url')
+            log_info(f"[Video] Audio uploaded to Cloudinary: {audio_url}", "Video")
             
-            log_info(f"[Video] Text-to-video record saved to database - DB ID: {db_video_id}, HeyGen ID: {video_id}", "Video")
+        except Exception as e:
+            log_error(f"[Video] Cloudinary upload failed: {e}", "Video", e)
+            return JSONResponse(status_code=500, content={"error": "Audio upload failed"})
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_audio_path):
+                os.unlink(temp_audio_path)
+        
+        # Step 3: Create video with HeyGen using the uploaded audio
+        log_info(f"[Video] Creating HeyGen video with uploaded audio", "Video")
+        
+        heygen_headers = {
+            "X-Api-Key": heygen_api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Set dimensions based on format
+        if format == "9:16":
+            width, height = 1080, 1920
+        elif format == "1:1":
+            width, height = 1080, 1080
+        else:  # 16:9
+            width, height = 1920, 1080
+        
+        heygen_payload = {
+            "video_inputs": [
+                {
+                    "character": {
+                        "type": "avatar",
+                        "avatar_id": heygen_avatar_id,
+                        "avatar_style": "normal"
+                    },
+                    "voice": {
+                        "type": "audio",
+                        "audio_url": audio_url
+                    },
+                    "background": {
+                        "type": "color",
+                        "value": "#ffffff"
+                    }
+                }
+            ],
+            "dimension": {
+                "width": width,
+                "height": height
+            },
+            "aspect_ratio": format,
+            "test": False
+        }
+        
+        heygen_response = requests.post(
+            "https://api.heygen.com/v2/video/generate",
+            headers=heygen_headers,
+            json=heygen_payload,
+            timeout=30
+        )
+        
+        log_info(f"[Video] HeyGen response: {heygen_response.status_code} - {heygen_response.text}", "Video")
+        
+        if heygen_response.status_code == 200:
+            heygen_data = heygen_response.json()
             
-            return JSONResponse(content={
-                "success": True,
-                "video_id": video_id,
-                "message": "Text-to-video creation started successfully"
-            })
+            # Handle different HeyGen response formats
+            video_id = None
+            if heygen_data.get("data") and heygen_data.get("data", {}).get("video_id"):
+                video_id = heygen_data["data"]["video_id"]
+            elif heygen_data.get("code") == 100:
+                video_id = heygen_data.get("data", {}).get("video_id")
+            
+            if video_id:
+                log_info(f"[Video] HeyGen video creation successful, video_id: {video_id}", "Video")
+                
+                # Save video record to database
+                execute_query(
+                    """
+                    INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (user["id"], title, avatar_id, audio_url, video_id, "processing", datetime.now().isoformat())
+                )
+                
+                log_info(f"[Video] Text-to-video record saved - HeyGen ID: {video_id}, Voice: {voice_name}", "Video")
+                
+                return JSONResponse(content={
+                    "success": True,
+                    "video_id": video_id,
+                    "message": f"Video creation started with your {voice_name} voice"
+                })
+            else:
+                error_msg = heygen_data.get("error", {}).get("message", "Unknown HeyGen error")
+                log_error(f"[Video] HeyGen API error: {error_msg}", "Video")
+                return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
         
         else:
-            error_msg = heygen_result.get("error", "Unknown HeyGen error")
-            log_error(f"[Video] HeyGen text-to-video creation failed: {error_msg}", "Video")
-            return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
+            log_error(f"[Video] HeyGen API failed: {heygen_response.status_code}", "Video")
+            return JSONResponse(status_code=400, content={"error": "Video creation failed"})
     
     except Exception as e:
         log_error(f"[Video] Error creating text-to-video: {e}", "Video", e)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-@router.get("/api/video-status/{video_id}")
-async def check_video_status(request: Request, video_id: str):
-    """Check video processing status from HeyGen"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Video status check by user {user['username']} for video_id: {video_id}", "API")
-    
-    try:
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE heygen_video_id = ? AND user_id = ?",
-            (video_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not video:
-            log_error(f"Video not found: video_id={video_id}, user_id={user['id']}", "API")
-            return JSONResponse(status_code=404, content={"error": "Video not found"})
-        
-        # Check status with HeyGen
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured for status check", "API")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        headers = {"X-Api-Key": heygen_api_key}
-        status_url = f"https://api.heygen.com/v1/video_status.get?video_id={video_id}"
-        
-        log_info(f"Checking HeyGen video status: {status_url}", "API")
-        response = requests.get(status_url, headers=headers)
-        
-        log_info(f"HeyGen status response: {response.status_code} - {response.text}", "API")
-        
-        if response.status_code == 200:
-            status_data = response.json()
-            
-            if status_data.get("code") == 100:
-                data = status_data.get("data", {})
-                status = data.get("status")
-                video_url = data.get("video_url")
-                
-                log_info(f"Video status: {status}, URL: {video_url}", "API")
-                
-                # Update database with new status
-                if status == "completed" and video_url:
-                    execute_query(
-                        "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
-                        ("completed", video_url, video_id)
-                    )
-                    log_info(f"Video completed and database updated: {video_id}", "API")
-                elif status == "failed":
-                    execute_query(
-                        "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                        ("failed", video_id)
-                    )
-                    log_error(f"Video failed: {video_id}", "API")
-                
-                return JSONResponse(content={
-                    "status": status,
-                    "video_url": video_url,
-                    "progress": data.get("progress", 0)
-                })
-        
-        log_error(f"Failed to get video status from HeyGen: {response.status_code}", "API")
-        return JSONResponse(status_code=400, content={"error": "Failed to get video status"})
-    
-    except Exception as e:
-        log_error(f"Error checking video status: {e}", "API", e)
         return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
 # ============================================================================
