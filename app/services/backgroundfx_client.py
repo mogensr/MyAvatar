@@ -46,16 +46,42 @@ class BackgroundFXClient:
         )
         logger.info(f"BackgroundFX client initialized with URL: {self.base_url}")
     
-    def health_check(self) -> bool:
+    def health_check(self) -> Dict[str, Any]:
         """
         Check if the BackgroundFX service is healthy
         
         Returns:
-            True if service is healthy, False otherwise
+            Dictionary with status information containing:
+            - status: "ok" | "error"
+            - message: Additional information
+            - details: Any error details or service information
         """
         try:
             response = requests.get(f"{self.base_url}/health", timeout=5)
-            return response.status_code == 200
+            
+            if response.status_code == 200:
+                # Try to parse the response JSON
+                try:
+                    data = response.json()
+                    return {
+                        "status": "ok",
+                        "message": "BackgroundFX service is healthy",
+                        "details": data
+                    }
+                except Exception as e:
+                    logging.warning(f"BackgroundFX returned 200 but invalid JSON: {str(e)}")
+                    return {
+                        "status": "ok",
+                        "message": "BackgroundFX service is responding but returned invalid JSON",
+                        "details": {"response_text": response.text[:100]}
+                    }
+            else:
+                logging.error(f"BackgroundFX health check failed with status code: {response.status_code}")
+                return {
+                    "status": "error",
+                    "message": f"BackgroundFX returned status code {response.status_code}",
+                    "details": {"status_code": response.status_code, "response_text": response.text[:100]}
+                }
         except Exception as e:
             logging.error(f"BackgroundFX health check error: {str(e)}")
             send_alert(
@@ -63,7 +89,11 @@ class BackgroundFXClient:
                 message=f"Failed to connect to BackgroundFX service: {str(e)}",
                 severity="error"
             )
-            return False
+            return {
+                "status": "error",
+                "message": "Failed to connect to BackgroundFX service",
+                "details": {"error": str(e)}
+            }
     
     def get_available_backgrounds(self) -> List[Dict[str, str]]:
         """
