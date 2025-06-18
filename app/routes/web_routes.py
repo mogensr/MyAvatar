@@ -1247,7 +1247,7 @@ async def admin_edit_user_submit(request: Request, user_id: int):
         return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
 
 # ============================================================================
-# AVATAR MANAGEMENT ROUTES - FIXED TO MATCH YOUR TEMPLATE
+# AVATAR MANAGEMENT ROUTES - WITH DEBUG ENDPOINT TESTING
 # ============================================================================
 
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
@@ -1399,7 +1399,7 @@ async def admin_fetch_heygen_avatar(
     user_id: int,
     heygen_avatar_id: str = Form(...)
 ):
-    """Fetch avatar from HeyGen by ID - matches your template form action"""
+    """Fetch avatar from HeyGen by ID - DEBUG VERSION WITH MULTIPLE ENDPOINTS"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1439,25 +1439,88 @@ async def admin_fetch_heygen_avatar(
                 status_code=303
             )
         
-        # Fetch avatar details from HeyGen API
         headers = {
             "X-Api-Key": heygen_api_key,
-            "Content-Type": "application/json"
+            "Accept": "application/json"
         }
         
-        # Get avatar details from HeyGen
-        response = requests.get(
-            f"https://api.heygen.com/v2/avatars/{heygen_avatar_id}",
-            headers=headers,
-            timeout=30
-        )
+        log_info(f"🔍 DEBUG: Attempting to fetch HeyGen avatar: {heygen_avatar_id}", "Admin")
         
-        if response.status_code == 200:
-            avatar_data = response.json()
-            
+        # Try multiple possible endpoints
+        endpoints_to_try = [
+            f"https://api.heygen.com/v1/avatar/{heygen_avatar_id}",  # Try v1 single avatar
+            f"https://api.heygen.com/v2/avatar/{heygen_avatar_id}",  # Try v2 single avatar
+            f"https://api.heygen.com/v1/avatars/{heygen_avatar_id}", # Try v1 with s
+            f"https://api.heygen.com/v2/avatars/{heygen_avatar_id}"  # Try v2 with s (your original)
+        ]
+        
+        avatar_found = None
+        successful_endpoint = None
+        
+        for endpoint in endpoints_to_try:
+            try:
+                log_info(f"🔍 DEBUG: Trying endpoint: {endpoint}", "Admin")
+                response = requests.get(endpoint, headers=headers, timeout=30)
+                log_info(f"🔍 DEBUG: Response from {endpoint}: {response.status_code} - {response.text[:200]}...", "Admin")
+                
+                if response.status_code == 200:
+                    avatar_data = response.json()
+                    
+                    # Check different response formats
+                    if avatar_data.get('data'):
+                        avatar_found = avatar_data['data']
+                        successful_endpoint = endpoint
+                        log_info(f"✅ DEBUG: Found avatar using endpoint: {endpoint}", "Admin")
+                        break
+                    elif avatar_data.get('avatar_id'):
+                        avatar_found = avatar_data
+                        successful_endpoint = endpoint
+                        log_info(f"✅ DEBUG: Found avatar using endpoint: {endpoint}", "Admin")
+                        break
+                        
+            except Exception as e:
+                log_info(f"❌ DEBUG: Endpoint {endpoint} failed: {e}", "Admin")
+                continue
+        
+        # If no single avatar endpoint worked, try the list endpoint
+        if not avatar_found:
+            log_info("🔍 DEBUG: Single avatar endpoints failed, trying list endpoint", "Admin")
+            try:
+                response = requests.get(
+                    "https://api.heygen.com/v2/avatars",
+                    headers=headers,
+                    timeout=30
+                )
+                
+                log_info(f"🔍 DEBUG: List endpoint response: {response.status_code}", "Admin")
+                
+                if response.status_code == 200:
+                    avatars_data = response.json()
+                    avatars_list = avatars_data.get('data', {}).get('avatars', [])
+                    
+                    log_info(f"🔍 DEBUG: Found {len(avatars_list)} total avatars in list", "Admin")
+                    
+                    for avatar in avatars_list:
+                        if avatar.get('avatar_id') == heygen_avatar_id:
+                            avatar_found = avatar
+                            successful_endpoint = "https://api.heygen.com/v2/avatars (list filtered)"
+                            log_info(f"✅ DEBUG: Found avatar {heygen_avatar_id} in list!", "Admin")
+                            break
+                    
+                    if not avatar_found:
+                        log_error(f"❌ DEBUG: Avatar {heygen_avatar_id} not found in list of {len(avatars_list)} avatars", "Admin")
+                        # Log first few avatar IDs for debugging
+                        if avatars_list:
+                            sample_ids = [av.get('avatar_id', 'NO_ID') for av in avatars_list[:5]]
+                            log_info(f"🔍 DEBUG: Sample avatar IDs from list: {sample_ids}", "Admin")
+                            
+            except Exception as e:
+                log_error(f"❌ DEBUG: List endpoint also failed: {e}", "Admin")
+        
+        if avatar_found:
             # Create avatar record
-            avatar_name = avatar_data.get('data', {}).get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
-            avatar_preview_url = avatar_data.get('data', {}).get('preview_image_url', '')
+            avatar_name = avatar_found.get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
+            avatar_preview_url = avatar_found.get('preview_image_url', '')
             
             execute_query(
                 """
@@ -1467,15 +1530,16 @@ async def admin_fetch_heygen_avatar(
                 (user_id, avatar_name, avatar_preview_url, heygen_avatar_id, datetime.now().isoformat())
             )
             
-            log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
+            log_info(f"✅ Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id} using {successful_endpoint}", "Admin")
             return RedirectResponse(
                 url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched",
                 status_code=303
             )
         else:
-            log_error(f"HeyGen API error: {response.status_code}", "Admin")
+            # Avatar ID not found in any endpoint
+            log_error(f"❌ Avatar ID {heygen_avatar_id} not found in any HeyGen endpoint", "Admin")
             return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
+                url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found_all_endpoints",
                 status_code=303
             )
         
