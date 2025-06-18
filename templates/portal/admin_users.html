@@ -1,48 +1,159 @@
-<!-- templates/portal/admin_users.html -->
 <!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
     <title>Brugeroversigt - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+        }
+        .container { 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            margin: -20px -20px 20px -20px;
+            padding: 30px 20px;
+        }
+        .table { 
+            border-radius: 10px; 
+            overflow: hidden; 
+        }
+        .table thead th { 
+            background: #f8f9fa; 
+            border: none; 
+            font-weight: 600;
+        }
+        .btn-sm { 
+            border-radius: 20px; 
+            padding: 5px 12px; 
+            margin: 1px;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .btn-group .btn {
+            font-size: 0.8rem;
+        }
+    </style>
 </head>
 <body>
-<div class="container mt-5">
-    <h2 class="mb-4">👥 Brugeroversigt</h2>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Navn</th>
-                <th>Email</th>
-                <th>Telefon</th>
-                <th>HeyGen ID</th>
-                <th>Logo</th>
-                <th>Avatar</th>
-                <th>LinkedIn</th>
-                <th>Handling</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for user in users %}
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>{{ user.phone or '' }}</td>
-                <td>{{ user.heygen_id or '' }}</td>
-                <td>{% if user.logo_url %}<img src="{{ user.logo_url }}" alt="Logo" style="height:32px;">{% endif %}</td>
-                <td>{% if user.avatar_img_url %}<img src="{{ user.avatar_img_url }}" alt="Avatar" style="height:32px;">{% endif %}</td>
-                <td>{% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank">LinkedIn</a>{% endif %}</td>
-                <td>
-                    <a href="/admin/edit-user/{{ user.id }}" class="btn btn-sm btn-warning">Rediger</a>
-<a href="/admin/manage-avatars/{{ user.id }}" class="btn btn-sm btn-info ms-1">Administrér avatarer</a>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <a href="/admin" class="btn btn-secondary mt-3">Tilbage til admin-dashboard</a>
+<div class="container mt-5 p-4">
+    <div class="header-gradient">
+        <h1 class="mb-1">
+            <i class="fas fa-users me-2"></i>
+            Brugeroversigt
+        </h1>
+        <p class="mb-0 opacity-90">Administrer alle brugere og deres indhold</p>
+    </div>
+    
+    <div class="mb-4">
+        <a href="/admin/dashboard" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Tilbage til admin-dashboard
+        </a>
+        <a href="/admin/create-user" class="btn btn-primary ms-2">
+            <i class="fas fa-plus me-2"></i>Opret ny bruger
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Navn</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>HeyGen ID</th>
+                    <th>Logo</th>
+                    <th>Avatar</th>
+                    <th>LinkedIn</th>
+                    <th>Handlinger</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for user in users %}
+                <tr>
+                    <td class="align-middle">
+                        <span class="badge bg-primary">{{ user.id }}</span>
+                    </td>
+                    <td class="align-middle">
+                        <strong>{{ user.username }}</strong>
+                        {% if user.is_admin %}
+                            <span class="badge bg-warning text-dark ms-1">Admin</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">{{ user.email }}</td>
+                    <td class="align-middle">{{ user.phone or '-' }}</td>
+                    <td class="align-middle">
+                        {% if user.heygen_voice_id %}
+                            <code class="small">{{ user.heygen_voice_id[:12] }}...</code>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
+                        {% if user.logo_url %}
+                            <img src="{{ user.logo_url }}" alt="Logo" class="user-avatar">
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
+                        {% if user.avatar_img_url %}
+                            <img src="{{ user.avatar_img_url }}" alt="Avatar" class="user-avatar">
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
+                        {% if user.linkedin_url %}
+                            <a href="{{ user.linkedin_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fab fa-linkedin"></i>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
+                        <div class="btn-group-vertical btn-group-sm" role="group">
+                            <div class="btn-group btn-group-sm mb-1" role="group">
+                                <a href="/admin/edit-user/{{ user.id }}" class="btn btn-warning btn-sm" title="Rediger bruger">
+                                    <i class="fas fa-edit"></i> Rediger
+                                </a>
+                                <a href="/admin/manage-avatars/{{ user.id }}" class="btn btn-info btn-sm" title="Administrer avatarer">
+                                    <i class="fas fa-user-circle"></i> Avatarer
+                                </a>
+                            </div>
+                            <a href="/admin/manage-videos/{{ user.id }}" class="btn btn-success btn-sm" title="Administrer videoer">
+                                <i class="fas fa-video"></i> Videoer
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4 text-center">
+        <p class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Totalt {{ users|length }} brugere i systemet
+        </p>
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

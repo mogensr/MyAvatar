@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Videos - MyAvatar Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+        }
+        .container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .video-card { 
+            border: none; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .video-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .video-thumbnail {
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .video-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-completed { background: #28a745; color: white; }
+        .status-processing { background: #ffc107; color: #212529; }
+        .status-failed { background: #dc3545; color: white; }
+        .video-placeholder {
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            color: #6c757d;
+            font-size: 3rem;
+        }
+        .btn-primary { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+        }
+        .btn-outline-secondary {
+            border-radius: 25px;
+            padding: 10px 25px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            margin: -20px -20px 20px -20px;
+            padding: 30px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-5 p-4">
+        <div class="header-gradient">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-1"><i class="fas fa-video me-2"></i>My Videos</h1>
+                    <p class="mb-0 opacity-90">Manage all your AI-generated videos</p>
+                </div>
+                <div>
+                    <span class="badge bg-light text-dark fs-6">{{ total_videos }} Videos</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <a href="/dashboard" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+            <div class="col-md-6 text-end">
+                <a href="/text-to-video" class="btn btn-primary me-2">
+                    <i class="fas fa-plus me-2"></i>Create New Video
+                </a>
+                <button onclick="location.reload()" class="btn btn-outline-primary">
+                    <i class="fas fa-sync-alt me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        {% if videos %}
+        <div class="row">
+            {% for video in videos %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card video-card h-100">
+                    <div class="video-thumbnail position-relative">
+                        {% if video.status == 'completed' and video.video_path %}
+                            <video controls preload="metadata">
+                                <source src="{{ video.video_path }}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        {% else %}
+                            <div class="video-placeholder">
+                                <i class="fas fa-video"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <span class="status-badge status-{{ video.status }}">
+                            {{ video.status }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">{{ video.title or 'Untitled Video' }}</h5>
+                        <div class="text-muted small mb-3">
+                            <i class="fas fa-calendar me-1"></i>{{ video.created_at }}
+                            {% if video.heygen_video_id %}
+                            <br><i class="fas fa-id-card me-1"></i>{{ video.heygen_video_id[:16] }}...
+                            {% endif %}
+                        </div>
+                        
+                        {% if video.status == 'completed' and video.video_path %}
+                        <div class="d-flex gap-2">
+                            <a href="{{ video.video_path }}" target="_blank" class="btn btn-primary btn-sm flex-fill">
+                                <i class="fas fa-play me-1"></i>Play
+                            </a>
+                            <a href="{{ video.video_path }}" download class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                        {% elif video.status == 'processing' %}
+                        <div class="d-flex align-items-center text-warning">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            <small>Processing...</small>
+                        </div>
+                        {% elif video.status == 'failed' %}
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <small>Processing failed</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-video"></i>
+            <h3>No videos yet</h3>
+            <p class="mb-4">Start creating amazing AI videos with your personalized avatar!</p>
+            <a href="/text-to-video" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Create Your First Video
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

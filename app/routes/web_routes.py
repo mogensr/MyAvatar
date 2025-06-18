@@ -357,6 +357,72 @@ async def dashboard(request: Request):
         )
 
 # ============================================================================
+# CLIENT VIDEO PAGES
+# ============================================================================
+
+@router.get("/videos", response_class=HTMLResponse)
+async def videos_page(request: Request):
+    """
+    Client videos page - Show all videos for the user
+    """
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    log_info(f"Videos page accessed by user {user.get('username')}", "Web")
+    
+    try:
+        # Get all user's videos
+        videos = execute_query(
+            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
+            (user["id"],),
+            fetch_all=True
+        )
+        
+        # Convert database results to list of dicts for videos
+        video_list = []
+        for v in videos:
+            try:
+                if isinstance(v, dict):
+                    video_dict = v
+                else:
+                    video_dict = {}
+                    for key in v.keys():
+                        video_dict[key] = v[key]
+                
+                safe_video = {
+                    'id': video_dict.get('id'),
+                    'title': video_dict.get('title', 'Untitled'),
+                    'status': video_dict.get('status', 'unknown'),
+                    'created_at': video_dict.get('created_at').strftime('%m/%d/%Y') if video_dict.get('created_at') else 'Unknown',
+                    'video_path': video_dict.get('video_path'),
+                    'thumbnail_url': video_dict.get('thumbnail_url'),
+                    'duration': video_dict.get('duration'),
+                    'heygen_video_id': video_dict.get('heygen_video_id'),
+                    'video_format': '16:9'
+                }
+                video_list.append(safe_video)
+                
+            except Exception as e:
+                log_error(f"Error processing video {v}: {e}", "Web")
+                continue
+        
+        return templates.TemplateResponse(
+            "videos.html",
+            {
+                "request": request,
+                "user": user,
+                "username": user.get("username", ""),
+                "videos": video_list,
+                "total_videos": len(video_list)
+            }
+        )
+        
+    except Exception as e:
+        log_error(f"Videos page error for user {user.get('username')}", "Web", e)
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+# ============================================================================
 # VIDEO CREATION PAGES
 # ============================================================================
 
@@ -1378,6 +1444,133 @@ async def admin_fetch_heygen_avatar(request: Request, user_id: int):
     except Exception as e:
         log_error(f"Error fetching HeyGen avatar: {e}", "Admin", e)
         return RedirectResponse(url=f"/admin/manage-avatars/{user_id}?error=system_error", status_code=303)
+
+# ============================================================================
+# ADMIN VIDEO MANAGEMENT ROUTES
+# ============================================================================
+
+@router.get("/admin/manage-videos/{user_id}", response_class=HTMLResponse)
+async def admin_manage_videos_page(request: Request, user_id: int):
+    """Admin manage user videos page"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        log_info(f"Admin {user['username']} managing videos for user_id: {user_id}", "Admin")
+        
+        # Get the user to manage
+        user_to_manage = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            log_error(f"User not found for video management: {user_id}", "Admin")
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get user's videos
+        raw_videos = execute_query(
+            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,),
+            fetch_all=True
+        )
+        
+        log_info(f"Found {len(raw_videos) if raw_videos else 0} videos for user {user_to_manage['username']}", "Admin")
+        
+        # Transform videos for template
+        videos = []
+        for video in raw_videos:
+            if not isinstance(video, dict):
+                video_dict = {}
+                for key in video.keys():
+                    video_dict[key] = video[key]
+                video = video_dict
+            
+            processed_video = {
+                'id': video.get('id'),
+                'title': video.get('title', 'Untitled'),
+                'status': video.get('status', 'unknown'),
+                'created_at': video.get('created_at').strftime('%Y-%m-%d %H:%M') if video.get('created_at') else 'Unknown',
+                'video_path': video.get('video_path'),
+                'heygen_video_id': video.get('heygen_video_id'),
+                'audio_path': video.get('audio_path'),
+                'user_id': video.get('user_id')
+            }
+            videos.append(processed_video)
+        
+        return templates.TemplateResponse("portal/admin_manage_videos.html", {
+            "request": request,
+            "user": user,
+            "user_to_manage": user_to_manage,
+            "videos": videos,
+            "total_videos": len(videos),
+            "title": f"Manage Videos: {user_to_manage['username']}"
+        })
+        
+    except Exception as e:
+        log_error(f"Error in admin_manage_videos_page: {e}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
+
+@router.post("/admin/delete-video/{video_id}")
+async def admin_delete_video(request: Request, video_id: int):
+    """Admin delete video"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        log_info(f"Admin {user['username']} attempting to delete video {video_id}", "Admin")
+        
+        # Get video info first
+        video = execute_query(
+            "SELECT user_id FROM videos WHERE id = ?",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if video:
+            user_id = video["user_id"]
+            log_info(f"Video {video_id} belongs to user {user_id}", "Admin")
+            
+            # Delete video
+            execute_query(
+                "DELETE FROM videos WHERE id = ?",
+                (video_id,)
+            )
+            log_info(f"Admin {user['username']} deleted video {video_id} successfully", "Admin")
+            return RedirectResponse(url=f"/admin/manage-videos/{user_id}?success=video_deleted", status_code=303)
+        else:
+            log_error(f"Video not found for deletion: {video_id}", "Admin")
+            return RedirectResponse(url="/admin/users?error=video_not_found", status_code=303)
+            
+    except Exception as e:
+        log_error(f"Error deleting video {video_id}: {e}", "Admin", e)
+        return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
+
+@router.post("/admin/clear-user-videos/{user_id}")
+async def admin_clear_user_videos(request: Request, user_id: int):
+    """Admin clear all videos for a specific user"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        log_info(f"Admin {user['username']} clearing all videos for user {user_id}", "Admin")
+        
+        # Delete all videos for the user
+        execute_query(
+            "DELETE FROM videos WHERE user_id = ?",
+            (user_id,)
+        )
+        
+        log_info(f"Admin {user['username']} cleared all videos for user {user_id}", "Admin")
+        return RedirectResponse(url=f"/admin/manage-videos/{user_id}?success=all_videos_cleared", status_code=303)
+        
+    except Exception as e:
+        log_error(f"Error clearing videos for user {user_id}: {e}", "Admin", e)
+        return RedirectResponse(url=f"/admin/manage-videos/{user_id}?error=clear_failed", status_code=303)
 
 # ============================================================================
 # VIDEO BACKGROUND REPLACEMENT ROUTES
