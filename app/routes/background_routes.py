@@ -266,10 +266,19 @@ async def process_video_background(
         background_client = BackgroundFXClient()
         
         # Check if service is available
-        if not background_client.check_connection():
-            logger.error("BackgroundFX service is not available")
+        try:
+            connection_status = background_client.check_connection()
+            if connection_status.get('status') != 'ok':
+                logger.error(f"BackgroundFX service is not healthy: {connection_status}")
+                execute_query(
+                    "UPDATE videos SET status = 'error', error_message = 'Background service unavailable' WHERE id = ?",
+                    (video_id,)
+                )
+                return
+        except Exception as e:
+            logger.error(f"BackgroundFX connection check failed: {e}")
             execute_query(
-                "UPDATE videos SET status = 'error' WHERE id = ?",
+                "UPDATE videos SET status = 'error', error_message = 'Background service connection failed' WHERE id = ?",
                 (video_id,)
             )
             return

@@ -44,6 +44,7 @@ greenlet==3.2.2
 bcrypt==4.3.0
 pytest==7.4.4
 pytest-asyncio==0.21.1
+psutil==5.9.8  # For system monitoring in health checks
 
 # Typing & compatibility
 annotated-types==0.7.0
