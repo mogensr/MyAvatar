@@ -269,9 +269,6 @@ async def dashboard(request: Request):
         
         log_info(f"Dashboard data loaded: {len(videos) if videos else 0} videos, {len(avatars) if avatars else 0} avatars", "Web")
         
-        # DEBUG: Log actual video data to see what we have
-        log_info(f"Raw videos from database: {videos}", "Web")
-        
         # Convert database results to list of dicts for videos
         video_list = []
         total_duration = 0
@@ -1247,12 +1244,12 @@ async def admin_edit_user_submit(request: Request, user_id: int):
         return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
 
 # ============================================================================
-# AVATAR MANAGEMENT ROUTES - WITH DEBUG ENDPOINT TESTING
+# AVATAR MANAGEMENT ROUTES - CLEANED UP VERSION
 # ============================================================================
 
 @router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
 async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page - Fixed to match template expectations"""
+    """Admin manage user avatars page"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1280,7 +1277,7 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         
         log_info(f"Found {len(raw_avatars) if raw_avatars else 0} avatars for user {user_to_manage['username']}", "Admin")
         
-        # Transform avatars to match template expectations (admin_user_avatars.html)
+        # Transform avatars to match template expectations
         avatars = []
         for avatar in raw_avatars:
             # Convert database row to dict if needed
@@ -1294,8 +1291,8 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
             processed_avatar = {
                 'id': avatar.get('id'),
                 'user_id': avatar.get('user_id'),
-                'avatar_name': avatar.get('name', 'Unnamed Avatar'),  # Template expects avatar_name
-                'avatar_url': avatar.get('image_path'),                # Template expects avatar_url
+                'avatar_name': avatar.get('name', 'Unnamed Avatar'),
+                'avatar_url': avatar.get('image_path'),
                 'heygen_avatar_id': avatar.get('heygen_avatar_id'),
                 'created_at': avatar.get('created_at')
             }
@@ -1306,9 +1303,6 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
             
             avatars.append(processed_avatar)
         
-        log_info(f"Processed {len(avatars)} avatars for display", "Admin")
-        
-        # Use the correct template name (portal/admin_user_avatars.html)
         return templates.TemplateResponse("portal/admin_user_avatars.html", {
             "request": request,
             "user": user,
@@ -1320,13 +1314,55 @@ async def admin_manage_avatars_page(request: Request, user_id: int):
         log_error(f"Error in admin_manage_avatars_page: {e}", "Admin", e)
         return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
 
+@router.get("/admin/list-my-avatars")
+async def list_my_avatars(request: Request):
+    """Show first 50 avatars from your HeyGen account with names"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        heygen_api_key = os.getenv("HEYGEN_API_KEY")
+        if not heygen_api_key:
+            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
+        
+        headers = {"X-Api-Key": heygen_api_key, "Accept": "application/json"}
+        
+        response = requests.get("https://api.heygen.com/v2/avatars", headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            avatars_data = response.json()
+            avatars = avatars_data.get('data', {}).get('avatars', [])[:50]  # First 50 avatars
+            
+            avatar_list = []
+            for avatar in avatars:
+                avatar_list.append({
+                    'id': avatar.get('avatar_id'),
+                    'name': avatar.get('avatar_name', 'Unnamed'),
+                    'gender': avatar.get('gender', 'unknown'),
+                    'preview_url': avatar.get('preview_image_url', '')
+                })
+            
+            return JSONResponse(content={
+                "success": True,
+                "total_available": len(avatars_data.get('data', {}).get('avatars', [])),
+                "showing": len(avatar_list),
+                "avatars": avatar_list
+            })
+        else:
+            return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
+            
+    except Exception as e:
+        log_error(f"Error listing avatars: {e}", "Admin", e)
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @router.post("/admin/upload-avatar/{user_id}")
 async def admin_upload_avatar(
     request: Request,
     user_id: int,
     avatar_file: UploadFile = File(...)
 ):
-    """Upload avatar file for user - matches your template form action"""
+    """Upload avatar file for user"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1399,7 +1435,7 @@ async def admin_fetch_heygen_avatar(
     user_id: int,
     heygen_avatar_id: str = Form(...)
 ):
-    """Fetch avatar from HeyGen by ID - DEBUG VERSION WITH MULTIPLE ENDPOINTS"""
+    """Fetch avatar from HeyGen by ID - CLEANED UP VERSION"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1444,102 +1480,54 @@ async def admin_fetch_heygen_avatar(
             "Accept": "application/json"
         }
         
-        log_info(f"🔍 DEBUG: Attempting to fetch HeyGen avatar: {heygen_avatar_id}", "Admin")
+        log_info(f"Fetching HeyGen avatar: {heygen_avatar_id}", "Admin")
         
-        # Try multiple possible endpoints
-        endpoints_to_try = [
-            f"https://api.heygen.com/v1/avatar/{heygen_avatar_id}",  # Try v1 single avatar
-            f"https://api.heygen.com/v2/avatar/{heygen_avatar_id}",  # Try v2 single avatar
-            f"https://api.heygen.com/v1/avatars/{heygen_avatar_id}", # Try v1 with s
-            f"https://api.heygen.com/v2/avatars/{heygen_avatar_id}"  # Try v2 with s (your original)
-        ]
+        # Use the list endpoint to find the avatar (we know this works from your logs)
+        response = requests.get(
+            "https://api.heygen.com/v2/avatars",
+            headers=headers,
+            timeout=30
+        )
         
-        avatar_found = None
-        successful_endpoint = None
-        
-        for endpoint in endpoints_to_try:
-            try:
-                log_info(f"🔍 DEBUG: Trying endpoint: {endpoint}", "Admin")
-                response = requests.get(endpoint, headers=headers, timeout=30)
-                log_info(f"🔍 DEBUG: Response from {endpoint}: {response.status_code} - {response.text[:200]}...", "Admin")
+        if response.status_code == 200:
+            avatars_data = response.json()
+            avatars_list = avatars_data.get('data', {}).get('avatars', [])
+            
+            avatar_found = None
+            for avatar in avatars_list:
+                if avatar.get('avatar_id') == heygen_avatar_id:
+                    avatar_found = avatar
+                    break
+            
+            if avatar_found:
+                # Create avatar record
+                avatar_name = avatar_found.get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
+                avatar_preview_url = avatar_found.get('preview_image_url', '')
                 
-                if response.status_code == 200:
-                    avatar_data = response.json()
-                    
-                    # Check different response formats
-                    if avatar_data.get('data'):
-                        avatar_found = avatar_data['data']
-                        successful_endpoint = endpoint
-                        log_info(f"✅ DEBUG: Found avatar using endpoint: {endpoint}", "Admin")
-                        break
-                    elif avatar_data.get('avatar_id'):
-                        avatar_found = avatar_data
-                        successful_endpoint = endpoint
-                        log_info(f"✅ DEBUG: Found avatar using endpoint: {endpoint}", "Admin")
-                        break
-                        
-            except Exception as e:
-                log_info(f"❌ DEBUG: Endpoint {endpoint} failed: {e}", "Admin")
-                continue
-        
-        # If no single avatar endpoint worked, try the list endpoint
-        if not avatar_found:
-            log_info("🔍 DEBUG: Single avatar endpoints failed, trying list endpoint", "Admin")
-            try:
-                response = requests.get(
-                    "https://api.heygen.com/v2/avatars",
-                    headers=headers,
-                    timeout=30
+                execute_query(
+                    """
+                    INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (user_id, avatar_name, avatar_preview_url, heygen_avatar_id, datetime.now().isoformat())
                 )
                 
-                log_info(f"🔍 DEBUG: List endpoint response: {response.status_code}", "Admin")
-                
-                if response.status_code == 200:
-                    avatars_data = response.json()
-                    avatars_list = avatars_data.get('data', {}).get('avatars', [])
-                    
-                    log_info(f"🔍 DEBUG: Found {len(avatars_list)} total avatars in list", "Admin")
-                    
-                    for avatar in avatars_list:
-                        if avatar.get('avatar_id') == heygen_avatar_id:
-                            avatar_found = avatar
-                            successful_endpoint = "https://api.heygen.com/v2/avatars (list filtered)"
-                            log_info(f"✅ DEBUG: Found avatar {heygen_avatar_id} in list!", "Admin")
-                            break
-                    
-                    if not avatar_found:
-                        log_error(f"❌ DEBUG: Avatar {heygen_avatar_id} not found in list of {len(avatars_list)} avatars", "Admin")
-                        # Log first few avatar IDs for debugging
-                        if avatars_list:
-                            sample_ids = [av.get('avatar_id', 'NO_ID') for av in avatars_list[:5]]
-                            log_info(f"🔍 DEBUG: Sample avatar IDs from list: {sample_ids}", "Admin")
-                            
-            except Exception as e:
-                log_error(f"❌ DEBUG: List endpoint also failed: {e}", "Admin")
-        
-        if avatar_found:
-            # Create avatar record
-            avatar_name = avatar_found.get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
-            avatar_preview_url = avatar_found.get('preview_image_url', '')
-            
-            execute_query(
-                """
-                INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id, created_at)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (user_id, avatar_name, avatar_preview_url, heygen_avatar_id, datetime.now().isoformat())
-            )
-            
-            log_info(f"✅ Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id} using {successful_endpoint}", "Admin")
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched",
-                status_code=303
-            )
+                log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
+                return RedirectResponse(
+                    url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched",
+                    status_code=303
+                )
+            else:
+                # Avatar ID not found in HeyGen's library
+                log_error(f"Avatar ID {heygen_avatar_id} not found in HeyGen's avatar library", "Admin")
+                return RedirectResponse(
+                    url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found",
+                    status_code=303
+                )
         else:
-            # Avatar ID not found in any endpoint
-            log_error(f"❌ Avatar ID {heygen_avatar_id} not found in any HeyGen endpoint", "Admin")
+            log_error(f"HeyGen API error: {response.status_code}", "Admin")
             return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found_all_endpoints",
+                url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
                 status_code=303
             )
         
@@ -1550,9 +1538,46 @@ async def admin_fetch_heygen_avatar(
             status_code=303
         )
 
+@router.post("/admin/rename-avatar/{avatar_id}")
+async def admin_rename_avatar(
+    request: Request,
+    avatar_id: int,
+    new_name: str = Form(...)
+):
+    """Rename an avatar"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        # Get the avatar
+        avatar = execute_query(
+            "SELECT user_id FROM avatars WHERE id = ?",
+            (avatar_id,),
+            fetch_one=True
+        )
+        
+        if not avatar:
+            return JSONResponse(status_code=404, content={"error": "Avatar not found"})
+        
+        user_id = avatar["user_id"]
+        
+        # Update avatar name
+        execute_query(
+            "UPDATE avatars SET name = ? WHERE id = ?",
+            (new_name.strip(), avatar_id)
+        )
+        
+        log_info(f"Admin {user['username']} renamed avatar {avatar_id} to '{new_name}'", "Admin")
+        return JSONResponse(content={"success": True, "message": "Avatar renamed successfully"})
+        
+    except Exception as e:
+        log_error(f"Avatar rename error: {e}", "Admin", e)
+        return JSONResponse(status_code=500, content={"error": "Rename failed"})
+
 @router.post("/admin/delete-avatar/{avatar_id}")
 async def admin_delete_avatar(request: Request, avatar_id: int):
-    """Delete avatar - matches your template form action"""
+    """Delete avatar"""
     user = get_current_user(request)
     if not user or not is_admin(request):
         return RedirectResponse(url="/login", status_code=303)
@@ -1734,44 +1759,6 @@ async def admin_clear_user_videos(request: Request, user_id: int):
     except Exception as e:
         log_error(f"Error clearing videos for user {user_id}: {e}", "Admin", e)
         return RedirectResponse(url=f"/admin/manage-videos/{user_id}?error=clear_failed", status_code=303)
-
-# ============================================================================
-# VIDEO BACKGROUND REPLACEMENT ROUTES
-# ============================================================================
-
-@router.get("/videos/{video_id}/backgrounds", response_class=HTMLResponse)
-async def video_backgrounds_page(request: Request, video_id: int):
-    """
-    Video backgrounds page for selecting and applying backgrounds
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check if video exists and belongs to user
-    video = execute_query(
-        "SELECT * FROM videos WHERE id = ? AND user_id = ?",
-        (video_id, user["id"]),
-        fetch_one=True
-    )
-    
-    if not video:
-        return RedirectResponse(url="/dashboard?error=video_not_found", status_code=303)
-    
-    # Get video URL
-    video_url = f"/static/videos/{video.get('heygen_video_id')}.mp4"
-    if video.get('file_path'):
-        video_url = f"/static/videos/{os.path.basename(video['file_path'])}"
-    
-    return templates.TemplateResponse(
-        "video_backgrounds.html", 
-        {
-            "request": request,
-            "user": user,
-            "video": video,
-            "video_url": video_url
-        }
-    )
 
 # ============================================================================
 # ADMIN UTILITY ROUTES
