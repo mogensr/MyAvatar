@@ -459,8 +459,8 @@ async def heygen_webhook(request: Request):
         # HeyGen can send different formats, handle both
         video_id = data.get("video_id") or data.get("data", {}).get("video_id") or data.get("event_data", {}).get("video_id")
         status = data.get("status") or data.get("event", "").replace("video.", "")
-        video_url = data.get("video_url") or data.get("data", {}).get("video_url")
-        event = data.get("event", "unknown")
+        video_url = data.get("video_url") or data.get("data", {}).get("video_url") or data.get("event_data", {}).get("url")
+        event = data.get("event", data.get("event_type", "unknown"))
         
         if not video_id:
             log_error("No video_id in webhook data", "Webhook")
@@ -469,7 +469,7 @@ async def heygen_webhook(request: Request):
         log_info(f"Processing webhook - Event: {event}, Video: {video_id}, Status: {status}", "Webhook")
         
         # Handle different event types
-        if event in ["video.completed", "completed"] or status == "completed":
+        if event in ["video.completed", "completed", "avatar_video.success"] or status == "completed":
             if video_url:
                 log_info(f"Video completed: {video_id}, URL: {video_url}", "Webhook")
                 execute_query(
