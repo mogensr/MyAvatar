@@ -580,6 +580,64 @@ async def heygen_webhook(request: Request):
 # VIDEO CREATION API ROUTES - CLOUDINARY + HEYGEN INTEGRATION
 # ============================================================================
 
+@router.get("/api/videos-status")
+async def get_videos_status(request: Request):
+    """Get all videos for current user - endpoint for AJAX polling"""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    log_info(f"Videos status check via AJAX by user {user['username']}", "API")
+    
+    try:
+        # Get user's videos
+        videos = execute_query(
+            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
+            (user["id"],),
+            fetch_all=True
+        )
+        
+        # Convert database results to list of dicts for videos
+        video_list = []
+        for v in videos:
+            try:
+                if isinstance(v, dict):
+                    video_dict = v
+                else:
+                    # Handle SQLite/PostgreSQL Row objects
+                    video_dict = {}
+                    for key in v.keys():
+                        video_dict[key] = v[key]
+                
+                # Format created_at as string if it's a datetime object
+                created_at = video_dict.get('created_at')
+                if created_at and not isinstance(created_at, str):
+                    created_at = created_at.strftime('%m/%d/%Y')
+                
+                # Ensure safe access to fields
+                safe_video = {
+                    'id': video_dict.get('id'),
+                    'title': video_dict.get('title', 'Untitled'),
+                    'status': video_dict.get('status', 'unknown'),
+                    'created_at': created_at or 'Unknown',
+                    'video_path': video_dict.get('video_path'),
+                    'thumbnail_url': video_dict.get('thumbnail_url'),
+                    'duration': video_dict.get('duration'),
+                    'heygen_video_id': video_dict.get('heygen_video_id'),
+                    'video_format': '16:9'  # Default format
+                }
+                video_list.append(safe_video)
+                
+            except Exception as e:
+                log_error(f"Error processing video data: {e}", "API")
+                continue
+        
+        return JSONResponse(content={"videos": video_list})
+        
+    except Exception as e:
+        log_error(f"Error fetching videos status: {e}", "API")
+        return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
 @router.post("/api/create-video")
 async def create_video_from_audio(
     request: Request,
