@@ -371,9 +371,10 @@ async def heygen_webhook(request: Request):
         data = await request.json()
         log_info(f"HeyGen webhook data: {data}", "Webhook")
 
-        video_id = data.get("video_id") or data.get("data", {}).get("video_id")
-        status = data.get("status") or data.get("event", "").replace("video.", "")
-        video_url = data.get("video_url") or data.get("data", {}).get("video_url")
+        # Support multiple webhook formats including newer HeyGen format with event_data
+        video_id = data.get("video_id") or data.get("data", {}).get("video_id") or data.get("event_data", {}).get("video_id")
+        status = data.get("status") or data.get("event", "").replace("video.", "") or data.get("event_type", "").replace("avatar_video.", "")
+        video_url = data.get("video_url") or data.get("data", {}).get("video_url") or data.get("event_data", {}).get("url")
         event = data.get("event", "unknown")
 
         if not video_id:
