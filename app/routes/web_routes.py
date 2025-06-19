@@ -68,6 +68,54 @@ def check_gdpr_consent(user_id: int, request_path: str) -> bool:
 # Create router
 router = APIRouter(prefix="", tags=["web"])
 
+# ============================================================================
+# ADMIN ROUTES
+# ============================================================================
+
+@router.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    """
+    Admin dashboard page - requires admin access
+    """
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/auth/login", status_code=303)
+        
+    if not user.get("is_admin", 0) == 1:
+        log_warning(f"Non-admin user {user['username']} attempted to access admin dashboard", "Admin")
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    # Check GDPR consent first
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
+        
+    try:
+        # Get system stats
+        user_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
+        video_count = execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_dashboard.html",
+            {
+                "request": request,
+                "user": user,
+                "user_count": user_count["count"] if user_count else 0,
+                "video_count": video_count["count"] if video_count else 0,
+                "current_page": "admin_dashboard"
+            }
+        )
+    except Exception as e:
+        log_error("Error loading admin dashboard", "Admin", e)
+        return templates.TemplateResponse(
+            "portal/admin_dashboard.html",
+            {
+                "request": request,
+                "user": user,
+                "error": "Error loading dashboard data",
+                "current_page": "admin_dashboard"
+            }
+        )
+
 # Set up templates
 templates = Jinja2Templates(directory="templates")
 

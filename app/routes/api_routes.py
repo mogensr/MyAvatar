@@ -459,3 +459,91 @@ async def get_heygen_avatars(request: Request):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+@router.get("/video-status/{video_id}")
+async def get_video_status(request: Request, video_id: str):
+    """
+    Check status of a video by ID
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE heygen_video_id = ?",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+            
+        # Check if user has access to this video
+        if not user["is_admin"] and video["user_id"] != user["id"]:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Access denied"}
+            )
+            
+        # If video is completed or failed, return current status
+        if video["status"] in ["completed", "failed"]:
+            return JSONResponse(content={
+                "success": True,
+                "status": video["status"],
+                "video_url": video.get("video_url"),
+                "thumbnail_url": video.get("thumbnail_url")
+            })
+        
+        # Otherwise, check current status from HeyGen API
+        api_key = os.getenv("HEYGEN_API_KEY") or user.get("api_key")
+        if not api_key:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "No API key available"}
+            )
+            
+        # Get video details from HeyGen API
+        result = get_video_details(api_key, video_id)
+        
+        if not result["success"]:
+            return JSONResponse(
+                status_code=500,
+                content={"success": False, "error": result.get("error", "Failed to fetch video status")}
+            )
+            
+        status = result["data"]["status"]
+        
+        # Update status in database if changed
+        if status != video["status"]:
+            execute_query(
+                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
+                (status, video_id)
+            )
+            
+            # If completed, update URLs too
+            if status == "completed" and "video_url" in result["data"]:
+                execute_query(
+                    "UPDATE videos SET video_url = ?, thumbnail_url = ? WHERE heygen_video_id = ?",
+                    (result["data"]["video_url"], result["data"].get("thumbnail_url", ""), video_id)
+                )
+                
+        return JSONResponse(content={
+            "success": True,
+            "status": status,
+            "video_url": result["data"].get("video_url"),
+            "thumbnail_url": result["data"].get("thumbnail_url")
+        })
+    except Exception as e:
+        log_error(f"Error checking video status for {video_id}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
