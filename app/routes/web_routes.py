@@ -1,5 +1,5 @@
 """
-Web routes for MyAvatar - Enhanced with Cloudinary integration and HeyGen Voice Integration
+Web routes for MyAvatar - Enhanced with Cloudinary integration, HeyGen Voice Integration, and GDPR Compliance
 """
 import os
 import uuid
@@ -11,7 +11,7 @@ import time
 import cloudinary
 import cloudinary.uploader
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, Response
 from fastapi.templating import Jinja2Templates
 from datetime import datetime, timedelta
 from typing import Optional
@@ -22,6 +22,14 @@ from ..logger.log_handler import log_info, log_error
 
 # Import HeyGen functions
 from app.api.heygen import create_video_from_text
+
+# Import GDPR module
+from ..gdpr.gdpr_compliance import (
+    GDPR_CONSENT_TEXT, store_user_consent, has_user_given_consent,
+    get_user_consent_data, export_user_data, delete_user_account,
+    get_consent_statistics, get_users_without_consent, get_deletion_log,
+    get_client_ip, require_gdpr_consent
+)
 
 # ============================================================================
 # UTILITIES
@@ -44,6 +52,14 @@ def secure_filename(filename):
     if not filename or len(filename) > 100:
         return f"file_{uuid.uuid4().hex[:8]}.jpg"
     return filename
+
+def check_gdpr_consent(user_id: int, request_path: str) -> bool:
+    """Check if user needs GDPR consent before accessing protected routes"""
+    # Skip GDPR check for consent and logout pages
+    if request_path in ["/gdpr/consent", "/logout", "/login", "/register"]:
+        return True
+    
+    return not require_gdpr_consent(user_id)
 
 # ============================================================================
 # ROUTER SETUP
@@ -69,7 +85,7 @@ async def logout(request: Request):
     return response
 
 # ============================================================================
-# MAIN PAGES - WITH ADMIN REDIRECT
+# MAIN PAGES - WITH ADMIN REDIRECT AND GDPR CHECK
 # ============================================================================
 
 @router.get("/", response_class=HTMLResponse)
@@ -79,6 +95,10 @@ async def index(request: Request):
     """
     user = get_current_user(request)
     if user:
+        # Check GDPR consent
+        if require_gdpr_consent(user["id"]):
+            return RedirectResponse(url="/gdpr/consent", status_code=303)
+        
         # Redirect admin users to admin dashboard
         if user.get("is_admin", 0) == 1:
             return RedirectResponse(url="/admin/dashboard", status_code=303)
@@ -136,8 +156,11 @@ async def login_post(
             expires_delta=timedelta(minutes=120)
         )
         
+        # Check GDPR consent before redirecting
+        if require_gdpr_consent(user["id"]):
+            response = RedirectResponse(url="/gdpr/consent", status_code=303)
         # Create response - redirect admin users to admin dashboard
-        if user.get("is_admin", 0) == 1:
+        elif user.get("is_admin", 0) == 1:
             log_info(f"Admin user {user['username']} logged in, redirecting to admin dashboard", "Auth")
             response = RedirectResponse(url="/admin/dashboard", status_code=303)
         else:
@@ -236,7 +259,184 @@ async def register(
         )
 
 # ============================================================================
-# DASHBOARD ROUTE - WITH REAL STATISTICS
+# GDPR COMPLIANCE ROUTES
+# ============================================================================
+
+@router.get("/gdpr/consent", response_class=HTMLResponse)
+async def gdpr_consent_page(request: Request):
+    """GDPR consent page for new users"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Check if user already gave consent
+    if has_user_given_consent(user["id"]):
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    return templates.TemplateResponse("consent.html", {
+        "request": request,
+        "user": user,
+        "consent_text": GDPR_CONSENT_TEXT
+    })
+
+@router.post("/gdpr/consent")
+async def gdpr_consent_submit(
+    request: Request,
+    consent_given: bool = Form(...)
+):
+    """Process GDPR consent form submission"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    if not consent_given:
+        return templates.TemplateResponse("consent.html", {
+            "request": request,
+            "user": user,
+            "consent_text": GDPR_CONSENT_TEXT,
+            "error": "You must accept the privacy policy and terms to use MyAvatar.dk"
+        })
+    
+    # Store consent
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("User-Agent", "")
+    
+    success = store_user_consent(
+        user["id"], 
+        user["email"], 
+        consent_given=True,
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
+    if success:
+        log_info(f"GDPR consent given by user {user['email']}", "GDPR")
+        return RedirectResponse(url="/dashboard?gdpr_consent=success", status_code=303)
+    else:
+        return templates.TemplateResponse("consent.html", {
+            "request": request,
+            "user": user,
+            "consent_text": GDPR_CONSENT_TEXT,
+            "error": "Error saving your consent. Please try again."
+        })
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """User privacy dashboard - view, export, delete data"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Check GDPR consent
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
+    
+    # Get user's consent data
+    consent_data = get_user_consent_data(user["id"])
+    
+    # Get user's data summary
+    user_videos = execute_query(
+        "SELECT COUNT(*) as count FROM videos WHERE user_id = ?",
+        (user["id"],),
+        fetch_one=True
+    )
+    
+    user_avatars = execute_query(
+        "SELECT COUNT(*) as count FROM avatars WHERE user_id = ?",
+        (user["id"],),
+        fetch_one=True
+    )
+    
+    return templates.TemplateResponse("privacy/dashboard.html", {
+        "request": request,
+        "user": user,
+        "consent_data": consent_data,
+        "video_count": user_videos["count"] if user_videos else 0,
+        "avatar_count": user_avatars["count"] if user_avatars else 0
+    })
+
+@router.post("/privacy/export-data")
+async def export_user_data_endpoint(request: Request):
+    """Export all user data as ZIP file"""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        zip_data = export_user_data(user["id"])
+        
+        # Create filename with timestamp
+        filename = f"myavatar_data_export_{user['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        
+        return Response(
+            content=zip_data,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        log_error(f"Error exporting data for user {user['email']}: {e}", "GDPR", e)
+        return JSONResponse(status_code=500, content={"error": "Error generating data export"})
+
+@router.post("/privacy/delete-account")
+async def delete_account_endpoint(
+    request: Request,
+    confirm_email: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    """Delete user account (GDPR right to be forgotten)"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Verify email matches
+    if confirm_email != user["email"]:
+        return RedirectResponse(url="/privacy?error=email_mismatch", status_code=303)
+    
+    # Verify password
+    if not authenticate_user(user["username"], confirm_password):
+        return RedirectResponse(url="/privacy?error=invalid_password", status_code=303)
+    
+    # Delete the account
+    success = delete_user_account(user["id"])
+    
+    if success:
+        # Clear session
+        response = RedirectResponse(url="/login?account_deleted=true", status_code=303)
+        response.delete_cookie(key="access_token")
+        response.delete_cookie(key="refresh_token")
+        return response
+    else:
+        return RedirectResponse(url="/privacy?error=deletion_failed", status_code=303)
+
+@router.post("/privacy/update-consent")
+async def update_consent_endpoint(
+    request: Request,
+    consent_given: bool = Form(...)
+):
+    """Update user's GDPR consent"""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("User-Agent", "")
+    
+    success = store_user_consent(
+        user["id"],
+        user["email"],
+        consent_given=consent_given,
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
+    if success:
+        return JSONResponse(content={"success": True, "message": "Consent updated successfully"})
+    else:
+        return JSONResponse(status_code=500, content={"error": "Error updating consent"})
+
+# ============================================================================
+# DASHBOARD ROUTE - WITH REAL STATISTICS AND GDPR CHECK
 # ============================================================================
 
 @router.get("/dashboard", response_class=HTMLResponse)
@@ -249,6 +449,10 @@ async def dashboard(request: Request):
     if not user:
         log_info("Unauthenticated dashboard access attempt", "Web")
         return RedirectResponse(url="/login", status_code=303)
+    
+    # Check GDPR consent
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
     
     log_info(f"Dashboard access by user {user.get('username')}", "Web")
     
@@ -354,7 +558,7 @@ async def dashboard(request: Request):
         )
 
 # ============================================================================
-# CLIENT VIDEO PAGES
+# CLIENT VIDEO PAGES - WITH GDPR CHECK
 # ============================================================================
 
 @router.get("/videos", response_class=HTMLResponse)
@@ -365,6 +569,10 @@ async def videos_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    
+    # Check GDPR consent
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
     
     log_info(f"Videos page accessed by user {user.get('username')}", "Web")
     
@@ -420,7 +628,7 @@ async def videos_page(request: Request):
         return RedirectResponse(url="/dashboard", status_code=303)
 
 # ============================================================================
-# VIDEO CREATION PAGES
+# VIDEO CREATION PAGES - WITH GDPR CHECK
 # ============================================================================
 
 @router.get("/voice-recording", response_class=HTMLResponse)
@@ -431,6 +639,10 @@ async def voice_recording_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    
+    # Check GDPR consent
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
     
     log_info(f"Voice recording page accessed by user {user.get('username')}", "Web")
     
@@ -472,6 +684,10 @@ async def text_to_video_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    
+    # Check GDPR consent
+    if require_gdpr_consent(user["id"]):
+        return RedirectResponse(url="/gdpr/consent", status_code=303)
     
     log_info(f"Text-to-video page accessed by user {user.get('username')}", "Web")
     
@@ -1102,6 +1318,108 @@ async def admin_dashboard(request: Request):
             "avatar_count": avatar_count["count"] if avatar_count else 0
         }
     )
+
+# ============================================================================
+# ADMIN GDPR ROUTES
+# ============================================================================
+
+@router.get("/admin/gdpr", response_class=HTMLResponse)
+async def admin_gdpr_dashboard(request: Request):
+    """Admin GDPR compliance dashboard"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Get consent statistics
+    stats = get_consent_statistics()
+    
+    # Get users without consent
+    users_without_consent = get_users_without_consent()
+    
+    # Get recent deletion log
+    deletion_log = get_deletion_log()
+    
+    return templates.TemplateResponse("portal/admin_gdpr.html", {
+        "request": request,
+        "user": user,
+        "stats": stats,
+        "users_without_consent": users_without_consent,
+        "deletion_log": deletion_log[:10]  # Show last 10 deletions
+    })
+
+@router.post("/admin/gdpr/export-user-data/{user_id}")
+async def admin_export_user_data(request: Request, user_id: int):
+    """Admin export specific user's data"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        # Get target user info
+        target_user = execute_query(
+            "SELECT username, email FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not target_user:
+            return JSONResponse(status_code=404, content={"error": "User not found"})
+        
+        zip_data = export_user_data(user_id)
+        
+        filename = f"admin_export_{target_user['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        
+        log_info(f"Admin {user['username']} exported data for user {target_user['email']}", "GDPR")
+        
+        return Response(
+            content=zip_data,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        log_error(f"Admin export error for user {user_id}: {e}", "GDPR", e)
+        return JSONResponse(status_code=500, content={"error": "Error generating data export"})
+
+@router.post("/admin/gdpr/delete-user/{user_id}")
+async def admin_delete_user_account(request: Request, user_id: int):
+    """Admin delete user account"""
+    user = get_current_user(request)
+    if not user or not is_admin(request):
+        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
+    
+    try:
+        # Get target user info
+        target_user = execute_query(
+            "SELECT username, email FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not target_user:
+            return JSONResponse(status_code=404, content={"error": "User not found"})
+        
+        # Don't allow deleting other admins
+        if user_id != user["id"]:
+            target_is_admin = execute_query(
+                "SELECT is_admin FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
+            if target_is_admin and target_is_admin["is_admin"]:
+                return JSONResponse(status_code=403, content={"error": "Cannot delete admin users"})
+        
+        success = delete_user_account(user_id, admin_user_id=user["id"])
+        
+        if success:
+            log_info(f"Admin {user['username']} deleted user account {target_user['email']}", "GDPR")
+            return JSONResponse(content={"success": True, "message": f"User {target_user['username']} deleted successfully"})
+        else:
+            return JSONResponse(status_code=500, content={"error": "Error deleting user account"})
+            
+    except Exception as e:
+        log_error(f"Admin delete user error for user {user_id}: {e}", "GDPR", e)
+        return JSONResponse(status_code=500, content={"error": "Error deleting user account"})
 
 @router.get("/admin/create-user", response_class=HTMLResponse)
 async def admin_create_user_page(request: Request):
