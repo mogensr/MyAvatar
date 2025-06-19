@@ -955,14 +955,14 @@
             formData.append('title', document.getElementById('videoTitle').value);
             formData.append('description', document.getElementById('videoDescription').value);
             formData.append('avatar_id', selectedAvatarId);
-            formData.append('video_format', selectedFormat);
+            formData.append('format', selectedFormat);
             
             // Show progress modal
             document.getElementById('progressModal').classList.add('show');
             updateProgressModal('Uploading audio...', 10);
             
             // Submit to API
-            fetch('/api/create-video', {
+            fetch('/api/videos/create-from-audio', {
                 method: 'POST',
                 body: formData
             })
