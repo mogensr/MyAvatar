@@ -152,6 +152,14 @@ async def startup_event():
         update_database_schema()
         create_admin_user()  # Create admin user if not exists
         
+        # Initialize GDPR schema
+        try:
+            from app.database.gdpr_schema import initialize_gdpr_schema
+            initialize_gdpr_schema()
+            logger.info("GDPR schema initialized")
+        except Exception as gdpr_error:
+            log_error(f"Error initializing GDPR schema: {str(gdpr_error)}", "Server", gdpr_error)
+        
         # Initialize background replacement feature only if not in safe mode
         if ENABLE_BACKGROUND_REPLACEMENT:
             logger.info("Background replacement functionality enabled via BackgroundFX microservice")
