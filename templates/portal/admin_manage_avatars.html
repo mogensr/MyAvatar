@@ -87,7 +87,7 @@
                     <div class="row g-3 align-items-end">
                         <div class="col-md-8">
                             <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
-                            <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" placeholder="Enter HeyGen Avatar ID" required>
+                            <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" required>
                             <div class="form-text">Enter the Avatar ID from your HeyGen account</div>
                         </div>
                         <div class="col-md-4">
@@ -95,6 +95,18 @@
                         </div>
                     </div>
                 </form>
+                
+                <!-- Voice ID Management -->
+                <hr>
+                <h5 class="card-title">🔊 Voice ID Management</h5>
+                <div class="mb-3">
+                    <label for="current_voice_id" class="form-label">Current Voice ID</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="current_voice_id" value="{{ user_to_manage.heygen_voice_id or '' }}" readonly>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#voiceModal">Change Voice ID</button>
+                    </div>
+                    <div class="form-text">This voice ID is used for public avatars that require a voice</div>
+                </div>
             </div>
         </div>
 
@@ -173,5 +185,138 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Voice ID Selection Modal -->
+    <div class="modal fade" id="voiceModal" tabindex="-1" aria-labelledby="voiceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="voiceModalLabel">Voice ID Management</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Manual Voice ID Entry -->
+                    <div class="mb-4">
+                        <h6>Manual Voice ID Entry</h6>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="new_voice_id" placeholder="Enter HeyGen Voice ID">
+                            <button class="btn btn-primary" type="button" id="saveVoiceBtn">Save Changes</button>
+                        </div>
+                        <div class="form-text">Enter a specific voice ID manually</div>
+                    </div>
+                    
+                    <!-- Available Voices from HeyGen -->
+                    <hr>
+                    <h6>Select from Available Voices</h6>
+                    <div class="mb-3">
+                        <button class="btn btn-outline-primary btn-sm mb-3" id="loadVoicesBtn">Load Available Voices</button>
+                        <div class="form-text mb-2">Select a voice from the list of available HeyGen voices</div>
+                        <div id="voicesContainer" class="list-group">
+                            <div class="text-center py-3 text-muted" id="loadingVoices" style="display: none;">Loading voices...</div>
+                            <div class="text-center py-3 text-muted" id="noVoicesMessage">Click the button above to load available voices</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Voice ID Management
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load voices button
+            const loadVoicesBtn = document.getElementById('loadVoicesBtn');
+            const voicesContainer = document.getElementById('voicesContainer');
+            const loadingVoices = document.getElementById('loadingVoices');
+            const noVoicesMessage = document.getElementById('noVoicesMessage');
+            const saveVoiceBtn = document.getElementById('saveVoiceBtn');
+            const currentVoiceInput = document.getElementById('current_voice_id');
+            const newVoiceInput = document.getElementById('new_voice_id');
+            const userId = '{{ user_to_manage.id }}';
+            
+            // Load available voices
+            loadVoicesBtn.addEventListener('click', function() {
+                loadingVoices.style.display = 'block';
+                noVoicesMessage.style.display = 'none';
+                voicesContainer.innerHTML = '';
+                
+                // Add loading indicator
+                voicesContainer.appendChild(loadingVoices);
+                
+                // Call API to get voices
+                fetch('/api/voices')
+                    .then(response => response.json())
+                    .then(data => {
+                        loadingVoices.style.display = 'none';
+                        
+                        if (data.success && data.voices && data.voices.length > 0) {
+                            // Create voice list
+                            data.voices.forEach(voice => {
+                                const voiceItem = document.createElement('button');
+                                voiceItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                                voiceItem.innerHTML = `
+                                    <div>
+                                        <strong>${voice.name}</strong>
+                                        <br>
+                                        <small class="text-muted">${voice.id}</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">${voice.language || 'Unknown'}</span>
+                                `;
+                                voiceItem.addEventListener('click', function() {
+                                    newVoiceInput.value = voice.id;
+                                });
+                                voicesContainer.appendChild(voiceItem);
+                            });
+                        } else {
+                            voicesContainer.innerHTML = '<div class="text-center py-3 text-danger">No voices available or error loading voices</div>';
+                        }
+                    })
+                    .catch(error => {
+                        loadingVoices.style.display = 'none';
+                        voicesContainer.innerHTML = '<div class="text-center py-3 text-danger">Error loading voices. Please try again.</div>';
+                        console.error('Error loading voices:', error);
+                    });
+            });
+            
+            // Save voice ID changes
+            saveVoiceBtn.addEventListener('click', function() {
+                const newVoiceId = newVoiceInput.value.trim();
+                if (!newVoiceId) {
+                    alert('Please enter a voice ID');
+                    return;
+                }
+                
+                // Call API to update voice ID
+                fetch('/admin/update-voice-id', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        voice_id: newVoiceId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentVoiceInput.value = newVoiceId;
+                        alert('Voice ID updated successfully!');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('voiceModal'));
+                        modal.hide();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to update voice ID'));
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating voice ID. Please try again.');
+                    console.error('Error:', error);
+                });
+            });
+        });
+    </script>
 </body>
 </html>

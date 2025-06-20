@@ -35,12 +35,15 @@ from app.compatibility import ENABLE_SAFE_MODE, ENABLE_BACKGROUND_REPLACEMENT, l
 from app.logger.log_handler import log_handler, log_info, log_error, log_warning
 from app.db.database import init_database, update_database_schema, get_db_connection
 from app.db.admin import create_admin_user
+# Import available route modules
 from app.routes.api_routes import router as api_router
 from app.routes.web_routes import router as web_router
 from app.routes.finance_routes import router as finance_router
 from app.routes.health_routes import router as health_router
 from app.routes.admin_routes import router as admin_router
 from app.routes.debug_routes import router as debug_router
+from app.routes.mobile_debug import router as mobile_debug_router
+from app.routes.voice_routes import router as voice_router
 
 # Conditionally import background replacement components
 if ENABLE_BACKGROUND_REPLACEMENT:
@@ -78,6 +81,8 @@ app.include_router(finance_router)
 app.include_router(health_router)
 app.include_router(admin_router)
 app.include_router(debug_router)
+app.include_router(voice_router)
+app.include_router(mobile_debug_router)
 
 # Conditionally register background routes
 if ENABLE_BACKGROUND_REPLACEMENT:
