@@ -113,6 +113,7 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         text: Text to convert to speech
         video_format: Video format (16:9, 9:16, 1:1)
         voice_id: ID of the voice to use. If None or 'cloned', will use avatar's cloned voice
+           For public avatars (not starting with 'custom-'), a voice_id MUST be provided
         
     Returns:
         Dictionary with video details or error information
@@ -158,12 +159,24 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         }
     }
     
-    # Add voice_id if specified
+    # Check if this is a public avatar (not starting with custom-)
+    is_public_avatar = not avatar_id.startswith("custom-")
+    
+    # For public avatars like Abigail_expressive_2024112501, a voice_id is REQUIRED
+    if is_public_avatar and (not voice_id or voice_id.lower() == 'cloned'):
+        log_error(f"Public avatar {avatar_id} requires a specific voice_id", "HeyGen API")
+        return {
+            "success": False,
+            "error": f"Public avatars require a specific voice_id. For avatar '{avatar_id}', please provide a voice ID."
+        }
+    
+    # Add voice_id for all public avatars or when specifically provided for custom avatars
     if voice_id and voice_id.lower() != 'cloned':
         data["video_inputs"][0]["voice"]["voice_id"] = voice_id
         log_info(f"Using specified voice_id: {voice_id}", "HeyGen API")
     else:
-        log_info(f"Using avatar's cloned voice for avatar_id: {avatar_id}", "HeyGen API")
+        # This will only happen for custom avatars that use their own cloned voice
+        log_info(f"Using avatar's cloned voice for custom avatar_id: {avatar_id}", "HeyGen API")
     
     try:
         log_info(f"Creating TTS video with avatar {avatar_id}, format: {video_format}", "HeyGen API")

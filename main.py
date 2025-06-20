@@ -40,6 +40,7 @@ from app.routes.web_routes import router as web_router
 from app.routes.finance_routes import router as finance_router
 from app.routes.health_routes import router as health_router
 from app.routes.admin_routes import router as admin_router
+from app.routes.debug_routes import router as debug_router
 
 # Conditionally import background replacement components
 if ENABLE_BACKGROUND_REPLACEMENT:
@@ -76,6 +77,7 @@ app.include_router(web_router)
 app.include_router(finance_router)
 app.include_router(health_router)
 app.include_router(admin_router)
+app.include_router(debug_router)
 
 # Conditionally register background routes
 if ENABLE_BACKGROUND_REPLACEMENT:
