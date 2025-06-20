@@ -261,20 +261,19 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         log_error(error_msg, "HeyGen API", e)
         return {"success": False, "error": error_msg}
     except Exception as e:
-        error_msg = f"Exception in TTS video creation: {str(e)}"
+        error_msg = f"Exception in HeyGen API call: {str(e)}"
         log_error(error_msg, "HeyGen API", e)
         return {"success": False, "error": error_msg}
 
-# PREMIUM FEATURES
 def get_available_avatars(api_key: str):
     """
-    Get list of available avatars from HeyGen
+    Get available avatars from HeyGen API
     
     Args:
         api_key: HeyGen API key
         
     Returns:
-        List of avatars or error information
+        Dictionary with avatars list or error information
     """
     headers = {
         "X-Api-Key": api_key,
