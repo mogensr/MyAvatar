@@ -147,7 +147,7 @@ async def create_video_from_text_endpoint(
     request: Request,
     text: str = Form(...),
     format: str = Form("16:9"),
-    voice_id: str = Form("en-US-JennyNeural"),
+    voice_id: str = Form(None),  # Changed to None default to allow system to find the right voice ID
     title: str = Form(None)
 ):
     """
@@ -185,6 +185,35 @@ async def create_video_from_text_endpoint(
                     status_code=400,
                     content={"success": False, "error": "No avatar available"}
                 )
+        
+        # Check if this is a public avatar (not starting with "custom-")
+        is_public_avatar = not avatar_id.startswith("custom-")
+        
+        # If public avatar and no voice_id provided, try to find user's preferred voice ID
+        if is_public_avatar and not voice_id:
+            # Try to get voice ID from user_settings
+            try:
+                user_voice = execute_query(
+                    "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_name = 'voice_id'",
+                    (user["id"],),
+                    fetch_one=True
+                )
+                
+                if user_voice and user_voice["setting_value"]:
+                    voice_id = user_voice["setting_value"]
+                    log_info(f"Using user's preferred voice_id from settings: {voice_id}", "API")
+            except Exception as e:
+                log_warning(f"Error retrieving user voice setting: {str(e)}", "API")
+        
+        # For testuser with specific public avatars, hardcode the voice ID if not found elsewhere
+        if is_public_avatar and not voice_id and user.get("username") == "testuser":
+            voice_id = "0f04c50500bf417396ba2e846d7bd3d7"  # Use the voice ID you provided
+            log_info(f"Using hardcoded voice_id for testuser with public avatar: {voice_id}", "API")
+        
+        # If still no voice_id for public avatar, use a default
+        if is_public_avatar and not voice_id:
+            voice_id = "en-US-JennyNeural"  # Default Microsoft neural voice
+            log_warning(f"Using fallback voice_id for public avatar: {voice_id}", "API")
                 
         # Create video with HeyGen API
         result = create_video_from_text(api_key, avatar_id, text, format, voice_id)
