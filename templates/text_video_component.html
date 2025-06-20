@@ -488,17 +488,15 @@
         }
         
         .submit-btn {
-            width: 100%;
-            max-width: 400px;
-            padding: 1.5rem 2rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            padding: 1.25rem 3rem;
             background: var(--gradient-primary);
             color: white;
             border: none;
-            border-radius: 0.75rem;
-            font-size: 1.25rem;
-            font-weight: 700;
+            border-radius: 1.5rem;
             cursor: pointer;
-            transition: all var(--transition-fast);
+            transition: all var(--transition-base);
             box-shadow: var(--shadow-lg);
         }
         
@@ -757,11 +755,15 @@
     <!-- Progress Modal -->
     <div id="progressModal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-icon">
-                <i class="fas fa-cog"></i>
+            <div class="modal-spinner"></div>
+            <h3 class="modal-title">Creating Your AI Video</h3>
+            <p class="modal-message" id="modalMessage">Please wait while we process your request...</p>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
             </div>
-            <h3 class="modal-title">Creating Your Video</h3>
-            <p class="modal-message">Please wait while we process your text and generate your AI video...</p>
         </div>
     </div>
 
@@ -1009,6 +1011,9 @@
                 formData.append('description', description);
             }
             
+            // Update progress modal
+            updateProgressModal('⏳ Submitting your video request...', 10);
+            
             // Submit to text-to-video API endpoint with FormData
             fetch('/api/create-text-video', {
                 method: 'POST',
@@ -1017,9 +1022,10 @@
             })
             .then(response => response.json())
             .then(result => {
-                if (result.success) {
-                    // Redirect to dashboard with success message
-                    window.location.href = `/dashboard`;
+                if (result.success && result.video_id) {
+                    // Start polling for video status
+                    updateProgressModal('✅ Request submitted! Now processing with HeyGen...', 20);
+                    pollVideoStatus(result.video_id);
                 } else {
                     throw new Error(result.detail || result.error || 'Unknown error occurred');
                 }
@@ -1029,6 +1035,101 @@
                 document.getElementById('progressModal').classList.remove('show');
                 showAlert(`❌ Error creating video: ${error.message}`, 'error');
             });
+        }
+        
+        // Update progress modal with message and percentage
+        function updateProgressModal(message, progress = null) {
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.textContent = message;
+            
+            if (progress !== null) {
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${progress}%`;
+            }
+        }
+        
+        // Poll video status
+        async function pollVideoStatus(videoId) {
+            const maxAttempts = 120; // 10 minutes max (at 5-second intervals)
+            let attempts = 0;
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`/api/video-status/${videoId}`);
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        console.error('Error from video status API:', result.error);
+                        updateProgressModal(`⚠️ Status check error: ${result.error || 'Unknown error'}`, 50);
+                        return; // Continue polling despite errors
+                    }
+                    
+                    const videoStatus = result.status;
+                    console.log('Video status response:', result);
+                    
+                    if (videoStatus === 'completed') {
+                        updateProgressModal('✅ Video completed successfully!', 100);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('🎉 Your AI video is ready! Redirecting to dashboard...');
+                            window.location.href = '/dashboard';
+                        }, 2000);
+                        
+                    } else if (videoStatus === 'failed') {
+                        updateProgressModal('❌ Video creation failed', 0);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('❌ Video creation failed. Please try again.');
+                        }, 2000);
+                        
+                    } else if (videoStatus === 'processing') {
+                        // Gradually increase progress as processing continues
+                        const progress = Math.min(30 + (attempts * 2), 90); // Gradual progress that stops at 90%
+                        updateProgressModal('🔄 HeyGen is creating your video...', progress);
+                        
+                    } else {
+                        // For pending or other statuses
+                        const progress = Math.min(30 + attempts, 70); // More conservative progress
+                        updateProgressModal('⏳ Processing your request...', progress);
+                    }
+                    
+                    // Log status for debugging
+                    console.log(`Video ${videoId} status (attempt ${attempts}):`, status);
+                    
+                } catch (error) {
+                    console.error('Error checking video status:', error);
+                    // Don't stop polling on network errors, just continue
+                }
+                
+                // Adjust polling interval based on attempts to reduce server load
+                if (attempts > 30) {
+                    clearInterval(pollInterval);
+                    setInterval(pollVideoStatus.bind(null, videoId), 10000); // Switch to 10-second intervals
+                }
+                
+                // Fallback: after max attempts, give user option to continue waiting or go to dashboard
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    updateProgressModal('⏱️ Processing is taking longer than expected', 90);
+                    
+                    if (confirm('Video processing is taking longer than expected. Would you like to continue to your dashboard? The video will appear there when ready.')) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        // If user wants to keep waiting, start a new polling cycle
+                        pollVideoStatus(videoId);
+                    }
+                }
+                
+            }, 5000); // Check every 5 seconds initially
         }
     </script>
 </body>
