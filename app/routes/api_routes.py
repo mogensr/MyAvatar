@@ -53,12 +53,22 @@ async def get_videos(request: Request):
         video_list = []
         for v in videos:
             if isinstance(v, dict):
-                video_list.append(v)
+                video_dict = {}
+                for key, value in v.items():
+                    if isinstance(value, datetime):
+                        video_dict[key] = value.isoformat()
+                    else:
+                        video_dict[key] = value
+                video_list.append(video_dict)
             else:
                 # Handle SQLite Row objects
                 video_dict = {}
                 for key in v.keys():
-                    video_dict[key] = v[key]
+                    value = v[key]
+                    if isinstance(value, datetime):
+                        video_dict[key] = value.isoformat()
+                    else:
+                        video_dict[key] = value
                 video_list.append(video_dict)
                 
         return JSONResponse(content={"success": True, "videos": video_list})
@@ -171,6 +181,51 @@ async def download_video(request: Request, video_id: str):
         
     except Exception as e:
         log_error(f"Error downloading video {video_id}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/videos/{video_id}/debug")
+async def debug_video(request: Request, video_id: str):
+    """
+    Debug endpoint to check video details without downloading
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            (video_id, video_id),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+            
+        return JSONResponse(content={
+            "success": True,
+            "video_id": video.get("id"),
+            "heygen_video_id": video.get("heygen_video_id"),
+            "status": video.get("status"),
+            "has_video_url": bool(video.get("video_url")),
+            "video_url_preview": video.get("video_url", "")[:100] + "..." if video.get("video_url") else None,
+            "user_id": video.get("user_id"),
+            "current_user_id": user.get("id"),
+            "is_admin": user.get("is_admin", False),
+            "created_at": str(video.get("created_at")) if video.get("created_at") else None
+        })
+        
+    except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
@@ -698,49 +753,6 @@ async def get_video_status(request: Request, video_id: str):
         
     except Exception as e:
         log_error(f"Error downloading video {video_id}", "API", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.get("/videos/{video_id}/debug")
-async def debug_video(request: Request, video_id: str):
-    """
-    Debug endpoint to check video details without downloading
-    """
-    try:
-        user = get_current_user(request)
-        if not user:
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Not authenticated"}
-            )
-        
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
-            (video_id, video_id),
-            fetch_one=True
-        )
-        
-        if not video:
-            return JSONResponse(
-                status_code=404,
-                content={"success": False, "error": "Video not found"}
-            )
-            
-        return JSONResponse(content={
-            "success": True,
-            "video_id": video.get("id"),
-            "heygen_video_id": video.get("heygen_video_id"),
-            "status": video.get("status"),
-            "has_video_url": bool(video.get("video_url")),
-            "video_url_preview": video.get("video_url", "")[:100] + "..." if video.get("video_url") else None,
-            "user_id": video.get("user_id"),
-            "created_at": video.get("created_at")
-        })
-        
-    except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
