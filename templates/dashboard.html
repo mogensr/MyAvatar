@@ -1207,7 +1207,7 @@
                     <div class="user-menu" onclick="toggleUserDropdown()">
                         <div class="user-avatar" id="userAvatar">U</div>
                         <div class="user-info">
-                            <div class="user-name" id="userName">{{ username }}</div>
+                            <div class="user-name" id="userName">{{ username or 'User' }}</div>
                             <div class="user-role">Pro Member</div>
                         </div>
                         <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);" id="dropdownIcon"></i>
@@ -1241,7 +1241,7 @@
                 <!-- Welcome Header -->
                 <div class="welcome-header">
                     <div class="welcome-content">
-                        <h1 class="welcome-title">Welcome back, {{ username }}! 👋</h1>
+                        <h1 class="welcome-title">Welcome back, {{ username or 'User' }}! 👋</h1>
                         <p class="welcome-subtitle">Ready to create amazing AI videos today?</p>
                     </div>
                 </div>
@@ -1252,7 +1252,7 @@
                         <div class="stat-icon">
                             <i class="fas fa-video"></i>
                         </div>
-                        <div class="stat-value">{{ total_videos }}</div>
+                        <div class="stat-value">{{ total_videos or '0' }}</div>
                         <div class="stat-label">Total Videos</div>
                         <span class="stat-change">+12%</span>
                     </div>
@@ -1261,7 +1261,7 @@
                         <div class="stat-icon" style="background: var(--gradient-premium);">
                             <i class="fas fa-clock"></i>
                         </div>
-                        <div class="stat-value">{{ total_duration }}</div>
+                        <div class="stat-value">{{ total_duration or '0h 0m' }}</div>
                         <div class="stat-label">Total Duration</div>
                         <span class="stat-change">+8%</span>
                     </div>
@@ -1270,7 +1270,7 @@
                         <div class="stat-icon" style="background: var(--gradient-success);">
                             <i class="fas fa-eye"></i>
                         </div>
-                        <div class="stat-value">{{ total_views }}</div>
+                        <div class="stat-value">{{ total_views or '0' }}</div>
                         <div class="stat-label">Total Views</div>
                         <span class="stat-change">+24%</span>
                     </div>
@@ -1279,7 +1279,7 @@
                         <div class="stat-icon" style="background: var(--gradient-warning);">
                             <i class="fas fa-share"></i>
                         </div>
-                        <div class="stat-value">{{ total_shares }}</div>
+                        <div class="stat-value">{{ total_shares or '0' }}</div>
                         <div class="stat-label">Shares</div>
                         <span class="stat-change negative">-5%</span>
                     </div>
@@ -1457,8 +1457,8 @@
 
         // Initialize user data
         document.addEventListener('DOMContentLoaded', function() {
-            const username = '{{ username }}';
-            if (username) {
+            const username = '{{ username or "User" }}';
+            if (username && username !== 'User') {
                 document.getElementById('userName').textContent = username;
                 document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
             }
@@ -1665,9 +1665,6 @@
                 if (method === 'voice') {
                     window.location.href = '/voice-recording';  // Voice recording page
                 } else if (method === 'text') {
-                    window.location.href = '/text-to-video';    // Text-to-speech page (existing route)
-                } else {
-                    // Fallback for any other methods
                     window.location.href = '/text-to-video';
                 }
             }
@@ -1721,4 +1718,7 @@
         });
     </script>
 </body>
-</html>
+</html>-video';    // Text-to-speech page (existing route)
+                } else {
+                    // Fallback for any other methods
+                    window.location.href = '/text-to
