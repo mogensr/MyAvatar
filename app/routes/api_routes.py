@@ -69,6 +69,113 @@ async def get_videos(request: Request):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/videos/{video_id}/download")
+async def download_video(request: Request, video_id: str):
+    """
+    Download video by redirecting to the video URL
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            (video_id, video_id),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+            
+        log_info(f"Found video in database: ID={video.get('id')}, HeyGen_ID={video.get('heygen_video_id')}, Status={video.get('status')}, Has_URL={bool(video.get('video_url'))}", "API")
+            
+        # Check if user has access to this video
+        if not user["is_admin"] and video["user_id"] != user["id"]:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Access denied"}
+            )
+
+        # Check if video has a URL
+        video_url = video.get("video_url")
+        if not video_url:
+            # Try to get the latest video details from HeyGen
+            api_key = os.getenv("HEYGEN_API_KEY") or user.get("api_key")
+            if api_key and video.get("heygen_video_id"):
+                log_info(f"Fetching video URL from HeyGen for video {video['heygen_video_id']}", "API")
+                result = get_video_details(api_key, video["heygen_video_id"])
+                
+                if result["success"] and result.get("details"):
+                    details = result["details"]
+                    log_info(f"HeyGen response details: {details}", "API")
+                    
+                    # Try different possible fields for video URL
+                    video_url = (details.get("video_url") or 
+                               details.get("video_url_caption") or 
+                               details.get("url") or 
+                               details.get("download_url"))
+                    
+                    # Check if video is completed
+                    video_status = details.get("status", "unknown")
+                    log_info(f"Video {video['heygen_video_id']} status: {video_status}", "API")
+                    
+                    if video_url:
+                        # Update the database with the video URL
+                        execute_query(
+                            "UPDATE videos SET video_url = ?, status = ? WHERE id = ?",
+                            (video_url, video_status, video["id"])
+                        )
+                        log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
+                    elif video_status in ["processing", "pending", "waiting"]:
+                        return JSONResponse(
+                            status_code=202,
+                            content={
+                                "success": False, 
+                                "error": f"Video is still {video_status}. Please try again in a few minutes.",
+                                "status": video_status
+                            }
+                        )
+                    elif video_status == "failed":
+                        return JSONResponse(
+                            status_code=400,
+                            content={
+                                "success": False, 
+                                "error": "Video generation failed. Please try creating a new video.",
+                                "status": video_status
+                            }
+                        )
+                else:
+                    log_error(f"Failed to get video details from HeyGen: {result.get('error', 'Unknown error')}", "API")
+        
+        if not video_url:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False, 
+                    "error": "Video URL not available. Video may still be processing or failed to generate."
+                }
+            )
+        
+        log_info(f"User {user['username']} downloading video {video_id}", "API")
+        
+        # Redirect to the video URL for download
+        return RedirectResponse(url=video_url, status_code=302)
+        
+    except Exception as e:
+        log_error(f"Error downloading video {video_id}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.get("/videos/{video_id}")
 async def get_video(request: Request, video_id: str):
     """
@@ -524,113 +631,6 @@ async def get_video_status(request: Request, video_id: str):
                 content={"success": False, "error": "Access denied"}
             )
         
-        # Check if video has a URL
-        video_url = video.get("video_url")
-        if not video_url:
-            # Try to get the latest video details from HeyGen
-            api_key = os.getenv("HEYGEN_API_KEY") or user.get("api_key")
-            if api_key and video.get("heygen_video_id"):
-                log_info(f"Fetching video URL from HeyGen for video {video['heygen_video_id']}", "API")
-                result = get_video_details(api_key, video["heygen_video_id"])
-                
-                if result["success"] and result.get("details"):
-                    details = result["details"]
-                    log_info(f"HeyGen response details: {details}", "API")
-                    
-                    # Try different possible fields for video URL
-                    video_url = (details.get("video_url") or 
-                               details.get("video_url_caption") or 
-                               details.get("url") or 
-                               details.get("download_url"))
-                    
-                    # Check if video is completed
-                    video_status = details.get("status", "unknown")
-                    log_info(f"Video {video['heygen_video_id']} status: {video_status}", "API")
-                    
-                    if video_url:
-                        # Update the database with the video URL
-                        execute_query(
-                            "UPDATE videos SET video_url = ?, status = ? WHERE id = ?",
-                            (video_url, video_status, video["id"])
-                        )
-                        log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
-                    elif video_status in ["processing", "pending", "waiting"]:
-                        return JSONResponse(
-                            status_code=202,
-                            content={
-                                "success": False, 
-                                "error": f"Video is still {video_status}. Please try again in a few minutes.",
-                                "status": video_status
-                            }
-                        )
-                    elif video_status == "failed":
-                        return JSONResponse(
-                            status_code=400,
-                            content={
-                                "success": False, 
-                                "error": "Video generation failed. Please try creating a new video.",
-                                "status": video_status
-                            }
-                        )
-                else:
-                    log_error(f"Failed to get video details from HeyGen: {result.get('error', 'Unknown error')}", "API")
-        
-        if not video_url:
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "success": False, 
-                    "error": "Video URL not available. Video may still be processing or failed to generate."
-                }
-            )
-        
-        log_info(f"User {user['username']} downloading video {video_id}", "API")
-        
-        # Redirect to the video URL for download
-        return RedirectResponse(url=video_url, status_code=302)
-        
-    except Exception as e:
-        log_error(f"Error downloading video {video_id}", "API", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.get("/videos/{video_id}/download")
-async def download_video(request: Request, video_id: str):
-    """
-    Download video by redirecting to the video URL
-    """
-    try:
-        user = get_current_user(request)
-        if not user:
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Not authenticated"}
-            )
-        
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
-            (video_id, video_id),
-            fetch_one=True
-        )
-        
-        if not video:
-            return JSONResponse(
-                status_code=404,
-                content={"success": False, "error": "Video not found"}
-            )
-            
-        log_info(f"Found video in database: ID={video.get('id')}, HeyGen_ID={video.get('heygen_video_id')}, Status={video.get('status')}, Has_URL={bool(video.get('video_url'))}", "API")
-            
-        # Check if user has access to this video
-        if not user["is_admin"] and video["user_id"] != user["id"]:
-            return JSONResponse(
-                status_code=403,
-                content={"success": False, "error": "Access denied"}
-            )
-
         # Check if video has a URL
         video_url = video.get("video_url")
         if not video_url:
