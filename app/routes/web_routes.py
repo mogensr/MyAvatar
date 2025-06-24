@@ -3,39 +3,23 @@ import uuid
 import shutil
 import logging
 import time
-# REMOVED: import magic - This was likely causing import failure
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Request, Form, HTTPException, Depends, UploadFile, File, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.gzip import GZipMiddleware
 
-# SAFE IMPORTS - Only import if available
-try:
-    from slowapi import Limiter, _rate_limit_exceeded_handler
-    from slowapi.util import get_remote_address
-    from slowapi.errors import RateLimitExceeded
-    from slowapi.middleware import SlowAPIMiddleware
-    SLOWAPI_AVAILABLE = True
-except ImportError:
-    SLOWAPI_AVAILABLE = False
-    # Create dummy classes
-    class Limiter:
-        def __init__(self, **kwargs): pass
-        def limit(self, rate): 
-            def decorator(func): return func
-            return decorator
-    class RateLimitExceeded(Exception): pass
-    def get_remote_address(request): return "127.0.0.1"
+# STEP 1: Configure logging FIRST (before anything uses logger)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
+# STEP 2: Import bcrypt and JWT with safe fallbacks
 import bcrypt
 
 # FIXED JWT IMPORT - Use python-jose instead of PyJWT
@@ -57,64 +41,62 @@ except ImportError:
             class ExpiredSignatureError(Exception): pass
             class InvalidTokenError(Exception): pass
 
+# STEP 3: Import optional dependencies
 try:
     import bleach
     BLEACH_AVAILABLE = True
 except ImportError:
     BLEACH_AVAILABLE = False
 
-# FIXED DATABASE IMPORTS - Match your project structure
 try:
-    # Try your actual database structure first
-    from app.db.database import get_db_connection
-    # Import your actual database class if it exists
-    from app.db.database import Database
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    SLOWAPI_AVAILABLE = True
+except ImportError:
+    SLOWAPI_AVAILABLE = False
+    # Create dummy classes
+    class Limiter:
+        def __init__(self, **kwargs): pass
+        def limit(self, rate): 
+            def decorator(func): return func
+            return decorator
+    class RateLimitExceeded(Exception): pass
+    def get_remote_address(request): return "127.0.0.1"
+
+# STEP 4: Import database with fallbacks
+try:
+    from app.db.database import get_db_connection, Database
     db = Database()
 except ImportError:
     try:
-        # Fallback to different path
         from database import Database
         db = Database()
     except ImportError:
         # Create minimal database interface
         class Database:
-            def get_user_by_username(self, username): 
-                # Return None for now - will need to implement
-                return None
-            def get_user_by_id(self, user_id): 
-                return None
-            def get_user_videos(self, user_id): 
-                return []
-            def get_user_avatars(self, user_id): 
-                return []
-            def create_user(self, user_data): 
-                return 1
-            def update_user_login(self, user_id): 
-                pass
-            def get_failed_login_attempts(self, ip, username): 
-                return 0
-            def record_failed_login(self, ip, username): 
-                pass
-            def clear_failed_login_attempts(self, ip, username): 
-                pass
-            def get_user_by_email(self, email):
-                return None
+            def get_user_by_username(self, username): return None
+            def get_user_by_id(self, user_id): return None
+            def get_user_videos(self, user_id): return []
+            def get_user_avatars(self, user_id): return []
+            def create_user(self, user_data): return 1
+            def update_user_login(self, user_id): pass
+            def get_failed_login_attempts(self, ip, username): return 0
+            def record_failed_login(self, ip, username): pass
+            def clear_failed_login_attempts(self, ip, username): pass
+            def get_user_by_email(self, email): return None
         db = Database()
 
-# FIXED UTILS IMPORTS
+# STEP 5: Import logging functions with fallbacks
 try:
     from app.logger.log_handler import log_error, log_info, log_warning
 except ImportError:
-    try:
-        from utils import log_error, log_info, validate_email, generate_api_key
-    except ImportError:
-        # Fallback implementations
-        logger = logging.getLogger(__name__)
-        def log_error(msg, context, exc=None): logger.error(f"[{context}] {msg}")
-        def log_info(msg, context): logger.info(f"[{context}] {msg}")
-        def log_warning(msg, context): logger.warning(f"[{context}] {msg}")
+    # Fallback implementations
+    def log_error(msg, context, exc=None): logger.error(f"[{context}] {msg}")
+    def log_info(msg, context): logger.info(f"[{context}] {msg}")
+    def log_warning(msg, context): logger.warning(f"[{context}] {msg}")
 
-# Utility functions with fallbacks
+# STEP 6: Define utility functions
 def validate_email(email: str) -> bool:
     """Basic email validation"""
     return "@" in email and "." in email.split("@")[1]
@@ -123,7 +105,18 @@ def generate_api_key() -> str:
     """Generate API key"""
     return str(uuid.uuid4())
 
-# Production Configuration Class - SAFER VERSION
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent XSS"""
+    if not text:
+        return ""
+    
+    if BLEACH_AVAILABLE:
+        return bleach.clean(text.strip(), tags=[], attributes={}, strip=True)
+    else:
+        # Basic sanitization without bleach
+        return str(text).strip().replace("<", "&lt;").replace(">", "&gt;")
+
+# STEP 7: Configuration class (NOW logger is available)
 class Config:
     def __init__(self):
         # Security - with safe fallbacks
@@ -174,23 +167,15 @@ class Config:
         except Exception as e:
             logger.warning(f"Could not create upload directory: {e}")
 
-# Initialize configuration
+# STEP 8: Initialize configuration (NOW Config class is defined)
 config = Config()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Initialize rate limiter only if available
+# STEP 9: Initialize components that depend on config
 if SLOWAPI_AVAILABLE:
     limiter = Limiter(key_func=get_remote_address)
 else:
     limiter = Limiter()
 
-# Initialize router and templates
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
@@ -200,20 +185,9 @@ try:
 except Exception:
     pass
 
-# Security utilities
 security = HTTPBearer(auto_error=False)
 
-def sanitize_input(text: str) -> str:
-    """Sanitize user input to prevent XSS"""
-    if not text:
-        return ""
-    
-    if BLEACH_AVAILABLE:
-        return bleach.clean(text.strip(), tags=[], attributes={}, strip=True)
-    else:
-        # Basic sanitization without bleach
-        return str(text).strip().replace("<", "&lt;").replace(">", "&gt;")
-
+# STEP 10: File utilities (after config is available)
 def validate_file_content(file_path: str, expected_type: str) -> bool:
     """Validate file content matches expected type - SAFE VERSION"""
     try:
@@ -255,7 +229,50 @@ def create_secure_filename(filename: str) -> str:
     secure_name = f"{uuid.uuid4()}{ext}"
     return secure_name
 
-# Session and Authentication with enhanced security
+# STEP 11: Authentication functions (after config is available)
+def hash_password(password: str) -> str:
+    """Hash password with configurable rounds"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=config.BCRYPT_ROUNDS)).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        return False
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """Validate password strength"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    
+    if not any(c.isupper() for c in password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not any(c.islower() for c in password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not any(c.isdigit() for c in password):
+        return False, "Password must contain at least one number"
+    
+    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
+        return False, "Password must contain at least one special character"
+    
+    return True, "Password is strong"
+
+def create_access_token(user_id: int) -> str:
+    """Create JWT access token with enhanced security"""
+    expire = datetime.utcnow() + timedelta(hours=config.JWT_EXPIRATION_HOURS)
+    payload = {
+        "user_id": user_id,
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "jti": str(uuid.uuid4())  # JWT ID for token tracking
+    }
+    return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+
+# STEP 12: Session management class (after all dependencies available)
 class SessionManager:
     def __init__(self):
         self.active_sessions = {}  # In production, use Redis
@@ -302,8 +319,10 @@ class SessionManager:
         
         return session
 
+# STEP 13: Initialize session manager (after SessionManager class is defined)
 session_manager = SessionManager()
 
+# STEP 14: User authentication function (after session_manager is available)
 def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
     """Get current user with enhanced security"""
     try:
@@ -347,49 +366,7 @@ def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
         logger.error(f"Error getting current user: {e}")
         return None
 
-def create_access_token(user_id: int) -> str:
-    """Create JWT access token with enhanced security"""
-    expire = datetime.utcnow() + timedelta(hours=config.JWT_EXPIRATION_HOURS)
-    payload = {
-        "user_id": user_id,
-        "exp": expire,
-        "iat": datetime.utcnow(),
-        "jti": str(uuid.uuid4())  # JWT ID for token tracking
-    }
-    return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
-
-def hash_password(password: str) -> str:
-    """Hash password with configurable rounds"""
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt(rounds=config.BCRYPT_ROUNDS)).decode('utf-8')
-
-def verify_password(password: str, hashed: str) -> bool:
-    """Verify password against hash"""
-    try:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    except Exception as e:
-        logger.error(f"Password verification error: {e}")
-        return False
-
-def validate_password_strength(password: str) -> tuple[bool, str]:
-    """Validate password strength"""
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
-    
-    if not any(c.isupper() for c in password):
-        return False, "Password must contain at least one uppercase letter"
-    
-    if not any(c.islower() for c in password):
-        return False, "Password must contain at least one lowercase letter"
-    
-    if not any(c.isdigit() for c in password):
-        return False, "Password must contain at least one number"
-    
-    if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
-        return False, "Password must contain at least one special character"
-    
-    return True, "Password is strong"
-
-# Enhanced error handling
+# STEP 15: Error handling classes
 class APIError(Exception):
     def __init__(self, message: str, status_code: int = 500, error_code: str = "INTERNAL_ERROR"):
         self.message = message
@@ -419,7 +396,7 @@ def handle_api_error(error: Exception, context: str = "") -> JSONResponse:
             }
         )
 
-# Main Routes with Security
+# STEP 16: ROUTES (everything is now properly defined)
 @router.get("/")
 async def home_page(request: Request):
     """Home page with security headers"""
@@ -448,7 +425,6 @@ async def home_page(request: Request):
             "error_message": "Service temporarily unavailable"
         })
 
-# Authentication Routes with Rate Limiting
 @router.get("/login")
 async def login_page(request: Request):
     """Display login page"""
@@ -541,9 +517,6 @@ async def login_user(request: Request):
             "user": None,
             "error": "Login failed. Please try again."
         }, status_code=500)
-
-# Continue with all other routes... (keeping the same structure as your original file)
-# Registration, dashboard, file upload, etc. - ALL FUNCTIONALITY PRESERVED
 
 @router.get("/register")
 async def register_page(request: Request):
@@ -689,7 +662,6 @@ async def logout_user(request: Request):
         # Still redirect even if cleanup fails
         return RedirectResponse(url="/", status_code=302)
 
-# Production-Ready Dashboard Route
 @router.get("/dashboard")
 async def dashboard_page(request: Request):
     """Display user dashboard with comprehensive error handling"""
@@ -849,7 +821,6 @@ async def dashboard_page(request: Request):
         
         return templates.TemplateResponse("dashboard.html", safe_context)
 
-# Add test route to verify routes are loaded
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
