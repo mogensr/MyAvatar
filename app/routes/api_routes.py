@@ -396,10 +396,10 @@ async def create_video_from_text_endpoint(
         
         execute_query(
             """
-            INSERT INTO videos (user_id, heygen_video_id, status, format, title, voice_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, voice_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, str(heygen_video_id), "processing", str(format), str(title), voice_id_value)
+            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), voice_id_value)
         )
         
         log_info(f"Text-to-video created: {heygen_video_id}", "API")
@@ -478,15 +478,16 @@ async def create_video_from_audio_endpoint(
         # Ensure all values are properly typed for PostgreSQL
         user_id = int(user["id"]) if user["id"] else None
         
+        # FIXED: Added avatar_id and audio_path to the INSERT statement
         execute_query(
             """
-            INSERT INTO videos (user_id, heygen_video_id, status, format, title)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO videos (user_id, avatar_id, audio_path, heygen_video_id, status, format, title)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, str(heygen_video_id), "processing", str(format), str(title))
+            (user_id, str(avatar_id), audio_url, str(heygen_video_id), "processing", str(format), str(title))
         )
         
-        log_info(f"Audio-to-video created: {heygen_video_id}", "API")
+        log_info(f"Audio-to-video created: {heygen_video_id} with avatar: {avatar_id}", "API")
         
         return JSONResponse(content={
             "success": True,
