@@ -565,8 +565,10 @@ def get_video_details(api_key: str, video_id: str):
     
     try:
         log_info(f"Fetching details for video {video_id}", "HeyGen API")
+        
+        # Use the correct v2 API endpoint instead of deprecated v1
         response = requests.get(
-            f"https://api.heygen.com/v1/video_status/{video_id}",
+            f"https://api.heygen.com/v2/video/{video_id}",
             headers=headers
         )
         
@@ -584,14 +586,31 @@ def get_video_details(api_key: str, video_id: str):
                 "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
             }
         
-        if response.status_code == 200 and "data" in response_data:
-            log_info(f"Retrieved details for video {video_id}, status: {response_data['data'].get('status')}", "HeyGen API")
-            return {
-                "success": True, 
-                "details": response_data["data"]
-            }
+        # Handle both v1 and v2 response formats for compatibility
+        if response.status_code == 200:
+            # v2 API format: {"code": 100, "data": {...}, "message": "Success"}
+            if "data" in response_data and response_data.get("code") == 100:
+                log_info(f"Retrieved details for video {video_id}, status: {response_data['data'].get('status')}", "HeyGen API")
+                return {
+                    "success": True, 
+                    "details": response_data["data"]
+                }
+            # Legacy v1 format fallback
+            elif "data" in response_data:
+                log_info(f"Retrieved details for video {video_id} (legacy format), status: {response_data['data'].get('status')}", "HeyGen API")
+                return {
+                    "success": True, 
+                    "details": response_data["data"]
+                }
+            else:
+                error_msg = f"Unexpected response format from HeyGen API: {response_data}"
+                log_error(error_msg, "HeyGen API")
+                return {
+                    "success": False,
+                    "error": error_msg
+                }
         else:
-            error_msg = f"Failed to fetch video details: {response_data.get('message', 'Unknown error')}"
+            error_msg = f"Failed to fetch video details (HTTP {response.status_code}): {response_data.get('message', 'Unknown error')}"
             log_error(error_msg, "HeyGen API")
             return {
                 "success": False,
