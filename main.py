@@ -88,8 +88,9 @@ try:
 except Exception as e:
     logger.warning(f"Could not mount static files: {e}")
 
-# SAFE ROUTE IMPORTS - each wrapped individually
+# SAFE ROUTE IMPORTS - each wrapped individually with DETAILED ERROR LOGGING
 routers_loaded = []
+router_errors = []
 
 # Import and register routes safely
 route_imports = [
@@ -104,13 +105,23 @@ route_imports = [
 
 for module_name, router_name in route_imports:
     try:
+        logger.info(f"Attempting to import {module_name}...")
         module = __import__(module_name, fromlist=[router_name])
+        logger.info(f"Successfully imported {module_name}, getting router...")
         router = getattr(module, router_name)
+        logger.info(f"Got router from {module_name}, including in app...")
         app.include_router(router)
         routers_loaded.append(module_name)
-        logger.info(f"Successfully loaded router: {module_name}")
+        logger.info(f"✅ Successfully loaded router: {module_name}")
     except Exception as e:
-        logger.warning(f"Could not load router {module_name}: {e}")
+        error_details = {
+            "module": module_name,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+        router_errors.append(error_details)
+        logger.error(f"❌ Could not load router {module_name}: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
 
 # Background routes - conditional and safe
 if ENABLE_BACKGROUND_REPLACEMENT:
@@ -167,6 +178,35 @@ async def simple_health_check():
     """Ultra-simple health check for deployment platforms"""
     return {"status": "ok"}
 
+# DEBUG ROUTE - TO DIAGNOSE ROUTE LOADING ISSUES
+@app.get("/debug-routes")
+async def debug_routes():
+    """Debug which routes are loaded and why others failed"""
+    routes = []
+    for route in app.routes:
+        routes.append({
+            "path": getattr(route, 'path', 'unknown'),
+            "methods": getattr(route, 'methods', []),
+            "name": getattr(route, 'name', 'unknown')
+        })
+    
+    return {
+        "total_routes": len(app.routes),
+        "routes_loaded_successfully": routers_loaded,
+        "router_import_errors": router_errors,
+        "all_routes": routes
+    }
+
+# TEST ROUTE - Simple route to confirm basic functionality
+@app.get("/test")
+async def test_route():
+    """Test route to confirm FastAPI is working"""
+    return {
+        "message": "FastAPI is working!", 
+        "routers_loaded": routers_loaded,
+        "timestamp": datetime.now().isoformat()
+    }
+
 # Startup event with safe initialization
 @app.on_event("startup")
 async def startup_event():
@@ -215,7 +255,12 @@ async def startup_event():
     # Report successful startup
     edition_name = "Premium Edition" if not ENABLE_SAFE_MODE else "Premium Edition (Safe Mode)"
     log_info(f"MyAvatar {edition_name} is running", "Server")
-    logger.info(f"Successfully loaded {len(routers_loaded)} route modules: {', '.join(routers_loaded)}")
+    logger.info(f"✅ Successfully loaded {len(routers_loaded)} route modules: {', '.join(routers_loaded)}")
+    
+    if router_errors:
+        logger.error(f"❌ Failed to load {len(router_errors)} route modules")
+        for error in router_errors:
+            logger.error(f"   - {error['module']}: {error['error']}")
 
 # Entry point
 if __name__ == "__main__":
