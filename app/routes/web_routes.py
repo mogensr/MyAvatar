@@ -1,580 +1,374 @@
-"""
-Web routes for MyAvatar - Enhanced with Cloudinary integration, HeyGen Voice Integration, and GDPR Compliance
-"""
 import os
 import uuid
-import requests
-import re
-import tempfile
-import base64
-import time
-import cloudinary
-import cloudinary.uploader
-from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse, Response
-from fastapi.templating import Jinja2Templates
+import shutil
 from datetime import datetime, timedelta
-from typing import Optional
-from ..db.database import execute_query
-from ..auth.authentication import (get_current_user, authenticate_user, authenticate_user_by_email,
-                                  create_access_token, get_password_hash, is_admin)
-from ..logger.log_handler import log_info, log_error
+from typing import Optional, Dict, Any, List
+from fastapi import APIRouter, Request, Form, HTTPException, Depends, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
+import bcrypt
+import jwt
+from database import Database
+from utils import log_error, log_info, validate_email, generate_api_key
 
-# Import HeyGen functions
-from app.api.heygen import create_video_from_text
-
-# Import GDPR module
-from ..gdpr.gdpr_compliance import (
-    GDPR_CONSENT_TEXT, store_user_consent, has_user_given_consent,
-    get_user_consent_data, export_user_data, delete_user_account,
-    get_consent_statistics, get_users_without_consent, get_deletion_log,
-    get_client_ip, require_gdpr_consent
-)
-
-# ============================================================================
-# UTILITIES
-# ============================================================================
-
-def secure_filename(filename):
-    """
-    Secure a filename by removing dangerous characters.
-    Alternative to Werkzeug's secure_filename for FastAPI.
-    """
-    # Remove any path separators
-    filename = filename.replace('/', '').replace('\\', '')
-    # Remove any characters that aren't alphanumeric, dots, hyphens, or underscores
-    filename = re.sub(r'[^a-zA-Z0-9._-]', '', filename)
-    # Remove multiple dots
-    filename = re.sub(r'\.+', '.', filename)
-    # Remove leading/trailing dots and spaces
-    filename = filename.strip('. ')
-    # If filename is empty or too long, generate a safe one
-    if not filename or len(filename) > 100:
-        return f"file_{uuid.uuid4().hex[:8]}.jpg"
-    return filename
-
-def check_gdpr_consent(user_id: int, request_path: str) -> bool:
-    """Check if user needs GDPR consent before accessing protected routes"""
-    # Skip GDPR check for consent and logout pages
-    if request_path in ["/gdpr/consent", "/logout", "/login", "/register"]:
-        return True
-    
-    return not require_gdpr_consent(user_id)
-
-# ============================================================================
-# ROUTER SETUP
-# ============================================================================
-
-# Create router
-router = APIRouter(prefix="", tags=["web"])
-
-# ============================================================================
-# ADMIN ROUTES
-# ============================================================================
-
-@router.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request):
-    """
-    Admin dashboard page - requires admin access
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/auth/login", status_code=303)
-        
-    if not user.get("is_admin", 0) == 1:
-        log_warning(f"Non-admin user {user['username']} attempted to access admin dashboard", "Admin")
-        return RedirectResponse(url="/dashboard", status_code=303)
-    
-    # Check GDPR consent first
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-        
-    try:
-        # Get system stats
-        user_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
-        video_count = execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True)
-        
-        return templates.TemplateResponse(
-            "portal/admin_dashboard.html",
-            {
-                "request": request,
-                "user": user,
-                "user_count": user_count["count"] if user_count else 0,
-                "video_count": video_count["count"] if video_count else 0,
-                "current_page": "admin_dashboard"
-            }
-        )
-    except Exception as e:
-        log_error("Error loading admin dashboard", "Admin", e)
-        return templates.TemplateResponse(
-            "portal/admin_dashboard.html",
-            {
-                "request": request,
-                "user": user,
-                "error": "Error loading dashboard data",
-                "current_page": "admin_dashboard"
-            }
-        )
-
-# Set up templates
+# Initialize router and templates
+router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# ============================================================================
-# AUTHENTICATION ROUTES
-# ============================================================================
+# Initialize database
+db = Database()
 
-@router.get("/logout")
-async def logout(request: Request):
-    """Log out the current user by clearing the authentication cookie"""
-    log_info(f"User logout requested")
-    response = RedirectResponse(url="/login", status_code=302)
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
-    return response
+# JWT Configuration
+JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = 24
 
-# ============================================================================
-# MAIN PAGES - WITH ADMIN REDIRECT AND GDPR CHECK
-# ============================================================================
-
-@router.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """
-    Main page - redirects to appropriate dashboard if logged in, otherwise shows login page
-    """
-    user = get_current_user(request)
-    if user:
-        # Check GDPR consent
-        if require_gdpr_consent(user["id"]):
-            return RedirectResponse(url="/gdpr/consent", status_code=303)
-        
-        # Redirect admin users to admin dashboard
-        if user.get("is_admin", 0) == 1:
-            return RedirectResponse(url="/admin/dashboard", status_code=303)
-        else:
-            return RedirectResponse(url="/dashboard", status_code=303)
-    
-    return templates.TemplateResponse("portal/login.html", {"request": request})
-
-# ============================================================================
-# AUTHENTICATION ROUTES - WITH ADMIN REDIRECT
-# ============================================================================
-
-@router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    """
-    Login page
-    """
-    return templates.TemplateResponse("portal/login.html", {"request": request})
-
-@router.post("/auth/login", response_class=HTMLResponse)
-async def login_post(
-    request: Request,
-    username: str = Form(None),
-    email: str = Form(None),
-    password: str = Form(...)
-):
-    """
-    Process login - WITH ADMIN REDIRECT
-    """
+# Session helpers
+def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
+    """Get current user from session"""
     try:
-        log_info(f"Login attempt: username={username}, email={email}", "Auth")
+        token = request.session.get("access_token")
+        if not token:
+            return None
         
-        # Try to authenticate by username or email
-        user = None
-        if username:
-            user = authenticate_user(username, password)
-            log_info(f"Username authentication result: {user is not None}", "Auth")
-        elif email:
-            user = authenticate_user_by_email(email, password)
-            log_info(f"Email authentication result: {user is not None}", "Auth")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            return None
         
-        if not user:
-            log_error(f"Failed login attempt: username={username}, email={email}", "Auth")
-            return templates.TemplateResponse(
-                "portal/login.html", 
-                {
-                    "request": request, 
-                    "error": "Invalid username/email or password"
-                }
-            )
-        
-        # Create access token
-        access_token = create_access_token(
-            data={"sub": user["username"]},
-            expires_delta=timedelta(minutes=120)
-        )
-        
-        # Check GDPR consent before redirecting
-        if require_gdpr_consent(user["id"]):
-            response = RedirectResponse(url="/gdpr/consent", status_code=303)
-        # Create response - redirect admin users to admin dashboard
-        elif user.get("is_admin", 0) == 1:
-            log_info(f"Admin user {user['username']} logged in, redirecting to admin dashboard", "Auth")
-            response = RedirectResponse(url="/admin/dashboard", status_code=303)
-        else:
-            log_info(f"Regular user {user['username']} logged in, redirecting to dashboard", "Auth")
-            response = RedirectResponse(url="/dashboard", status_code=303)
+        user = db.get_user_by_id(user_id)
+        return user
+    except Exception as e:
+        log_error("Error getting current user from session", "Auth", e)
+        return None
+
+def create_access_token(user_id: int) -> str:
+    """Create JWT access token"""
+    expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    payload = {
+        "user_id": user_id,
+        "exp": expire
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def hash_password(password: str) -> str:
+    """Hash password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+# Main Routes
+@router.get("/")
+async def home_page(request: Request):
+    """Home page"""
+    try:
+        user = get_current_user(request)
+        if user:
+            return RedirectResponse(url="/dashboard")
             
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True
-        )
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "user": None
+        })
+    except Exception as e:
+        log_error("Error loading home page", "Web", e)
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "user": None
+        })
+
+# Authentication Routes
+@router.get("/login")
+async def login_page(request: Request):
+    """Display login page"""
+    try:
+        user = get_current_user(request)
+        if user:
+            return RedirectResponse(url="/dashboard")
+            
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "user": None
+        })
+    except Exception as e:
+        log_error("Error loading login page", "Web", e)
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "user": None
+        })
+
+@router.post("/login")
+async def login_user(request: Request):
+    """Handle user login"""
+    try:
+        form = await request.form()
+        username = form.get("username", "").strip()
+        password = form.get("password", "").strip()
         
-        log_info(f"User {user['username']} logged in successfully", "Web")
-        return response
+        if not username or not password:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "user": None,
+                "error": "Username and password are required"
+            })
+        
+        # Get user from database
+        user = db.get_user_by_username(username)
+        if not user:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "user": None,
+                "error": "Invalid username or password"
+            })
+        
+        # Verify password
+        if not verify_password(password, user.get("password", "")):
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "user": None,
+                "error": "Invalid username or password"
+            })
+        
+        # Create access token and set session
+        token = create_access_token(user["id"])
+        request.session["access_token"] = token
+        
+        # Update last login
+        db.update_user_login(user["id"])
+        
+        log_info(f"User {username} logged in successfully", "Auth")
+        return RedirectResponse(url="/dashboard", status_code=302)
         
     except Exception as e:
-        log_error("Login error", "Web", e)
-        return templates.TemplateResponse(
-            "portal/login.html",
-            {
-                "request": request,
-                "error": "Login error"
-            }
-        )
+        log_error("Error during login", "Auth", e)
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "user": None,
+            "error": "Login failed. Please try again."
+        })
 
-# ============================================================================
-# REGISTRATION ROUTES
-# ============================================================================
-
-@router.get("/register", response_class=HTMLResponse)
+@router.get("/register")
 async def register_page(request: Request):
-    """
-    Registration page
-    """
-    return templates.TemplateResponse("portal/register.html", {"request": request})
+    """Display registration page"""
+    try:
+        user = get_current_user(request)
+        if user:
+            return RedirectResponse(url="/dashboard")
+            
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "user": None
+        })
+    except Exception as e:
+        log_error("Error loading register page", "Web", e)
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "user": None
+        })
 
 @router.post("/register")
-async def register(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...)
-):
-    """
-    Process registration
-    """
+async def register_user(request: Request):
+    """Handle user registration"""
     try:
-        log_info(f"Registration attempt: username={username}, email={email}", "Web")
+        form = await request.form()
+        username = form.get("username", "").strip()
+        email = form.get("email", "").strip()
+        password = form.get("password", "").strip()
+        confirm_password = form.get("confirm_password", "").strip()
+        
+        # Validation
+        if not username or not email or not password:
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "All fields are required"
+            })
+        
+        if len(username) < 3:
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Username must be at least 3 characters long"
+            })
+        
+        if not validate_email(email):
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Please enter a valid email address"
+            })
+        
+        if len(password) < 6:
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Password must be at least 6 characters long"
+            })
+        
+        if password != confirm_password:
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Passwords do not match"
+            })
         
         # Check if user already exists
-        existing_user = execute_query(
-            "SELECT * FROM users WHERE username = ? OR email = ?",
-            (username, email),
-            fetch_one=True
-        )
+        if db.get_user_by_username(username):
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Username already exists"
+            })
         
-        if existing_user:
-            log_error(f"Registration failed - user exists: username={username}, email={email}", "Web")
-            return templates.TemplateResponse(
-                "portal/register.html",
-                {
-                    "request": request,
-                    "error": "Username or email already exists"
-                }
-            )
+        if db.get_user_by_email(email):
+            return templates.TemplateResponse("register.html", {
+                "request": request,
+                "user": None,
+                "error": "Email already registered"
+            })
         
         # Create user
-        hashed_password = get_password_hash(password)
-        execute_query(
-            """
-            INSERT INTO users (username, email, hashed_password, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (username, email, hashed_password, datetime.now().isoformat())
-        )
+        hashed_password = hash_password(password)
+        api_key = generate_api_key()
         
-        log_info(f"User {username} registered successfully", "Web")
+        user_data = {
+            "username": username,
+            "email": email,
+            "password": hashed_password,
+            "api_key": api_key,
+            "is_admin": 0,
+            "avatar_id": "",
+            "created_at": datetime.now().isoformat()
+        }
         
-        # Redirect to login
-        return templates.TemplateResponse(
-            "portal/login.html",
-            {
+        user_id = db.create_user(user_data)
+        if not user_id:
+            return templates.TemplateResponse("register.html", {
                 "request": request,
-                "success": "Registration successful. Please log in."
-            }
-        )
+                "user": None,
+                "error": "Registration failed. Please try again."
+            })
+        
+        # Auto-login after registration
+        token = create_access_token(user_id)
+        request.session["access_token"] = token
+        
+        log_info(f"New user registered: {username}", "Auth")
+        return RedirectResponse(url="/dashboard", status_code=302)
         
     except Exception as e:
-        log_error("Registration error", "Web", e)
-        return templates.TemplateResponse(
-            "portal/register.html",
-            {
-                "request": request,
-                "error": "Registration error"
-            }
-        )
-
-# ============================================================================
-# GDPR COMPLIANCE ROUTES
-# ============================================================================
-
-@router.get("/gdpr/consent", response_class=HTMLResponse)
-async def gdpr_consent_page(request: Request):
-    """GDPR consent page for new users"""
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check if user already gave consent
-    if has_user_given_consent(user["id"]):
-        return RedirectResponse(url="/dashboard", status_code=303)
-    
-    return templates.TemplateResponse("consent.html", {
-        "request": request,
-        "user": user,
-        "consent_text": GDPR_CONSENT_TEXT
-    })
-
-@router.post("/gdpr/consent")
-async def gdpr_consent_submit(
-    request: Request,
-    consent_given: bool = Form(...)
-):
-    """Process GDPR consent form submission"""
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    if not consent_given:
-        return templates.TemplateResponse("consent.html", {
+        log_error("Error during registration", "Auth", e)
+        return templates.TemplateResponse("register.html", {
             "request": request,
-            "user": user,
-            "consent_text": GDPR_CONSENT_TEXT,
-            "error": "You must accept the privacy policy and terms to use MyAvatar.dk"
-        })
-    
-    # Store consent
-    client_ip = get_client_ip(request)
-    user_agent = request.headers.get("User-Agent", "")
-    
-    success = store_user_consent(
-        user["id"], 
-        user["email"], 
-        consent_given=True,
-        ip_address=client_ip,
-        user_agent=user_agent
-    )
-    
-    if success:
-        log_info(f"GDPR consent given by user {user['email']}", "GDPR")
-        return RedirectResponse(url="/dashboard?gdpr_consent=success", status_code=303)
-    else:
-        return templates.TemplateResponse("consent.html", {
-            "request": request,
-            "user": user,
-            "consent_text": GDPR_CONSENT_TEXT,
-            "error": "Error saving your consent. Please try again."
+            "user": None,
+            "error": "Registration failed. Please try again."
         })
 
-@router.get("/privacy", response_class=HTMLResponse)
-async def privacy_page(request: Request):
-    """User privacy dashboard - view, export, delete data"""
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check GDPR consent
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-    
-    # Get user's consent data
-    consent_data = get_user_consent_data(user["id"])
-    
-    # Get user's data summary
-    user_videos = execute_query(
-        "SELECT COUNT(*) as count FROM videos WHERE user_id = ?",
-        (user["id"],),
-        fetch_one=True
-    )
-    
-    user_avatars = execute_query(
-        "SELECT COUNT(*) as count FROM avatars WHERE user_id = ?",
-        (user["id"],),
-        fetch_one=True
-    )
-    
-    return templates.TemplateResponse("privacy/dashboard.html", {
-        "request": request,
-        "user": user,
-        "consent_data": consent_data,
-        "video_count": user_videos["count"] if user_videos else 0,
-        "avatar_count": user_avatars["count"] if user_avatars else 0
-    })
-
-@router.post("/privacy/export-data")
-async def export_user_data_endpoint(request: Request):
-    """Export all user data as ZIP file"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
+@router.get("/logout")
+async def logout_user(request: Request):
+    """Handle user logout"""
     try:
-        zip_data = export_user_data(user["id"])
-        
-        # Create filename with timestamp
-        filename = f"myavatar_data_export_{user['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-        
-        return Response(
-            content=zip_data,
-            media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-        
+        request.session.clear()
+        return RedirectResponse(url="/")
     except Exception as e:
-        log_error(f"Error exporting data for user {user['email']}: {e}", "GDPR", e)
-        return JSONResponse(status_code=500, content={"error": "Error generating data export"})
+        log_error("Error during logout", "Auth", e)
+        return RedirectResponse(url="/")
 
-@router.post("/privacy/delete-account")
-async def delete_account_endpoint(
-    request: Request,
-    confirm_email: str = Form(...),
-    confirm_password: str = Form(...)
-):
-    """Delete user account (GDPR right to be forgotten)"""
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Verify email matches
-    if confirm_email != user["email"]:
-        return RedirectResponse(url="/privacy?error=email_mismatch", status_code=303)
-    
-    # Verify password
-    if not authenticate_user(user["username"], confirm_password):
-        return RedirectResponse(url="/privacy?error=invalid_password", status_code=303)
-    
-    # Delete the account
-    success = delete_user_account(user["id"])
-    
-    if success:
-        # Clear session
-        response = RedirectResponse(url="/login?account_deleted=true", status_code=303)
-        response.delete_cookie(key="access_token")
-        response.delete_cookie(key="refresh_token")
-        return response
-    else:
-        return RedirectResponse(url="/privacy?error=deletion_failed", status_code=303)
-
-@router.post("/privacy/update-consent")
-async def update_consent_endpoint(
-    request: Request,
-    consent_given: bool = Form(...)
-):
-    """Update user's GDPR consent"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    client_ip = get_client_ip(request)
-    user_agent = request.headers.get("User-Agent", "")
-    
-    success = store_user_consent(
-        user["id"],
-        user["email"],
-        consent_given=consent_given,
-        ip_address=client_ip,
-        user_agent=user_agent
-    )
-    
-    if success:
-        return JSONResponse(content={"success": True, "message": "Consent updated successfully"})
-    else:
-        return JSONResponse(status_code=500, content={"error": "Error updating consent"})
-
-# ============================================================================
-# DASHBOARD ROUTE - WITH REAL STATISTICS AND GDPR CHECK
-# ============================================================================
-
-@router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    """
-    User dashboard - With real statistics instead of mock data
-    """
-    # Check authentication
-    user = get_current_user(request)
-    if not user:
-        log_info("Unauthenticated dashboard access attempt", "Web")
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check GDPR consent
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-    
-    log_info(f"Dashboard access by user {user.get('username')}", "Web")
-    
+# Dashboard Route - FIXED VERSION
+@router.get("/dashboard")
+async def dashboard_page(request: Request):
+    """Display user dashboard with safe error handling"""
     try:
-        # Get user's videos
-        videos = execute_query(
-            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-            (user["id"],),
-            fetch_all=True
-        )
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
         
-        # Get user's avatars
-        avatars = execute_query(
-            "SELECT * FROM avatars WHERE user_id = ?",
-            (user["id"],),
-            fetch_all=True
-        )
-        
-        log_info(f"Dashboard data loaded: {len(videos) if videos else 0} videos, {len(avatars) if avatars else 0} avatars", "Web")
-        
-        # Convert database results to list of dicts for videos
+        # Initialize safe defaults
         video_list = []
-        total_duration = 0
+        avatar_list = []
+        total_videos = 0
+        total_duration_hours = 0
         total_views = 0
         total_shares = 0
         
-        for v in videos:
-            try:
-                if isinstance(v, dict):
-                    video_dict = v
-                else:
-                    # Handle SQLite/PostgreSQL Row objects
-                    video_dict = {}
-                    for key in v.keys():
-                        video_dict[key] = v[key]
+        try:
+            # Safely get user videos
+            videos = db.get_user_videos(user["id"])
+            if videos:
+                video_list = []
+                for video in videos:
+                    try:
+                        # Safely convert video to dict if needed
+                        if hasattr(video, '__dict__'):
+                            video_dict = video.__dict__
+                        elif isinstance(video, dict):
+                            video_dict = video
+                        else:
+                            video_dict = dict(video) if video else {}
+                        
+                        # Clean datetime fields
+                        if 'created_at' in video_dict and video_dict['created_at']:
+                            try:
+                                if isinstance(video_dict['created_at'], str):
+                                    video_dict['created_at'] = datetime.fromisoformat(video_dict['created_at'].replace('Z', '+00:00'))
+                                video_dict['created_at_formatted'] = video_dict['created_at'].strftime('%Y-%m-%d %H:%M')
+                            except:
+                                video_dict['created_at_formatted'] = 'Unknown'
+                        else:
+                            video_dict['created_at_formatted'] = 'Unknown'
+                        
+                        # Ensure required fields exist
+                        video_dict.setdefault('title', 'Untitled')
+                        video_dict.setdefault('status', 'unknown')
+                        video_dict.setdefault('duration', 0)
+                        video_dict.setdefault('views', 0)
+                        video_dict.setdefault('shares', 0)
+                        
+                        video_list.append(video_dict)
+                    except Exception as video_error:
+                        log_error(f"Error processing video record", "Dashboard", video_error)
+                        continue
                 
-                # Ensure safe access to fields and convert datetime to string
-                safe_video = {
-                    'id': video_dict.get('id'),
-                    'title': video_dict.get('title', 'Untitled'),
-                    'status': video_dict.get('status', 'unknown'),
-                    'created_at': video_dict.get('created_at').strftime('%m/%d/%Y') if video_dict.get('created_at') else 'Unknown',
-                    'video_path': video_dict.get('video_path'),
-                    'thumbnail_url': video_dict.get('thumbnail_url'),
-                    'duration': video_dict.get('duration'),
-                    'heygen_video_id': video_dict.get('heygen_video_id'),
-                    'video_format': '16:9'  # Default format
-                }
-                
-                video_list.append(safe_video)
-                
-                # Calculate real statistics
-                if video_dict.get('duration'):
-                    total_duration += float(video_dict['duration'])
-                    
-            except Exception as e:
-                log_error(f"Error processing video {v}: {e}", "Web")
-                continue
+                total_videos = len(video_list)
+                total_duration_hours = sum(int(v.get('duration', 0)) for v in video_list) // 3600
+                total_views = sum(int(v.get('views', 0)) for v in video_list)
+                total_shares = sum(int(v.get('shares', 0)) for v in video_list)
         
-        # Convert database results to list of dicts for avatars
-        avatar_list = []
-        for a in avatars:
-            if isinstance(a, dict):
-                avatar_list.append(a)
-            else:
-                # Handle SQLite Row objects
-                avatar_dict = {}
-                for key in a.keys():
-                    avatar_dict[key] = a[key]
-                avatar_list.append(avatar_dict)
+        except Exception as video_error:
+            log_error(f"Error fetching user videos", "Dashboard", video_error)
+            # Continue with empty defaults
         
-        # Calculate real statistics
-        total_videos = len(video_list)
-        total_duration_hours = round(total_duration / 3600, 1) if total_duration > 0 else 0
+        try:
+            # Safely get user avatars - using correct table reference
+            avatars = db.get_user_avatars(user["id"])
+            if avatars:
+                avatar_list = []
+                for avatar in avatars:
+                    try:
+                        # Safely convert avatar to dict
+                        if hasattr(avatar, '__dict__'):
+                            avatar_dict = avatar.__dict__
+                        elif isinstance(avatar, dict):
+                            avatar_dict = avatar
+                        else:
+                            avatar_dict = dict(avatar) if avatar else {}
+                        
+                        # Ensure required fields
+                        avatar_dict.setdefault('name', 'Unnamed Avatar')
+                        avatar_dict.setdefault('avatar_id', '')
+                        avatar_dict.setdefault('image_url', '/static/images/default-avatar.png')
+                        
+                        avatar_list.append(avatar_dict)
+                    except Exception as avatar_error:
+                        log_error(f"Error processing avatar record", "Dashboard", avatar_error)
+                        continue
+                        
+        except Exception as avatar_error:
+            log_error(f"Error fetching user avatars", "Dashboard", avatar_error)
+            # Continue with empty defaults
         
         # Use proper template rendering with REAL statistics
         return templates.TemplateResponse(
@@ -582,7 +376,7 @@ async def dashboard(request: Request):
             {
                 "request": request,
                 "user": user,
-                "username": user.get("username", ""),
+                "username": user.get("username", "User"),
                 "is_admin": user.get("is_admin", 0), 
                 "avatar_id": user.get("avatar_id", ""),
                 "user_id": user.get("id", 0),
@@ -595,1571 +389,466 @@ async def dashboard(request: Request):
                 "total_shares": total_shares,
             }
         )
+        
     except Exception as e:
-        log_error(f"Dashboard error for user {user.get('username')}", "Web", e)
+        log_error(f"Dashboard error for user {user.get('username', 'unknown') if user else 'unknown'}", "Web", e)
+        # Return dashboard with safe defaults instead of login page
+        safe_user = user if user else {"username": "User", "is_admin": 0, "avatar_id": "", "id": 0, "api_key": ""}
         return templates.TemplateResponse(
-            "portal/login.html",
+            "dashboard.html",
             {
                 "request": request,
-                "error": "Dashboard error"
+                "user": safe_user,
+                "username": safe_user.get("username", "User"),
+                "is_admin": safe_user.get("is_admin", 0),
+                "avatar_id": safe_user.get("avatar_id", ""),
+                "user_id": safe_user.get("id", 0),
+                "api_key": "",
+                "videos": [],
+                "avatars": [],
+                "total_videos": 0,
+                "total_duration": "0h",
+                "total_views": 0,
+                "total_shares": 0,
             }
         )
 
-# ============================================================================
-# CLIENT VIDEO PAGES - WITH GDPR CHECK
-# ============================================================================
-
-@router.get("/videos", response_class=HTMLResponse)
-async def videos_page(request: Request):
-    """
-    Client videos page - Show all videos for the user
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check GDPR consent
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-    
-    log_info(f"Videos page accessed by user {user.get('username')}", "Web")
-    
+# Video Management Routes
+@router.get("/video/{video_id}")
+async def get_video(request: Request, video_id: str):
+    """Get specific video details"""
     try:
-        # Get all user's videos
-        videos = execute_query(
-            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-            (user["id"],),
-            fetch_all=True
-        )
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
         
-        # Convert database results to list of dicts for videos
-        video_list = []
-        for v in videos:
-            try:
-                if isinstance(v, dict):
-                    video_dict = v
-                else:
-                    video_dict = {}
-                    for key in v.keys():
-                        video_dict[key] = v[key]
-                
-                safe_video = {
-                    'id': video_dict.get('id'),
-                    'title': video_dict.get('title', 'Untitled'),
-                    'status': video_dict.get('status', 'unknown'),
-                    'created_at': video_dict.get('created_at').strftime('%m/%d/%Y') if video_dict.get('created_at') else 'Unknown',
-                    'video_path': video_dict.get('video_path'),
-                    'thumbnail_url': video_dict.get('thumbnail_url'),
-                    'duration': video_dict.get('duration'),
-                    'heygen_video_id': video_dict.get('heygen_video_id'),
-                    'video_format': '16:9'
-                }
-                video_list.append(safe_video)
-                
-            except Exception as e:
-                log_error(f"Error processing video {v}: {e}", "Web")
-                continue
-        
-        return templates.TemplateResponse(
-            "videos.html",
-            {
-                "request": request,
-                "user": user,
-                "username": user.get("username", ""),
-                "videos": video_list,
-                "total_videos": len(video_list)
-            }
-        )
-        
-    except Exception as e:
-        log_error(f"Videos page error for user {user.get('username')}", "Web", e)
-        return RedirectResponse(url="/dashboard", status_code=303)
-
-# ============================================================================
-# VIDEO CREATION PAGES - WITH GDPR CHECK
-# ============================================================================
-
-@router.get("/voice-recording", response_class=HTMLResponse)
-async def voice_recording_page(request: Request):
-    """
-    Voice recording page for creating videos from audio
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check GDPR consent
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-    
-    log_info(f"Voice recording page accessed by user {user.get('username')}", "Web")
-    
-    # Get user's avatars
-    avatars = execute_query(
-        "SELECT * FROM avatars WHERE user_id = ?",
-        (user["id"],),
-        fetch_all=True
-    )
-    
-    # Convert database results to list of dicts for avatars
-    avatar_list = []
-    for a in avatars:
-        if isinstance(a, dict):
-            avatar_list.append(a)
-        else:
-            # Handle SQLite Row objects
-            avatar_dict = {}
-            for key in a.keys():
-                avatar_dict[key] = a[key]
-            avatar_list.append(avatar_dict)
-    
-    return templates.TemplateResponse(
-        "voice_recording.html",
-        {
-            "request": request,
-            "user": user,
-            "username": user.get("username", ""),
-            "is_admin": user.get("is_admin", 0),
-            "avatars": avatar_list
-        }
-    )
-
-@router.get("/text-to-video", response_class=HTMLResponse)
-async def text_to_video_page(request: Request):
-    """
-    Text to video creation page
-    """
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Check GDPR consent
-    if require_gdpr_consent(user["id"]):
-        return RedirectResponse(url="/gdpr/consent", status_code=303)
-    
-    log_info(f"Text-to-video page accessed by user {user.get('username')}", "Web")
-    
-    # Get user's avatars
-    avatars = execute_query(
-        "SELECT * FROM avatars WHERE user_id = ?",
-        (user["id"],),
-        fetch_all=True
-    )
-    
-    # Convert database results to list of dicts for avatars
-    avatar_list = []
-    for a in avatars:
-        if isinstance(a, dict):
-            avatar_list.append(a)
-        else:
-            # Handle SQLite Row objects
-            avatar_dict = {}
-            for key in a.keys():
-                avatar_dict[key] = a[key]
-            avatar_list.append(avatar_dict)
-    
-    return templates.TemplateResponse(
-        "text_video_component.html",
-        {
-            "request": request,
-            "user": user,
-            "username": user.get("username", ""),
-            "is_admin": user.get("is_admin", 0),
-            "avatars": avatar_list
-        }
-    )
-
-# ============================================================================
-# HEYGEN WEBHOOK ROUTES
-# ============================================================================
-
-@router.post("/api/heygen/webhook")
-async def heygen_webhook(request: Request):
-    """Handle HeyGen video completion webhook - All Events"""
-    try:
-        log_info("HeyGen webhook received", "Webhook")
-        
-        # Get JSON data from HeyGen
-        data = await request.json()
-        log_info(f"HeyGen webhook data: {data}", "Webhook")
-        
-        # HeyGen can send different formats, handle both
-        video_id = data.get("video_id") or data.get("data", {}).get("video_id") or data.get("event_data", {}).get("video_id")
-        status = data.get("status") or data.get("event", "").replace("video.", "")
-        video_url = data.get("video_url") or data.get("data", {}).get("video_url") or data.get("event_data", {}).get("url")
-        event = data.get("event", data.get("event_type", "unknown"))
-        
-        if not video_id:
-            log_error("No video_id in webhook data", "Webhook")
-            return JSONResponse(status_code=400, content={"error": "Missing video_id"})
-        
-        log_info(f"Processing webhook - Event: {event}, Video: {video_id}, Status: {status}", "Webhook")
-        
-        # Handle different event types
-        if event in ["video.completed", "completed", "avatar_video.success"] or status == "completed":
-            if video_url:
-                log_info(f"Video completed: {video_id}, URL: {video_url}", "Webhook")
-                execute_query(
-                    "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
-                    ("completed", video_url, video_id)
-                )
-                log_info(f"Database updated for completed video: {video_id}", "Webhook")
-            else:
-                log_error(f"Video completed but no URL provided: {video_id}", "Webhook")
-                
-        elif event in ["video.failed", "failed"] or status in ["failed", "error"]:
-            log_error(f"Video failed: {video_id}", "Webhook")
-            execute_query(
-                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                ("failed", video_id)
-            )
-            log_info(f"Database updated for failed video: {video_id}", "Webhook")
-            
-        elif event in ["video.processing", "processing"] or status == "processing":
-            log_info(f"Video processing: {video_id}", "Webhook")
-            execute_query(
-                "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                ("processing", video_id)
-            )
-            
-        else:
-            log_info(f"Unknown event/status: {event}/{status} for video: {video_id}", "Webhook")
-            # Still update with whatever status we got
-            if status:
-                execute_query(
-                    "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                    (status, video_id)
-                )
-        
-        return JSONResponse(content={"status": "success", "message": f"Webhook processed: {event}"})
-        
-    except Exception as e:
-        log_error(f"HeyGen webhook error: {e}", "Webhook", e)
-        return JSONResponse(status_code=500, content={"error": "Webhook processing failed"})
-
-# ============================================================================
-# VIDEO CREATION API ROUTES - CLOUDINARY + HEYGEN INTEGRATION
-# ============================================================================
-
-@router.get("/api/videos-status")
-async def get_videos_status(request: Request):
-    """Get all videos for current user - endpoint for AJAX polling"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Videos status check via AJAX by user {user['username']}", "API")
-    
-    try:
-        # Get user's videos
-        videos = execute_query(
-            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-            (user["id"],),
-            fetch_all=True
-        )
-        
-        # Convert database results to list of dicts for videos
-        video_list = []
-        for v in videos:
-            try:
-                if isinstance(v, dict):
-                    video_dict = v
-                else:
-                    # Handle SQLite/PostgreSQL Row objects
-                    video_dict = {}
-                    for key in v.keys():
-                        video_dict[key] = v[key]
-                
-                # Format created_at as string if it's a datetime object
-                created_at = video_dict.get('created_at')
-                if created_at and not isinstance(created_at, str):
-                    created_at = created_at.strftime('%m/%d/%Y')
-                
-                # Ensure safe access to fields
-                safe_video = {
-                    'id': video_dict.get('id'),
-                    'title': video_dict.get('title', 'Untitled'),
-                    'status': video_dict.get('status', 'unknown'),
-                    'created_at': created_at or 'Unknown',
-                    'video_path': video_dict.get('video_path'),
-                    'thumbnail_url': video_dict.get('thumbnail_url'),
-                    'duration': video_dict.get('duration'),
-                    'heygen_video_id': video_dict.get('heygen_video_id'),
-                    'video_format': '16:9'  # Default format
-                }
-                video_list.append(safe_video)
-                
-            except Exception as e:
-                log_error(f"Error processing video data: {e}", "API")
-                continue
-        
-        return JSONResponse(content={"videos": video_list})
-        
-    except Exception as e:
-        log_error(f"Error fetching videos status: {e}", "API")
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-@router.post("/api/create-video")
-async def create_video_from_audio(
-    request: Request,
-    audio: UploadFile = File(...),
-    title: str = Form(...),
-    avatar_id: str = Form(...),
-    description: str = Form(None)
-):
-    """Create video from audio recording using Cloudinary + HeyGen API"""
-    user = get_current_user(request)
-    if not user:
-        log_error("Unauthorized video creation attempt", "API")
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Video creation request by user {user['username']}: title='{title}', avatar_id={avatar_id}", "API")
-    
-    temp_audio_path = None
-    try:
-        # Get HeyGen API key
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured", "API")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        log_info(f"HeyGen API key found: {heygen_api_key[:10]}...{heygen_api_key[-4:]}", "API")
-        
-        # Get avatar details from database
-        log_info(f"Fetching avatar details for avatar_id={avatar_id}, user_id={user['id']}", "API")
-        avatar = execute_query(
-            "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
-            (avatar_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            log_error(f"Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "API")
-            return JSONResponse(status_code=400, content={"error": "Avatar not found"})
-        
-        log_info(f"Avatar found: {avatar}", "API")
-        
-        # Save audio file temporarily
-        log_info(f"Processing audio file: {audio.filename}, content_type={audio.content_type}", "API")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-            audio_content = await audio.read()
-            temp_audio.write(audio_content)
-            temp_audio_path = temp_audio.name
-            
-        log_info(f"Audio saved to temporary file: {temp_audio_path}, size={len(audio_content)} bytes", "API")
-        
-        # Upload to Cloudinary as M4A (MP4A) for HeyGen compatibility
-        try:
-            log_info("Uploading audio to Cloudinary as M4A...", "API")
-            upload_result = cloudinary.uploader.upload(
-                temp_audio_path,
-                resource_type="video",           # Cloudinary treats audio as video resource
-                format="m4a",                   # Convert to M4A (MP4A) format for HeyGen
-                audio_codec="aac",              # Ensure AAC encoding
-                public_id=f"myavatar_audio_{user['id']}_{int(time.time())}"
-            )
-            cloudinary_url = upload_result.get('secure_url')
-            log_info(f"Audio uploaded to Cloudinary as M4A successfully: {cloudinary_url}", "API")
-            
-        except Exception as e:
-            log_error(f"Cloudinary upload failed: {str(e)}", "API", e)
-            if temp_audio_path:
-                os.unlink(temp_audio_path)
-            return JSONResponse(status_code=500, content={"error": "Audio upload to Cloudinary failed"})
-        
-        # Clean up temp file
-        if temp_audio_path:
-            os.unlink(temp_audio_path)
-            temp_audio_path = None
-        
-        # Get HeyGen avatar ID
-        heygen_avatar_id = avatar.get("heygen_avatar_id")
-        if not heygen_avatar_id:
-            log_error(f"No HeyGen avatar ID found for avatar: {avatar}", "API")
-            return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
-        
-        log_info(f"Using HeyGen avatar ID: {heygen_avatar_id}", "API")
-        
-        # Prepare HeyGen API request
-        heygen_url = "https://api.heygen.com/v2/video/generate"
-        
-        headers = {
-            "X-Api-Key": heygen_api_key,
-            "Content-Type": "application/json"
-        }
-        
-        log_info(f"HeyGen API URL: {heygen_url}", "API")
-        
-        # Use Cloudinary URL instead of base64
-        payload = {
-            "video_inputs": [
-                {
-                    "character": {
-                        "type": "avatar",
-                        "avatar_id": heygen_avatar_id,
-                        "avatar_style": "normal"
-                    },
-                    "voice": {
-                        "type": "audio",
-                        "audio_url": cloudinary_url  # Use Cloudinary URL here!
-                    },
-                    "background": {
-                        "type": "color",
-                        "value": "#ffffff"
-                    }
-                }
-            ],
-            "dimension": {
-                "width": 1920,
-                "height": 1080
-            },
-            "aspect_ratio": "16:9",
-            "test": False
-        }
-        
-        log_info(f"HeyGen payload prepared with Cloudinary URL: {cloudinary_url}", "API")
-        
-        # Make request to HeyGen
-        log_info(f"Making request to HeyGen API...", "API")
-        try:
-            response = requests.post(heygen_url, json=payload, headers=headers, timeout=30)
-            log_info(f"HeyGen API Response Status: {response.status_code}", "API")
-            log_info(f"HeyGen API Response Headers: {dict(response.headers)}", "API")
-            log_info(f"HeyGen API Response Text: {response.text}", "API")
-        except Exception as e:
-            log_error(f"HeyGen API request failed with exception: {e}", "API", e)
-            return JSONResponse(status_code=500, content={"error": "HeyGen API request failed"})
-        
-        if response.status_code == 200:
-            try:
-                heygen_data = response.json()
-                log_info(f"HeyGen API Response JSON: {heygen_data}", "API")
-                
-                # Check if we have a video_id (new HeyGen API format)
-                if heygen_data.get("data") and heygen_data.get("data", {}).get("video_id"):
-                    video_id = heygen_data.get("data", {}).get("video_id")
-                    log_info(f"HeyGen video creation successful, video_id: {video_id}", "API")
-                    
-                    # Save video record to database with improved error handling
-                    try:
-                        execute_query(
-                            """
-                            INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                        )
-                        log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
-                    except Exception as db_error:
-                        log_error(f"Database insert error: {db_error}", "API", db_error)
-                        # Video was created successfully in HeyGen, just database save failed
-                        pass
-                    
-                    return JSONResponse(content={
-                        "success": True,
-                        "video_id": video_id,
-                        "message": "Video creation started successfully"
-                    })
-                
-                # Check for legacy HeyGen API format (code == 100)
-                elif heygen_data.get("code") == 100:
-                    video_id = heygen_data.get("data", {}).get("video_id")
-                    log_info(f"HeyGen video creation successful (legacy format), video_id: {video_id}", "API")
-                    
-                    # Save video record to database with improved error handling
-                    try:
-                        execute_query(
-                            """
-                            INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                            """,
-                            (user["id"], title, avatar_id, cloudinary_url, video_id, "processing", datetime.now().isoformat())
-                        )
-                        log_info(f"Video record saved to database for user {user['username']}: {video_id}", "API")
-                    except Exception as db_error:
-                        log_error(f"Database insert error: {db_error}", "API", db_error)
-                        # Video was created successfully in HeyGen, just database save failed
-                        pass
-                    
-                    return JSONResponse(content={
-                        "success": True,
-                        "video_id": video_id,
-                        "message": "Video creation started successfully"
-                    })
-                
-                # Handle error cases
-                else:
-                    error_msg = heygen_data.get("error", {}).get("message") if heygen_data.get("error") else "Unknown HeyGen error"
-                    error_code = heygen_data.get("code", "Unknown")
-                    log_error(f"HeyGen API error: code={error_code}, message={error_msg}", "API")
-                    log_error(f"Full HeyGen response: {heygen_data}", "API")
-                    return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
-                    
-            except Exception as e:
-                log_error(f"Failed to parse HeyGen response JSON: {e}", "API", e)
-                log_error(f"Raw response: {response.text}", "API")
-                return JSONResponse(status_code=500, content={"error": "HeyGen response parsing error"})
-        
-        else:
-            # Enhanced error logging for non-200 responses
-            try:
-                error_response = response.json()
-                log_error(f"HeyGen API request failed: {response.status_code} - {error_response}", "API")
-            except:
-                log_error(f"HeyGen API request failed: {response.status_code} - {response.text}", "API")
-            
-            return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
-    
-    except Exception as e:
-        log_error(f"Error creating video: {e}", "API", e)
-        # Clean up temp file if it exists
-        if temp_audio_path:
-            try:
-                os.unlink(temp_audio_path)
-            except:
-                pass
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-# ============================================================================
-# TEXT-TO-VIDEO API ROUTE - HEYGEN VOICE INTEGRATION
-# ============================================================================
-
-@router.post("/api/create-text-video")
-async def create_video_from_text_input(
-    request: Request,
-    title: str = Form(...),
-    avatar_id: str = Form(...),
-    text: str = Form(...),
-    description: str = Form(None),
-    format: str = Form("16:9")
-):
-    """Create video from text using HeyGen with user's assigned voice"""
-    
-    log_info(f"[Video] Text-to-video request - Title: '{title}', Avatar: '{avatar_id}'", "Video")
-    
-    user = get_current_user(request)
-    if not user:
-        log_error("Unauthorized text-to-video creation attempt", "Video")
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    try:
-        # Get user's assigned HeyGen voice ID
-        user_data = execute_query(
-            "SELECT heygen_voice_id FROM users WHERE id = ?",
-            (user["id"],),
-            fetch_one=True
-        )
-        
-        heygen_voice_id = user_data.get("heygen_voice_id") if user_data else None
-        
-        if not heygen_voice_id:
-            log_error(f"[Video] No HeyGen voice ID assigned to user {user['username']}", "Video")
-            return JSONResponse(status_code=400, content={"error": "No voice assigned. Please contact admin."})
-        
-        log_info(f"[Video] Using HeyGen voice ID: {heygen_voice_id}", "Video")
-        
-        # Get HeyGen API key
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("[Video] HeyGen API key not configured", "Video")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        # Get avatar details from database
-        avatar = execute_query(
-            "SELECT * FROM avatars WHERE id = ? AND user_id = ?",
-            (avatar_id, user["id"]),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            log_error(f"[Video] Avatar not found: avatar_id={avatar_id}, user_id={user['id']}", "Video")
-            return JSONResponse(status_code=400, content={"error": "Avatar not found"})
-        
-        heygen_avatar_id = avatar.get("heygen_avatar_id")
-        if not heygen_avatar_id:
-            log_error(f"[Video] No HeyGen avatar ID found for avatar: {avatar}", "Video")
-            return JSONResponse(status_code=400, content={"error": "Avatar has no HeyGen ID"})
-        
-        log_info(f"[Video] Using HeyGen avatar ID: {heygen_avatar_id}", "Video")
-        
-        # Use the create_video_from_text function with the user's voice
-        log_info(f"[Video] Creating video with user's assigned voice: {heygen_voice_id}", "Video")
-        heygen_result = create_video_from_text(
-            api_key=heygen_api_key,
-            avatar_id=heygen_avatar_id,
-            text=text,
-            video_format=format,
-            voice_id=heygen_voice_id  # Use the user's assigned voice!
-        )
-        
-        log_info(f"[Video] HeyGen create_video_from_text result: {heygen_result}", "Video")
-        
-        if heygen_result.get("success"):
-            video_id = heygen_result.get("video_id")
-            log_info(f"[Video] HeyGen text-to-video creation successful, video_id: {video_id}", "Video")
-            
-            # Save video record to database with improved error handling
-            try:
-                execute_query(
-                    """
-                    INSERT INTO videos (user_id, title, avatar_id, audio_path, heygen_video_id, status, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (user["id"], title, avatar_id, f"voice_{heygen_voice_id}", video_id, "processing", datetime.now().isoformat())
-                )
-                log_info(f"[Video] Text-to-video record saved - HeyGen ID: {video_id}, Voice: {heygen_voice_id}", "Video")
-            except Exception as db_error:
-                log_error(f"[Video] Database insert error: {db_error}", "Video", db_error)
-                # Video was created successfully in HeyGen, just database save failed
-                pass
-            
-            return JSONResponse(content={
-                "success": True,
-                "video_id": video_id,
-                "message": "Video creation started with your personalized voice"
-            })
-        
-        else:
-            error_msg = heygen_result.get("error", "Unknown HeyGen error")
-            log_error(f"[Video] HeyGen text-to-video creation failed: {error_msg}", "Video")
-            return JSONResponse(status_code=400, content={"error": f"HeyGen error: {error_msg}"})
-    
-    except Exception as e:
-        log_error(f"[Video] Error creating text-to-video: {e}", "Video", e)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-@router.get("/api/video-status/{video_id}")
-async def check_video_status(request: Request, video_id: str):
-    """Check video processing status from HeyGen"""
-    user = get_current_user(request)
-    if not user:
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    log_info(f"Video status check by user {user['username']} for video_id: {video_id}", "API")
-    
-    try:
         # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE heygen_video_id = ? AND user_id = ?",
-            (video_id, user["id"]),
-            fetch_one=True
-        )
-        
+        video = db.get_video_by_id(video_id, user["id"])
         if not video:
-            log_error(f"Video not found: video_id={video_id}, user_id={user['id']}", "API")
-            return JSONResponse(status_code=404, content={"error": "Video not found"})
+            raise HTTPException(status_code=404, detail="Video not found")
         
-        # Check status with HeyGen
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured for status check", "API")
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        headers = {"X-Api-Key": heygen_api_key}
-        status_url = f"https://api.heygen.com/v1/video_status.get?video_id={video_id}"
-        
-        log_info(f"Checking HeyGen video status: {status_url}", "API")
-        response = requests.get(status_url, headers=headers)
-        
-        log_info(f"HeyGen status response: {response.status_code} - {response.text}", "API")
-        
-        if response.status_code == 200:
-            status_data = response.json()
-            
-            if status_data.get("code") == 100:
-                data = status_data.get("data", {})
-                status = data.get("status")
-                video_url = data.get("video_url")
-                
-                log_info(f"Video status: {status}, URL: {video_url}", "API")
-                
-                # Update database with new status
-                if status == "completed" and video_url:
-                    execute_query(
-                        "UPDATE videos SET status = ?, video_path = ? WHERE heygen_video_id = ?",
-                        ("completed", video_url, video_id)
-                    )
-                    log_info(f"Video completed and database updated: {video_id}", "API")
-                elif status == "failed":
-                    execute_query(
-                        "UPDATE videos SET status = ? WHERE heygen_video_id = ?",
-                        ("failed", video_id)
-                    )
-                    log_error(f"Video failed: {video_id}", "API")
-                
-                return JSONResponse(content={
-                    "status": status,
-                    "video_url": video_url,
-                    "progress": data.get("progress", 0)
-                })
-        
-        log_error(f"Failed to get video status from HeyGen: {response.status_code}", "API")
-        return JSONResponse(status_code=400, content={"error": "Failed to get video status"})
-    
-    except Exception as e:
-        log_error(f"Error checking video status: {e}", "API", e)
-        return JSONResponse(status_code=500, content={"error": "Internal server error"})
-
-# ============================================================================
-# ADMIN ROUTES
-# ============================================================================
-
-@router.get("/admin/users", response_class=HTMLResponse)
-async def admin_users(request: Request):
-    """
-    Admin users page
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        log_error(f"Unauthorized admin access attempt by {user.get('username') if user else 'anonymous'}", "Admin")
-        return RedirectResponse(url="/login", status_code=303)
-    
-    log_info(f"Admin users page accessed by {user['username']}", "Admin")
-    
-    # Get all users
-    users = execute_query(
-        "SELECT * FROM users ORDER BY created_at DESC",
-        fetch_all=True
-    )
-    
-    return templates.TemplateResponse(
-        "portal/admin_users.html",
-        {
-            "request": request,
-            "users": users
-        }
-    )
-
-@router.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request):
-    """
-    Admin dashboard
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    log_info(f"Admin dashboard accessed by {user['username']}", "Admin")
-    
-    # Get stats
-    user_count = execute_query(
-        "SELECT COUNT(*) as count FROM users",
-        fetch_one=True
-    )
-    
-    video_count = execute_query(
-        "SELECT COUNT(*) as count FROM videos",
-        fetch_one=True
-    )
-    
-    avatar_count = execute_query(
-        "SELECT COUNT(*) as count FROM avatars",
-        fetch_one=True
-    )
-    
-    return templates.TemplateResponse(
-        "portal/admin_dashboard.html",
-        {
-            "request": request,
-            "user_count": user_count["count"] if user_count else 0,
-            "video_count": video_count["count"] if video_count else 0,
-            "avatar_count": avatar_count["count"] if avatar_count else 0
-        }
-    )
-
-# ============================================================================
-# ADMIN GDPR ROUTES
-# ============================================================================
-
-@router.get("/admin/gdpr", response_class=HTMLResponse)
-async def admin_gdpr_dashboard(request: Request):
-    """Admin GDPR compliance dashboard"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Get consent statistics
-    stats = get_consent_statistics()
-    
-    # Get users without consent
-    users_without_consent = get_users_without_consent()
-    
-    # Get recent deletion log
-    deletion_log = get_deletion_log()
-    
-    return templates.TemplateResponse("portal/admin_gdpr.html", {
-        "request": request,
-        "user": user,
-        "stats": stats,
-        "users_without_consent": users_without_consent,
-        "deletion_log": deletion_log[:10]  # Show last 10 deletions
-    })
-
-@router.post("/admin/gdpr/export-user-data/{user_id}")
-async def admin_export_user_data(request: Request, user_id: int):
-    """Admin export specific user's data"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    try:
-        # Get target user info
-        target_user = execute_query(
-            "SELECT username, email FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not target_user:
-            return JSONResponse(status_code=404, content={"error": "User not found"})
-        
-        zip_data = export_user_data(user_id)
-        
-        filename = f"admin_export_{target_user['username']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-        
-        log_info(f"Admin {user['username']} exported data for user {target_user['email']}", "GDPR")
-        
-        return Response(
-            content=zip_data,
-            media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
-        
-    except Exception as e:
-        log_error(f"Admin export error for user {user_id}: {e}", "GDPR", e)
-        return JSONResponse(status_code=500, content={"error": "Error generating data export"})
-
-@router.post("/admin/gdpr/delete-user/{user_id}")
-async def admin_delete_user_account(request: Request, user_id: int):
-    """Admin delete user account"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    try:
-        # Get target user info
-        target_user = execute_query(
-            "SELECT username, email FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not target_user:
-            return JSONResponse(status_code=404, content={"error": "User not found"})
-        
-        # Don't allow deleting other admins
-        if user_id != user["id"]:
-            target_is_admin = execute_query(
-                "SELECT is_admin FROM users WHERE id = ?",
-                (user_id,),
-                fetch_one=True
-            )
-            if target_is_admin and target_is_admin["is_admin"]:
-                return JSONResponse(status_code=403, content={"error": "Cannot delete admin users"})
-        
-        success = delete_user_account(user_id, admin_user_id=user["id"])
-        
-        if success:
-            log_info(f"Admin {user['username']} deleted user account {target_user['email']}", "GDPR")
-            return JSONResponse(content={"success": True, "message": f"User {target_user['username']} deleted successfully"})
-        else:
-            return JSONResponse(status_code=500, content={"error": "Error deleting user account"})
-            
-    except Exception as e:
-        log_error(f"Admin delete user error for user {user_id}: {e}", "GDPR", e)
-        return JSONResponse(status_code=500, content={"error": "Error deleting user account"})
-
-@router.get("/admin/create-user", response_class=HTMLResponse)
-async def admin_create_user_page(request: Request):
-    """
-    Admin create user page
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    return templates.TemplateResponse(
-        "portal/admin_create_user.html",
-        {"request": request}
-    )
-
-@router.post("/admin/create-user")
-async def admin_create_user(
-    request: Request,
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    is_admin_user: bool = Form(False),
-    api_key: str = Form(None)
-):
-    """
-    Admin create user
-    """
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} creating user: {username}", "Admin")
-        
-        # Check if user already exists
-        existing_user = execute_query(
-            "SELECT * FROM users WHERE username = ? OR email = ?",
-            (username, email),
-            fetch_one=True
-        )
-        
-        if existing_user:
-            log_error(f"Admin create user failed - user exists: {username}", "Admin")
-            return templates.TemplateResponse(
-                "portal/admin_create_user.html",
-                {
-                    "request": request,
-                    "error": "Username or email already exists"
-                }
-            )
-        
-        # Create user
-        hashed_password = get_password_hash(password)
-        execute_query(
-            """
-            INSERT INTO users (username, email, hashed_password, created_at, is_admin, api_key)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (username, email, hashed_password, datetime.now().isoformat(), is_admin_user, api_key)
-        )
-        
-        log_info(f"Admin {user['username']} created user {username} successfully", "Admin")
-        
-        # Redirect to users list
-        return RedirectResponse(url="/admin/users", status_code=303)
-        
-    except Exception as e:
-        log_error("Admin create user error", "Admin", e)
-        return templates.TemplateResponse(
-            "portal/admin_create_user.html",
-            {
-                "request": request,
-                "error": "Error creating user"
-            }
-        )
-
-@router.get("/admin/edit-user/{user_id}", response_class=HTMLResponse)
-async def admin_edit_user_page(request: Request, user_id: int):
-    """Admin edit user page"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        # Get the user to edit
-        user_to_edit = execute_query(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_edit:
-            log_error(f"Admin edit user - user not found: {user_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        log_info(f"Admin {user['username']} editing user {user_to_edit['username']}", "Admin")
-        
-        return templates.TemplateResponse("portal/admin_edit_user.html", {
+        return templates.TemplateResponse("video_detail.html", {
             "request": request,
             "user": user,
-            "user_to_edit": user_to_edit,
-            "title": f"Edit User: {user_to_edit['username']}"
+            "video": video
         })
     except Exception as e:
-        log_error(f"Error in admin_edit_user_page: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
+        log_error(f"Error getting video {video_id}", "Web", e)
+        return RedirectResponse(url="/dashboard")
 
-@router.post("/admin/edit-user/{user_id}")
-async def admin_edit_user_submit(request: Request, user_id: int):
-    """Handle admin edit user form submission"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
+@router.post("/video/{video_id}/delete")
+async def delete_video(request: Request, video_id: str):
+    """Delete a video"""
     try:
-        # Get form data
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+        
+        # Delete video from database
+        success = db.delete_video(video_id, user["id"])
+        if success:
+            return JSONResponse({"success": True, "message": "Video deleted successfully"})
+        else:
+            return JSONResponse({"success": False, "message": "Failed to delete video"})
+    except Exception as e:
+        log_error(f"Error deleting video {video_id}", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
+
+# Avatar Management Routes
+@router.get("/avatars")
+async def avatars_page(request: Request):
+    """Display avatars page"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+        
+        # Get user's avatars
+        avatars = db.get_user_avatars(user["id"]) or []
+        
+        return templates.TemplateResponse("avatars.html", {
+            "request": request,
+            "user": user,
+            "avatars": avatars
+        })
+    except Exception as e:
+        log_error(f"Error loading avatars page", "Web", e)
+        return templates.TemplateResponse("avatars.html", {
+            "request": request,
+            "user": user,
+            "avatars": []
+        })
+
+@router.post("/avatar/create")
+async def create_avatar(request: Request):
+    """Create new avatar"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+        
+        form = await request.form()
+        avatar_name = form.get("avatar_name", "").strip()
+        avatar_image = form.get("avatar_image")
+        
+        if not avatar_name:
+            return JSONResponse({"success": False, "message": "Avatar name is required"})
+        
+        # Process avatar creation
+        avatar_id = db.create_avatar(user["id"], avatar_name, avatar_image)
+        if avatar_id:
+            return JSONResponse({"success": True, "message": "Avatar created successfully", "avatar_id": avatar_id})
+        else:
+            return JSONResponse({"success": False, "message": "Failed to create avatar"})
+    except Exception as e:
+        log_error(f"Error creating avatar", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
+
+# Video Creation Routes
+@router.get("/create")
+async def create_video_page(request: Request):
+    """Display video creation page"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+        
+        # Get user's avatars for selection
+        avatars = db.get_user_avatars(user["id"]) or []
+        
+        return templates.TemplateResponse("create_video.html", {
+            "request": request,
+            "user": user,
+            "avatars": avatars
+        })
+    except Exception as e:
+        log_error(f"Error loading create video page", "Web", e)
+        return templates.TemplateResponse("create_video.html", {
+            "request": request,
+            "user": user,
+            "avatars": []
+        })
+
+@router.post("/create/video")
+async def create_video(request: Request):
+    """Handle video creation"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"success": False, "message": "Authentication required"})
+        
+        form = await request.form()
+        script = form.get("script", "").strip()
+        avatar_id = form.get("avatar_id", "").strip()
+        title = form.get("title", "").strip()
+        
+        if not script:
+            return JSONResponse({"success": False, "message": "Script is required"})
+        
+        if not avatar_id:
+            return JSONResponse({"success": False, "message": "Avatar selection is required"})
+        
+        # Create video job
+        video_data = {
+            "user_id": user["id"],
+            "title": title or "Untitled Video",
+            "script": script,
+            "avatar_id": avatar_id,
+            "status": "pending"
+        }
+        
+        video_id = db.create_video_job(video_data)
+        if video_id:
+            # Trigger video generation (async)
+            # This would typically queue a background job
+            return JSONResponse({
+                "success": True, 
+                "message": "Video creation started", 
+                "video_id": video_id,
+                "redirect": "/dashboard"
+            })
+        else:
+            return JSONResponse({"success": False, "message": "Failed to create video job"})
+            
+    except Exception as e:
+        log_error(f"Error creating video", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
+
+# Settings Routes
+@router.get("/settings")
+async def settings_page(request: Request):
+    """Display settings page"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
+        
+        return templates.TemplateResponse("settings.html", {
+            "request": request,
+            "user": user
+        })
+    except Exception as e:
+        log_error(f"Error loading settings page", "Web", e)
+        return RedirectResponse(url="/dashboard")
+
+@router.post("/settings/update")
+async def update_settings(request: Request):
+    """Update user settings"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"success": False, "message": "Authentication required"})
+        
         form = await request.form()
         username = form.get("username", "").strip()
         email = form.get("email", "").strip()
-        is_premium = 1 if form.get("is_premium") == "on" else 0
-        is_admin_user = 1 if form.get("is_admin") == "on" else 0
+        api_key = form.get("api_key", "").strip()
         
-        log_info(f"Admin {user['username']} updating user {user_id}: {username}", "Admin")
+        updates = {}
+        if username and username != user.get("username"):
+            updates["username"] = username
+        if email and email != user.get("email"):
+            updates["email"] = email
+        if api_key:
+            updates["api_key"] = api_key
         
-        # Update user
-        execute_query(
-            """
-            UPDATE users 
-            SET username = ?, email = ?, is_premium = ?, is_admin = ?
-            WHERE id = ?
-            """,
-            (username, email, is_premium, is_admin_user, user_id)
-        )
-        
-        log_info(f"Admin {user['username']} updated user {username} successfully", "Admin")
-        return RedirectResponse(url=f"/admin/users?success=user_updated", status_code=303)
-    
-    except Exception as e:
-        log_error(f"Error updating user: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/edit-user/{user_id}?error=update_failed", status_code=303)
-
-# ============================================================================
-# AVATAR MANAGEMENT ROUTES - CLEANED UP VERSION
-# ============================================================================
-
-@router.get("/admin/manage-avatars/{user_id}", response_class=HTMLResponse)
-async def admin_manage_avatars_page(request: Request, user_id: int):
-    """Admin manage user avatars page"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} managing avatars for user_id: {user_id}", "Admin")
-        
-        # Get the user to manage
-        user_to_manage = execute_query(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_manage:
-            log_error(f"User not found for avatar management: {user_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        # Get user's avatars
-        raw_avatars = execute_query(
-            "SELECT * FROM avatars WHERE user_id = ?",
-            (user_id,),
-            fetch_all=True
-        )
-        
-        log_info(f"Found {len(raw_avatars) if raw_avatars else 0} avatars for user {user_to_manage['username']}", "Admin")
-        
-        # Transform avatars to match template expectations
-        avatars = []
-        for avatar in raw_avatars:
-            # Convert database row to dict if needed
-            if not isinstance(avatar, dict):
-                avatar_dict = {}
-                for key in avatar.keys():
-                    avatar_dict[key] = avatar[key]
-                avatar = avatar_dict
-            
-            # Map database fields to template expectations
-            processed_avatar = {
-                'id': avatar.get('id'),
-                'user_id': avatar.get('user_id'),
-                'avatar_name': avatar.get('name', 'Unnamed Avatar'),
-                'avatar_url': avatar.get('image_path'),
-                'heygen_avatar_id': avatar.get('heygen_avatar_id'),
-                'created_at': avatar.get('created_at')
-            }
-            
-            # For HeyGen avatars, try to get a better display name
-            if processed_avatar['heygen_avatar_id'] and not processed_avatar['avatar_name']:
-                processed_avatar['avatar_name'] = f"HeyGen Avatar {processed_avatar['heygen_avatar_id'][:8]}..."
-            
-            avatars.append(processed_avatar)
-        
-        return templates.TemplateResponse("portal/admin_user_avatars.html", {
-            "request": request,
-            "user": user,
-            "user_to_manage": user_to_manage,
-            "avatars": avatars,
-            "title": f"Manage Avatars: {user_to_manage['username']}"
-        })
-    except Exception as e:
-        log_error(f"Error in admin_manage_avatars_page: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
-
-@router.get("/admin/list-my-avatars")
-async def list_my_avatars(request: Request):
-    """Show first 50 avatars from your HeyGen account with names"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
-    try:
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            return JSONResponse(status_code=500, content={"error": "HeyGen API key not configured"})
-        
-        headers = {"X-Api-Key": heygen_api_key, "Accept": "application/json"}
-        
-        response = requests.get("https://api.heygen.com/v2/avatars", headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            avatars_data = response.json()
-            avatars = avatars_data.get('data', {}).get('avatars', [])[:50]  # First 50 avatars
-            
-            avatar_list = []
-            for avatar in avatars:
-                avatar_list.append({
-                    'id': avatar.get('avatar_id'),
-                    'name': avatar.get('avatar_name', 'Unnamed'),
-                    'gender': avatar.get('gender', 'unknown'),
-                    'preview_url': avatar.get('preview_image_url', '')
-                })
-            
-            return JSONResponse(content={
-                "success": True,
-                "total_available": len(avatars_data.get('data', {}).get('avatars', [])),
-                "showing": len(avatar_list),
-                "avatars": avatar_list
-            })
+        if updates:
+            success = db.update_user(user["id"], updates)
+            if success:
+                return JSONResponse({"success": True, "message": "Settings updated successfully"})
+            else:
+                return JSONResponse({"success": False, "message": "Failed to update settings"})
         else:
-            return JSONResponse(status_code=400, content={"error": f"HeyGen API error: {response.status_code}"})
+            return JSONResponse({"success": True, "message": "No changes made"})
             
     except Exception as e:
-        log_error(f"Error listing avatars: {e}", "Admin", e)
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        log_error(f"Error updating settings", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
 
-@router.post("/admin/upload-avatar/{user_id}")
-async def admin_upload_avatar(
-    request: Request,
-    user_id: int,
-    avatar_file: UploadFile = File(...)
-):
-    """Upload avatar file for user"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Validate user exists
-    target_user = execute_query(
-        "SELECT id FROM users WHERE id = ?",
-        (user_id,),
-        fetch_one=True
-    )
-    if not target_user:
-        return RedirectResponse(
-            url=f"/admin/users?error=user_not_found",
-            status_code=303
-        )
-    
+# Profile Routes
+@router.get("/profile")
+async def profile_page(request: Request):
+    """Display profile page"""
     try:
-        # Validate file type
-        allowed_extensions = {'png', 'jpg', 'jpeg'}
-        file_extension = avatar_file.filename.split('.')[-1].lower()
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login")
         
-        if file_extension not in allowed_extensions:
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=invalid_file",
-                status_code=303
-            )
-        
-        # Create uploads directory if it doesn't exist
-        upload_dir = "static/uploads/avatars"
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Generate secure filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        secure_name = secure_filename(avatar_file.filename)
-        file_ext = os.path.splitext(secure_name)[1].lower()
-        unique_filename = f"user_{user_id}_{timestamp}{file_ext}"
-        file_path = os.path.join(upload_dir, unique_filename)
-        
-        # Save the file
-        with open(file_path, "wb") as buffer:
-            content = await avatar_file.read()
-            buffer.write(content)
-        
-        # Create avatar record in database
-        image_url = f"/static/uploads/avatars/{unique_filename}"
-        execute_query(
-            """
-            INSERT INTO avatars (user_id, name, image_path, created_at)
-            VALUES (?, ?, ?, ?)
-            """,
-            (user_id, avatar_file.filename, image_url, datetime.now().isoformat())
-        )
-        
-        log_info(f"Admin {user['username']} uploaded avatar for user {user_id}: {unique_filename}", "Admin")
-        return RedirectResponse(
-            url=f"/admin/manage-avatars/{user_id}?success=avatar_uploaded",
-            status_code=303
-        )
-        
-    except Exception as e:
-        log_error(f"Avatar upload error: {e}", "Admin", e)
-        return RedirectResponse(
-            url=f"/admin/manage-avatars/{user_id}?error=upload_failed",
-            status_code=303
-        )
-
-@router.post("/admin/fetch-heygen-avatar/{user_id}")
-async def admin_fetch_heygen_avatar(
-    request: Request,
-    user_id: int,
-    heygen_avatar_id: str = Form(...)
-):
-    """Fetch avatar from HeyGen by ID - CLEANED UP VERSION"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    # Validate user exists
-    target_user = execute_query(
-        "SELECT id FROM users WHERE id = ?",
-        (user_id,),
-        fetch_one=True
-    )
-    if not target_user:
-        return RedirectResponse(
-            url=f"/admin/users?error=user_not_found",
-            status_code=303
-        )
-    
-    try:
-        # Check if avatar already exists
-        existing_avatar = execute_query(
-            "SELECT id FROM avatars WHERE user_id = ? AND heygen_avatar_id = ?",
-            (user_id, heygen_avatar_id),
-            fetch_one=True
-        )
-        
-        if existing_avatar:
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=avatar_exists",
-                status_code=303
-            )
-        
-        # Get HeyGen API key
-        heygen_api_key = os.getenv("HEYGEN_API_KEY")
-        if not heygen_api_key:
-            log_error("HeyGen API key not configured", "Admin")
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=api_key_missing",
-                status_code=303
-            )
-        
-        headers = {
-            "X-Api-Key": heygen_api_key,
-            "Accept": "application/json"
+        # Get user statistics
+        stats = {
+            "total_videos": db.get_user_video_count(user["id"]) or 0,
+            "total_views": db.get_user_total_views(user["id"]) or 0,
+            "account_created": user.get("created_at", "Unknown"),
+            "last_login": user.get("last_login", "Unknown")
         }
         
-        log_info(f"Fetching HeyGen avatar: {heygen_avatar_id}", "Admin")
-        
-        # Use the list endpoint to find the avatar (we know this works from your logs)
-        response = requests.get(
-            "https://api.heygen.com/v2/avatars",
-            headers=headers,
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            avatars_data = response.json()
-            avatars_list = avatars_data.get('data', {}).get('avatars', [])
-            
-            avatar_found = None
-            for avatar in avatars_list:
-                if avatar.get('avatar_id') == heygen_avatar_id:
-                    avatar_found = avatar
-                    break
-            
-            if avatar_found:
-                # Create avatar record
-                avatar_name = avatar_found.get('avatar_name', f'HeyGen Avatar {heygen_avatar_id}')
-                avatar_preview_url = avatar_found.get('preview_image_url', '')
-                
-                execute_query(
-                    """
-                    INSERT INTO avatars (user_id, name, image_path, heygen_avatar_id, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (user_id, avatar_name, avatar_preview_url, heygen_avatar_id, datetime.now().isoformat())
-                )
-                
-                log_info(f"Admin {user['username']} fetched HeyGen avatar {heygen_avatar_id} for user {user_id}", "Admin")
-                return RedirectResponse(
-                    url=f"/admin/manage-avatars/{user_id}?success=avatar_fetched",
-                    status_code=303
-                )
-            else:
-                # Avatar ID not found in HeyGen's library
-                log_error(f"Avatar ID {heygen_avatar_id} not found in HeyGen's avatar library", "Admin")
-                return RedirectResponse(
-                    url=f"/admin/manage-avatars/{user_id}?error=avatar_not_found",
-                    status_code=303
-                )
-        else:
-            log_error(f"HeyGen API error: {response.status_code}", "Admin")
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
-                status_code=303
-            )
-        
-    except Exception as e:
-        log_error(f"HeyGen avatar fetch error: {e}", "Admin", e)
-        return RedirectResponse(
-            url=f"/admin/manage-avatars/{user_id}?error=heygen_failed",
-            status_code=303
-        )
-
-@router.post("/admin/rename-avatar/{avatar_id}")
-async def admin_rename_avatar(
-    request: Request,
-    avatar_id: int,
-    new_name: str = Form(...)
-):
-    """Rename an avatar"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        # Get the avatar
-        avatar = execute_query(
-            "SELECT user_id FROM avatars WHERE id = ?",
-            (avatar_id,),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            return JSONResponse(status_code=404, content={"error": "Avatar not found"})
-        
-        user_id = avatar["user_id"]
-        
-        # Update avatar name
-        execute_query(
-            "UPDATE avatars SET name = ? WHERE id = ?",
-            (new_name.strip(), avatar_id)
-        )
-        
-        log_info(f"Admin {user['username']} renamed avatar {avatar_id} to '{new_name}'", "Admin")
-        return JSONResponse(content={"success": True, "message": "Avatar renamed successfully"})
-        
-    except Exception as e:
-        log_error(f"Avatar rename error: {e}", "Admin", e)
-        return JSONResponse(status_code=500, content={"error": "Rename failed"})
-
-@router.post("/admin/delete-avatar/{avatar_id}")
-async def admin_delete_avatar(request: Request, avatar_id: int):
-    """Delete avatar"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        # Get the avatar
-        avatar = execute_query(
-            "SELECT user_id, image_path FROM avatars WHERE id = ?",
-            (avatar_id,),
-            fetch_one=True
-        )
-        
-        if not avatar:
-            return RedirectResponse(
-                url="/admin/users?error=avatar_not_found",
-                status_code=303
-            )
-        
-        user_id = avatar["user_id"]
-        
-        # Delete file if it exists locally
-        if avatar.get("image_path") and avatar["image_path"].startswith('/static/'):
-            file_path = avatar["image_path"][1:]  # Remove leading slash
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        
-        # Delete from database
-        execute_query(
-            "DELETE FROM avatars WHERE id = ?",
-            (avatar_id,)
-        )
-        
-        log_info(f"Admin {user['username']} deleted avatar {avatar_id}", "Admin")
-        return RedirectResponse(
-            url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
-            status_code=303
-        )
-        
-    except Exception as e:
-        log_error(f"Avatar deletion error: {e}", "Admin", e)
-        return RedirectResponse(
-            url="/admin/users?error=delete_failed",
-            status_code=303
-        )
-
-# Also add this route to serve uploaded avatar files
-@router.get("/static/uploads/avatars/{filename}")
-async def serve_avatar_file(filename: str):
-    """Serve uploaded avatar files"""
-    file_path = f"static/uploads/avatars/{filename}"
-    if os.path.exists(file_path):
-        return FileResponse(file_path)
-    else:
-        raise HTTPException(status_code=404, detail="File not found")
-
-# ============================================================================
-# ADMIN VIDEO MANAGEMENT ROUTES
-# ============================================================================
-
-@router.get("/admin/manage-videos/{user_id}", response_class=HTMLResponse)
-async def admin_manage_videos_page(request: Request, user_id: int):
-    """Admin manage user videos page"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
-    try:
-        log_info(f"Admin {user['username']} managing videos for user_id: {user_id}", "Admin")
-        
-        # Get the user to manage
-        user_to_manage = execute_query(
-            "SELECT * FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_manage:
-            log_error(f"User not found for video management: {user_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        # Get user's videos
-        raw_videos = execute_query(
-            "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-            (user_id,),
-            fetch_all=True
-        )
-        
-        log_info(f"Found {len(raw_videos) if raw_videos else 0} videos for user {user_to_manage['username']}", "Admin")
-        
-        # Transform videos for template
-        videos = []
-        for video in raw_videos:
-            if not isinstance(video, dict):
-                video_dict = {}
-                for key in video.keys():
-                    video_dict[key] = video[key]
-                video = video_dict
-            
-            processed_video = {
-                'id': video.get('id'),
-                'title': video.get('title', 'Untitled'),
-                'status': video.get('status', 'unknown'),
-                'created_at': video.get('created_at').strftime('%Y-%m-%d %H:%M') if video.get('created_at') else 'Unknown',
-                'video_path': video.get('video_path'),
-                'heygen_video_id': video.get('heygen_video_id'),
-                'audio_path': video.get('audio_path'),
-                'user_id': video.get('user_id')
-            }
-            videos.append(processed_video)
-        
-        return templates.TemplateResponse("portal/admin_manage_videos.html", {
+        return templates.TemplateResponse("profile.html", {
             "request": request,
             "user": user,
-            "user_to_manage": user_to_manage,
-            "videos": videos,
-            "total_videos": len(videos),
-            "title": f"Manage Videos: {user_to_manage['username']}"
+            "stats": stats
         })
-        
     except Exception as e:
-        log_error(f"Error in admin_manage_videos_page: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=system_error", status_code=303)
+        log_error(f"Error loading profile page", "Web", e)
+        return templates.TemplateResponse("profile.html", {
+            "request": request,
+            "user": user,
+            "stats": {
+                "total_videos": 0,
+                "total_views": 0,
+                "account_created": "Unknown",
+                "last_login": "Unknown"
+            }
+        })
 
-@router.post("/admin/delete-video/{video_id}")
-async def admin_delete_video(request: Request, video_id: int):
-    """Admin delete video"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
+# API Routes for AJAX calls
+@router.get("/api/videos")
+async def api_get_videos(request: Request):
+    """API endpoint to get user videos"""
     try:
-        log_info(f"Admin {user['username']} attempting to delete video {video_id}", "Admin")
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"success": False, "message": "Authentication required"})
         
-        # Get video info first
-        video = execute_query(
-            "SELECT user_id FROM videos WHERE id = ?",
-            (video_id,),
-            fetch_one=True
-        )
-        
-        if video:
-            user_id = video["user_id"]
-            log_info(f"Video {video_id} belongs to user {user_id}", "Admin")
-            
-            # Delete video
-            execute_query(
-                "DELETE FROM videos WHERE id = ?",
-                (video_id,)
-            )
-            log_info(f"Admin {user['username']} deleted video {video_id} successfully", "Admin")
-            return RedirectResponse(url=f"/admin/manage-videos/{user_id}?success=video_deleted", status_code=303)
-        else:
-            log_error(f"Video not found for deletion: {video_id}", "Admin")
-            return RedirectResponse(url="/admin/users?error=video_not_found", status_code=303)
-            
+        videos = db.get_user_videos(user["id"]) or []
+        return JSONResponse({"success": True, "videos": videos})
     except Exception as e:
-        log_error(f"Error deleting video {video_id}: {e}", "Admin", e)
-        return RedirectResponse(url="/admin/users?error=delete_failed", status_code=303)
+        log_error(f"Error getting videos via API", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
 
-@router.post("/admin/clear-user-videos/{user_id}")
-async def admin_clear_user_videos(request: Request, user_id: int):
-    """Admin clear all videos for a specific user"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return RedirectResponse(url="/login", status_code=303)
-    
+@router.get("/api/video/{video_id}/status")
+async def api_video_status(request: Request, video_id: str):
+    """API endpoint to check video generation status"""
     try:
-        log_info(f"Admin {user['username']} clearing all videos for user {user_id}", "Admin")
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"success": False, "message": "Authentication required"})
         
-        # Delete all videos for the user
-        execute_query(
-            "DELETE FROM videos WHERE user_id = ?",
-            (user_id,)
-        )
+        video = db.get_video_by_id(video_id, user["id"])
+        if not video:
+            return JSONResponse({"success": False, "message": "Video not found"})
         
-        log_info(f"Admin {user['username']} cleared all videos for user {user_id}", "Admin")
-        return RedirectResponse(url=f"/admin/manage-videos/{user_id}?success=all_videos_cleared", status_code=303)
-        
+        return JSONResponse({
+            "success": True,
+            "status": video.get("status", "unknown"),
+            "progress": video.get("progress", 0),
+            "video_url": video.get("video_url", "")
+        })
     except Exception as e:
-        log_error(f"Error clearing videos for user {user_id}: {e}", "Admin", e)
-        return RedirectResponse(url=f"/admin/manage-videos/{user_id}?error=clear_failed", status_code=303)
+        log_error(f"Error checking video status", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
 
-# ============================================================================
-# ADMIN UTILITY ROUTES
-# ============================================================================
-
-@router.get("/admin/fix-sequence")
-async def fix_video_sequence(request: Request):
-    """Temporary route to fix video ID sequence"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
+# Admin Routes
+@router.get("/admin")
+async def admin_page(request: Request):
+    """Display admin dashboard"""
     try:
-        execute_query("SELECT setval(pg_get_serial_sequence('videos', 'id'), (SELECT MAX(id) FROM videos))")
-        log_info("Video sequence fixed by admin", "Admin")
-        return JSONResponse(content={"success": True, "message": "Video ID sequence fixed successfully!"})
+        user = get_current_user(request)
+        if not user or not user.get("is_admin"):
+            return RedirectResponse(url="/dashboard")
+        
+        # Get admin statistics
+        admin_stats = {
+            "total_users": db.get_total_users() or 0,
+            "total_videos": db.get_total_videos() or 0,
+            "active_users": db.get_active_users_count() or 0,
+            "pending_videos": db.get_pending_videos_count() or 0
+        }
+        
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "user": user,
+            "stats": admin_stats
+        })
     except Exception as e:
-        log_error(f"Error fixing sequence: {e}", "Admin", e)
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        log_error(f"Error loading admin page", "Web", e)
+        return RedirectResponse(url="/dashboard")
 
-@router.get("/admin/clear-videos")
-async def clear_videos(request: Request):
-    """Admin route to clear all videos from database"""
-    user = get_current_user(request)
-    if not user or not is_admin(request):
-        return JSONResponse(status_code=401, content={"error": "Unauthorized"})
-    
+@router.get("/admin/users")
+async def admin_users(request: Request):
+    """Display admin users management"""
     try:
-        execute_query("DELETE FROM videos")
-        log_info("All videos deleted by admin", "Admin")
-        return JSONResponse(content={"success": True, "message": "All videos deleted successfully"})
+        user = get_current_user(request)
+        if not user or not user.get("is_admin"):
+            return RedirectResponse(url="/dashboard")
+        
+        users = db.get_all_users() or []
+        return templates.TemplateResponse("admin_users.html", {
+            "request": request,
+            "user": user,
+            "users": users
+        })
     except Exception as e:
-        log_error(f"Error deleting videos: {e}", "Admin", e)
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        log_error(f"Error loading admin users page", "Web", e)
+        return RedirectResponse(url="/admin")
 
-# ============================================================================
-# END OF FILE
-# ============================================================================
+# Help and Support Routes
+@router.get("/help")
+async def help_page(request: Request):
+    """Display help page"""
+    try:
+        user = get_current_user(request)
+        return templates.TemplateResponse("help.html", {
+            "request": request,
+            "user": user
+        })
+    except Exception as e:
+        log_error(f"Error loading help page", "Web", e)
+        return templates.TemplateResponse("help.html", {
+            "request": request,
+            "user": None
+        })
+
+@router.get("/terms")
+async def terms_page(request: Request):
+    """Display terms of service"""
+    return templates.TemplateResponse("terms.html", {
+        "request": request,
+        "user": get_current_user(request)
+    })
+
+@router.get("/privacy")
+async def privacy_page(request: Request):
+    """Display privacy policy"""
+    return templates.TemplateResponse("privacy.html", {
+        "request": request,
+        "user": get_current_user(request)
+    })
+
+# Error handling routes
+@router.get("/error")
+async def error_page(request: Request):
+    """Display error page"""
+    error_msg = request.query_params.get("msg", "An error occurred")
+    return templates.TemplateResponse("error.html", {
+        "request": request,
+        "user": get_current_user(request),
+        "error_message": error_msg
+    })
+
+# Health check route
+@router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return JSONResponse({"status": "ok", "timestamp": datetime.now().isoformat()})
+
+# Webhook routes for external services
+@router.post("/webhook/heygen")
+async def heygen_webhook(request: Request):
+    """Handle HeyGen webhooks for video status updates"""
+    try:
+        data = await request.json()
+        video_id = data.get("video_id")
+        status = data.get("status")
+        video_url = data.get("video_url")
+        
+        if video_id and status:
+            db.update_video_status(video_id, status, video_url)
+            return JSONResponse({"success": True})
+        
+        return JSONResponse({"success": False, "message": "Invalid webhook data"})
+    except Exception as e:
+        log_error(f"Error processing HeyGen webhook", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
+
+# File upload routes
+@router.post("/upload/avatar")
+async def upload_avatar_image(request: Request, file: UploadFile = File(...)):
+    """Handle avatar image uploads"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"success": False, "message": "Authentication required"})
+        
+        # Validate file type
+        if not file.content_type.startswith("image/"):
+            return JSONResponse({"success": False, "message": "Only image files are allowed"})
+        
+        # Save file and return URL
+        file_url = await save_uploaded_file(file, "avatars")
+        return JSONResponse({"success": True, "file_url": file_url})
+        
+    except Exception as e:
+        log_error(f"Error uploading avatar image", "Web", e)
+        return JSONResponse({"success": False, "message": str(e)})
+
+# Utility functions
+async def save_uploaded_file(file: UploadFile, folder: str) -> str:
+    """Save uploaded file and return URL"""
+    try:
+        # Generate unique filename
+        file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        
+        # Create directory if it doesn't exist
+        upload_dir = f"static/uploads/{folder}"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Save file
+        file_path = f"{upload_dir}/{unique_filename}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        return f"/static/uploads/{folder}/{unique_filename}"
+    except Exception as e:
+        log_error(f"Error saving uploaded file", "Web", e)
+        raise e
