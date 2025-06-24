@@ -390,12 +390,16 @@ async def create_video_from_text_endpoint(
         heygen_video_id = result["video_id"]
         title = title or f"Video {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         
+        # Ensure all values are properly typed for PostgreSQL
+        user_id = int(user["id"]) if user["id"] else None
+        voice_id_value = str(voice_id) if voice_id else None
+        
         execute_query(
             """
             INSERT INTO videos (user_id, heygen_video_id, status, format, title, voice_id)
-            VALUES (?, ?, 'processing', ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (user["id"], heygen_video_id, format, title, voice_id)
+            (user_id, str(heygen_video_id), "processing", str(format), str(title), voice_id_value)
         )
         
         log_info(f"Text-to-video created: {heygen_video_id}", "API")
@@ -471,12 +475,15 @@ async def create_video_from_audio_endpoint(
         heygen_video_id = result["video_id"]
         title = title or f"Audio Video {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         
+        # Ensure all values are properly typed for PostgreSQL
+        user_id = int(user["id"]) if user["id"] else None
+        
         execute_query(
             """
             INSERT INTO videos (user_id, heygen_video_id, status, format, title)
-            VALUES (?, ?, 'processing', ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (user["id"], heygen_video_id, format, title)
+            (user_id, str(heygen_video_id), "processing", str(format), str(title))
         )
         
         log_info(f"Audio-to-video created: {heygen_video_id}", "API")
