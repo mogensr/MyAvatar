@@ -1374,9 +1374,9 @@
                                         <a href="{{ video.video_path }}" target="_blank" class="video-action primary">
                                             <i class="fas fa-play"></i> Play
                                         </a>
-                                        <button onclick="downloadVideo('{{ video.id }}')" class="video-action secondary">
+                                        <a href="{{ video.video_path }}" download class="video-action secondary">
                                             <i class="fas fa-download"></i> Download
-                                        </button>
+                                        </a>
                                     </div>
                                 {% endif %}
                             </div>
