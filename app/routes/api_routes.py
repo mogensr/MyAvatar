@@ -45,7 +45,7 @@ async def get_videos(request: Request):
         else:
             videos = execute_query(
                 "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
-                (user["id"],),
+                (int(user["id"]),),
                 fetch_all=True
             )
             
@@ -108,7 +108,7 @@ async def download_video(request: Request, video_id: str):
         log_info(f"Found video in database: ID={video.get('id')}, HeyGen_ID={video.get('heygen_video_id')}, Status={video.get('status')}, Has_URL={bool(video.get('video_url'))}", "API")
             
         # Check if user has access to this video
-        if not user["is_admin"] and video["user_id"] != user["id"]:
+        if not user["is_admin"] and video["user_id"] != int(user["id"]):
             return JSONResponse(
                 status_code=403,
                 content={"success": False, "error": "Access denied"}
@@ -258,7 +258,7 @@ async def get_video(request: Request, video_id: str):
             )
             
         # Check if user has access
-        if not user["is_admin"] and video["user_id"] != user["id"]:
+        if not user["is_admin"] and video["user_id"] != int(user["id"]):
             return JSONResponse(
                 status_code=403,
                 content={"success": False, "error": "Access denied"}
@@ -336,7 +336,7 @@ async def create_video_from_text_endpoint(
             # Get default avatar for user
             avatar = execute_query(
                 "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
-                (user["id"],),
+                (int(user["id"]),),
                 fetch_one=True
             )
             
@@ -357,7 +357,7 @@ async def create_video_from_text_endpoint(
             try:
                 user_voice = execute_query(
                     "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_name = 'voice_id'",
-                    (user["id"],),
+                    (int(user["id"]),),
                     fetch_one=True
                 )
                 
@@ -447,7 +447,7 @@ async def create_video_from_audio_endpoint(
             # Get default avatar for user
             avatar = execute_query(
                 "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
-                (user["id"],),
+                (int(user["id"]),),
                 fetch_one=True
             )
             
@@ -526,7 +526,7 @@ async def add_avatar(
         if is_default:
             execute_query(
                 "UPDATE user_avatars SET is_default = 0 WHERE user_id = ?",
-                (user["id"],)
+                (int(user["id"]),)
             )
             
         # Add avatar to database
@@ -535,14 +535,14 @@ async def add_avatar(
             INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (user["id"], avatar_id, avatar_name, avatar_image_url, is_default)
+            (int(user["id"]), avatar_id, avatar_name, avatar_image_url, is_default)
         )
         
         # If default, also update user record
         if is_default:
             execute_query(
                 "UPDATE users SET avatar_id = ? WHERE id = ?",
-                (avatar_id, user["id"])
+                (avatar_id, int(user["id"]))
             )
             
         log_info(f"Avatar added for user {user['username']}: {avatar_id}", "API")
@@ -576,7 +576,7 @@ async def get_avatars(request: Request):
         # Get user's avatars
         avatars = execute_query(
             "SELECT * FROM user_avatars WHERE user_id = ?",
-            (user["id"],),
+            (int(user["id"]),),
             fetch_all=True
         )
         
@@ -687,7 +687,7 @@ async def get_video_status(request: Request, video_id: str):
         log_info(f"Found video in database: ID={video.get('id')}, HeyGen_ID={video.get('heygen_video_id')}, Status={video.get('status')}, Has_URL={bool(video.get('video_url'))}", "API")
             
         # Check if user has access to this video
-        if not user["is_admin"] and video["user_id"] != user["id"]:
+        if not user["is_admin"] and video["user_id"] != int(user["id"]):
             return JSONResponse(
                 status_code=403,
                 content={"success": False, "error": "Access denied"}
