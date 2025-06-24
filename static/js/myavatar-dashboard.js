@@ -63,18 +63,49 @@ window.MyAvatarDashboard = function MyAvatarDashboard({ initialUser }) {
 
     const pollVideoStatus = async (videoId) => {
         let tries = 0;
+        const maxTries = 30; // Increased from 15 to 30 (2 minutes total polling time)
         const poll = async () => {
-            const res = await fetch(`/api/video/status/${videoId}`);
-            const data = await res.json();
-            if (data.status === "completed" && data.video_url) {
-                setVideoStatus("klar");
-                setVideoUrl(data.video_url);
-                showToast("Video klar!", "success");
-            } else if (tries < 15) {
-                tries++;
-                setTimeout(poll, 4000);
-            } else {
-                showToast("Timeout på video", "error");
+            try {
+                const res = await fetch(`/api/video/status/${videoId}`);
+                if (!res.ok) {
+                    console.error('Error fetching video status:', await res.text());
+                    setTimeout(poll, 5000); // Try again after 5 seconds on error
+                    return;
+                }
+                
+                const data = await res.json();
+                console.log('Video status update:', data);
+                
+                if (data.status === "completed" && data.video_url) {
+                    setVideoStatus("klar");
+                    setVideoUrl(data.video_url);
+                    showToast("Video klar!", "success");
+                    
+                    // Force refresh video list if available
+                    if (typeof refreshVideoList === 'function') {
+                        refreshVideoList();
+                    }
+                } else if (data.status === "failed" || data.status === "error") {
+                    showToast("Video processing failed", "error");
+                } else if (tries < maxTries) {
+                    tries++;
+                    // Adaptive polling: Start with 4s intervals, increase to 6s after 10 tries
+                    const interval = tries > 10 ? 6000 : 4000;
+                    setTimeout(poll, interval);
+                } else {
+                    // Even after timeout, set up a background refresh
+                    showToast("Video processing taking longer than expected. The page will refresh automatically when ready.", "warning");
+                    // Set up a background poll every 10 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 30000); // Refresh page after 30 seconds as last resort
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+                if (tries < maxTries) {
+                    tries++;
+                    setTimeout(poll, 5000); // Try again after 5 seconds
+                }
             }
         };
         poll();

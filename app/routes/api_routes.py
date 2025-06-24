@@ -3,7 +3,7 @@ API routes for MyAvatar
 """
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File, Path
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from datetime import datetime, timedelta
 from typing import Optional
 from ..api.heygen import (create_video_from_audio_file, create_video_from_text,
@@ -548,7 +548,9 @@ async def get_video_status(request: Request, video_id: str):
                 content={"success": False, "error": result.get("error", "Failed to fetch video status")}
             )
             
-        status = result["data"]["status"]
+        # Access via details key which is how get_video_details returns the data
+        video_details = result["details"]
+        status = video_details["status"]
         
         # Update status in database if changed
         if status != video["status"]:
@@ -558,20 +560,86 @@ async def get_video_status(request: Request, video_id: str):
             )
             
             # If completed, update URLs too
-            if status == "completed" and "video_url" in result["data"]:
+            if status == "completed" and "video_url" in video_details:
                 execute_query(
                     "UPDATE videos SET video_url = ?, thumbnail_url = ? WHERE heygen_video_id = ?",
-                    (result["data"]["video_url"], result["data"].get("thumbnail_url", ""), video_id)
+                    (video_details["video_url"], video_details.get("thumbnail_url", ""), video_id)
                 )
                 
         return JSONResponse(content={
             "success": True,
             "status": status,
-            "video_url": result["data"].get("video_url"),
-            "thumbnail_url": result["data"].get("thumbnail_url")
+            "video_url": video_details.get("video_url"),
+            "thumbnail_url": video_details.get("thumbnail_url")
         })
     except Exception as e:
         log_error(f"Error checking video status for {video_id}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/videos/{video_id}/download")
+async def download_video(request: Request, video_id: str):
+    """
+    Download video by redirecting to the video URL
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            (video_id, video_id),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+            
+        # Check if user has access to this video
+        if not user["is_admin"] and video["user_id"] != user["id"]:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Access denied"}
+            )
+        
+        # Check if video has a URL
+        video_url = video.get("video_url")
+        if not video_url:
+            # Try to get the latest video details from HeyGen
+            api_key = os.getenv("HEYGEN_API_KEY") or user.get("api_key")
+            if api_key and video.get("heygen_video_id"):
+                result = get_video_details(api_key, video["heygen_video_id"])
+                if result["success"] and "video_url" in result["details"]:
+                    video_url = result["details"]["video_url"]
+                    # Update the database with the video URL
+                    execute_query(
+                        "UPDATE videos SET video_url = ? WHERE id = ?",
+                        (video_url, video["id"])
+                    )
+        
+        if not video_url:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video URL not available. Video may still be processing."}
+            )
+        
+        log_info(f"User {user['username']} downloading video {video_id}", "API")
+        
+        # Redirect to the video URL for download
+        return RedirectResponse(url=video_url, status_code=302)
+        
+    except Exception as e:
+        log_error(f"Error downloading video {video_id}", "API", e)
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
