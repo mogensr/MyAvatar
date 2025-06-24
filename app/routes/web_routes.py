@@ -405,10 +405,18 @@ async def home_page(request: Request):
         if user:
             return RedirectResponse(url="/dashboard", status_code=302)
             
-        response = templates.TemplateResponse("index.html", {
-            "request": request,
-            "user": None
-        })
+        try:
+            response = templates.TemplateResponse("index.html", {
+                "request": request,
+                "user": None
+            })
+        except Exception:
+            # Fallback if index.html template is missing
+            return JSONResponse({
+                "message": "MyAvatar Home Page",
+                "status": "Template not found - using JSON response",
+                "login_url": "/login"
+            })
         
         # Add security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -419,11 +427,12 @@ async def home_page(request: Request):
         return response
     except Exception as e:
         logger.error(f"Error loading home page: {e}")
-        return templates.TemplateResponse("error.html", {
-            "request": request,
-            "user": None,
-            "error_message": "Service temporarily unavailable"
-        })
+        # Safe fallback without template dependency
+        return JSONResponse({
+            "error": "Service temporarily unavailable",
+            "status": "error",
+            "login_url": "/login"
+        }, status_code=500)
 
 @router.get("/login")
 async def login_page(request: Request):
@@ -433,16 +442,24 @@ async def login_page(request: Request):
         if user:
             return RedirectResponse(url="/dashboard", status_code=302)
             
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "user": None
-        })
+        try:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "user": None
+            })
+        except Exception:
+            # Fallback if login.html template is missing
+            return JSONResponse({
+                "message": "Login Page",
+                "status": "Template not found - using JSON response",
+                "instructions": "POST to /login with username and password"
+            })
     except Exception as e:
         logger.error(f"Error loading login page: {e}")
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "user": None
-        })
+        return JSONResponse({
+            "error": "Login page unavailable",
+            "status": "error"
+        }, status_code=500)
 
 @router.post("/login")
 @limiter.limit(config.RATE_LIMIT_LOGIN)
@@ -782,44 +799,38 @@ async def dashboard_page(request: Request):
             "total_shares": total_shares,
         }
         
-        response = templates.TemplateResponse("dashboard.html", template_context)
-        
-        # Add security headers
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        
-        return response
+        try:
+            response = templates.TemplateResponse("dashboard.html", template_context)
+            
+            # Add security headers
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            
+            return response
+        except Exception:
+            # Fallback if dashboard.html template is missing
+            return JSONResponse({
+                "message": "Dashboard",
+                "user": user.get("username", "User"),
+                "stats": {
+                    "total_videos": total_videos,
+                    "total_views": total_views,
+                    "total_duration": f"{total_duration_hours}h",
+                },
+                "videos": video_list[:5],  # Show first 5 videos
+                "status": "Template not found - using JSON response"
+            })
         
     except Exception as e:
         logger.error(f"Dashboard error for user {user.get('username', 'unknown') if user else 'unknown'}: {e}")
         
-        # Return dashboard with safe defaults instead of error page
-        safe_user = user if user else {
-            "username": "User", 
-            "is_admin": 0, 
-            "avatar_id": "", 
-            "id": 0, 
-            "api_key": ""
-        }
-        
-        safe_context = {
-            "request": request,
-            "user": safe_user,
-            "username": "User",
-            "is_admin": False,
-            "avatar_id": "",
-            "user_id": 0,
-            "api_key": "",
-            "videos": [],
-            "avatars": [],
-            "total_videos": 0,
-            "total_duration": "0h",
-            "total_views": 0,
-            "total_shares": 0,
-        }
-        
-        return templates.TemplateResponse("dashboard.html", safe_context)
+        # Safe JSON fallback
+        return JSONResponse({
+            "error": "Dashboard temporarily unavailable",
+            "user": user.get("username", "User") if user else "Unknown",
+            "status": "error"
+        }, status_code=500)
 
 @router.get("/test-routes")
 async def test_routes():
