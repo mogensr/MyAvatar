@@ -1,5 +1,6 @@
 """
 HeyGen API integration module
+FIXED VERSION - Updated to v2 API with correct endpoints
 Enhanced with Text-to-Speech and proper video format support (16:9, 9:16, 1:1)
 Premium features: Templates, Interactive Avatars, Custom Backgrounds
 """
@@ -8,12 +9,12 @@ import json
 from ..logger.log_handler import log_info, log_error, log_warning
 
 #####################################################################
-# HEYGEN API HANDLER - ENHANCED WITH TEXT SUPPORT & PREMIUM FEATURES
+# HEYGEN API HANDLER - FIXED V2 VERSION WITH PROPER AUDIO SUPPORT
 #####################################################################
 
 def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, video_format: str = "16:9"):
     """
-    Create a video using an audio file URL
+    Create a video using an audio file URL - FIXED V2 VERSION
     
     Args:
         api_key: HeyGen API key
@@ -40,68 +41,117 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
         width = 1280
         height = 720
     
+    # FIXED: Use v2 API format with proper audio voice type
     data = {
-        "background": {
-            "color": "#ffffff"
-        },
-        "clips": [{
-            "avatar_id": avatar_id,
-            "avatar_style": "normal",
-            "input_text": "",
-            "offset": {"x": 0, "y": 0},
-            "scale": 1,
-            "voice_url": audio_url
-        }],
-        "ratio": video_format,
-        "test": False,
-        "version": "v1",
-        "height": height, 
-        "width": width
+        "video_inputs": [
+            {
+                "character": {
+                    "type": "avatar",
+                    "avatar_id": avatar_id,
+                    "avatar_style": "normal"
+                },
+                "voice": {
+                    "type": "audio",
+                    "input_audio": audio_url  # FIXED: Use input_audio for v2
+                },
+                "background": {
+                    "type": "color",
+                    "value": "#ffffff"
+                }
+            }
+        ],
+        "dimension": {
+            "width": width,
+            "height": height
+        }
     }
     
     try:
-        log_info(f"Creating video with avatar {avatar_id}, format: {video_format}", "HeyGen API")
+        log_info(f"Creating video with avatar {avatar_id}, format: {video_format} (v2)", "HeyGen API")
+        log_info(f"HeyGen API v2 request data: {json.dumps(data)}", "HeyGen API")
+        
+        # FIXED: Use v2 endpoint consistently
         response = requests.post(
-            "https://api.heygen.com/v1/video/generate",
+            "https://api.heygen.com/v2/video/generate",
             headers=headers,
-            data=json.dumps(data)
+            data=json.dumps(data),
+            timeout=30
         )
         
         # Log raw response for debugging
         log_info(f"HeyGen API response status: {response.status_code}", "HeyGen API")
         log_info(f"HeyGen API response headers: {dict(response.headers)}", "HeyGen API")
-        log_info(f"HeyGen API response text: {response.text}", "HeyGen API")
+        log_info(f"HeyGen API response text: {response.text[:1000]}{'...' if len(response.text) > 1000 else ''}", "HeyGen API")
         
         # Check if response is actually JSON before parsing
-        if response.headers.get('content-type', '').startswith('application/json'):
-            response_data = response.json()
+        content_type = response.headers.get('content-type', '').lower()
+        if 'application/json' in content_type:
+            try:
+                response_data = response.json()
+                log_info(f"HeyGen API v2 response JSON: {json.dumps(response_data)}", "HeyGen API")
+            except json.JSONDecodeError as e:
+                log_error(f"Failed to parse JSON despite content-type header: {e}", "HeyGen API")
+                return {
+                    "success": False,
+                    "error": f"Invalid JSON response from HeyGen API: {response.text[:200]}"
+                }
         else:
-            log_error(f"HeyGen API returned non-JSON response: {response.text}", "HeyGen API")
+            log_error(f"HeyGen API returned non-JSON response (content-type: {content_type})", "HeyGen API")
             return {
                 "success": False,
-                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
+                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}, content-type: {content_type}): {response.text[:200]}"
             }
         
-        if response.status_code == 200 and "data" in response_data:
-            log_info(f"Video creation initiated, video_id: {response_data['data'].get('video_id')}", "HeyGen API")
+        # Handle v2 API response format
+        if response.status_code == 200:
+            if "error" in response_data and response_data["error"] is None:
+                # v2 success format: {"error": null, "data": {"video_id": "..."}}
+                video_id = response_data.get("data", {}).get("video_id")
+                if video_id:
+                    log_info(f"Audio video creation initiated (v2), video_id: {video_id}", "HeyGen API")
+                    return {
+                        "success": True, 
+                        "video_id": video_id
+                    }
+            elif "code" in response_data and response_data["code"] == 100:
+                # Legacy format support
+                video_id = response_data.get("data", {}).get("video_id")
+                if video_id:
+                    log_info(f"Audio video creation initiated (legacy), video_id: {video_id}", "HeyGen API")
+                    return {
+                        "success": True, 
+                        "video_id": video_id
+                    }
+            
+            # Error case
+            error_msg = response_data.get("error", {}).get("message") if response_data.get("error") else "Unknown v2 API error"
+            log_error(f"HeyGen v2 API error: {error_msg}", "HeyGen API")
             return {
-                "success": True, 
-                "video_id": response_data['data'].get('video_id')
+                "success": False,
+                "error": error_msg,
+                "details": response_data
             }
         else:
-            error_msg = f"Video creation failed: {response_data.get('message', 'Unknown error')}"
+            error_msg = f"Audio video creation failed: HTTP {response.status_code}"
             log_error(error_msg, "HeyGen API")
             return {
                 "success": False,
-                "error": error_msg
+                "error": error_msg,
+                "details": response_data if 'response_data' in locals() else None
             }
-    except Exception as e:
-        error_msg = f"Exception in video creation: {str(e)}"
+            
+    except requests.exceptions.Timeout:
+        error_msg = "HeyGen API request timed out after 30 seconds"
+        log_error(error_msg, "HeyGen API")
+        return {"success": False, "error": error_msg}
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Network error calling HeyGen API: {str(e)}"
         log_error(error_msg, "HeyGen API", e)
-        return {
-            "success": False,
-            "error": error_msg
-        }
+        return {"success": False, "error": error_msg}
+    except Exception as e:
+        error_msg = f"Exception in HeyGen API call: {str(e)}"
+        log_error(error_msg, "HeyGen API", e)
+        return {"success": False, "error": error_msg}
 
 def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format: str = "16:9", voice_id: str = None):
     """
@@ -267,7 +317,7 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
 
 def get_available_avatars(api_key: str):
     """
-    Get available avatars from HeyGen API
+    Get available avatars from HeyGen API - FIXED V2 VERSION
     
     Args:
         api_key: HeyGen API key
@@ -281,9 +331,11 @@ def get_available_avatars(api_key: str):
     }
     
     try:
-        log_info("Fetching available avatars", "HeyGen API")
+        log_info("Fetching available avatars (v2)", "HeyGen API")
+        
+        # FIXED: Use v2 endpoint
         response = requests.get(
-            "https://api.heygen.com/v1/avatar",
+            "https://api.heygen.com/v2/avatars",
             headers=headers
         )
         
@@ -301,8 +353,17 @@ def get_available_avatars(api_key: str):
                 "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
             }
         
-        if response.status_code == 200 and "data" in response_data:
-            avatars = response_data["data"].get("avatars", [])
+        # Handle both v2 and legacy response formats
+        if response.status_code == 200:
+            if "error" in response_data and response_data["error"] is None:
+                # v2 format
+                avatars = response_data.get("data", {}).get("avatars", [])
+            elif "data" in response_data:
+                # Legacy format
+                avatars = response_data["data"].get("avatars", [])
+            else:
+                avatars = []
+                
             log_info(f"Retrieved {len(avatars)} avatars", "HeyGen API")
             return {
                 "success": True, 
@@ -325,7 +386,7 @@ def get_available_avatars(api_key: str):
 
 def get_available_voices(api_key: str, language: str = None):
     """
-    Get list of available voices from HeyGen
+    Get list of available voices from HeyGen - FIXED V2 VERSION
     
     Args:
         api_key: HeyGen API key
@@ -340,9 +401,11 @@ def get_available_voices(api_key: str, language: str = None):
     }
     
     try:
-        log_info("Fetching available voices", "HeyGen API")
+        log_info("Fetching available voices (v2)", "HeyGen API")
+        
+        # FIXED: Use v2 endpoint
         response = requests.get(
-            "https://api.heygen.com/v1/voice",
+            "https://api.heygen.com/v2/voices",
             headers=headers
         )
         
@@ -360,8 +423,16 @@ def get_available_voices(api_key: str, language: str = None):
                 "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
             }
         
-        if response.status_code == 200 and "data" in response_data:
-            voices = response_data["data"].get("voices", [])
+        # Handle both v2 and legacy response formats
+        if response.status_code == 200:
+            if "error" in response_data and response_data["error"] is None:
+                # v2 format
+                voices = response_data.get("data", {}).get("voices", [])
+            elif "data" in response_data:
+                # Legacy format
+                voices = response_data["data"].get("voices", [])
+            else:
+                voices = []
             
             # Filter by language if specified
             if language:
@@ -459,7 +530,7 @@ def create_video_with_template(api_key: str, template_id: str, variables: dict, 
 
 def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, background: dict, video_format: str = "16:9"):
     """
-    Create video with custom background
+    Create video with custom background - FIXED V2 VERSION
     
     Args:
         api_key: HeyGen API key
@@ -487,27 +558,34 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
         width = 1280
         height = 720
     
+    # FIXED: Use v2 API format
     data = {
-        "background": background,
-        "clips": [{
-            "avatar_id": avatar_id,
-            "avatar_style": "normal",
-            "input_text": "",
-            "offset": {"x": 0, "y": 0},
-            "scale": 1,
-            "voice_url": audio_url
-        }],
-        "ratio": video_format,
-        "test": False,
-        "version": "v1",
-        "height": height,
-        "width": width
+        "video_inputs": [
+            {
+                "character": {
+                    "type": "avatar",
+                    "avatar_id": avatar_id,
+                    "avatar_style": "normal"
+                },
+                "voice": {
+                    "type": "audio",
+                    "input_audio": audio_url
+                },
+                "background": background
+            }
+        ],
+        "dimension": {
+            "width": width,
+            "height": height
+        }
     }
     
     try:
         log_info(f"Creating video with custom background, avatar {avatar_id}, format: {video_format}", "HeyGen API")
+        
+        # FIXED: Use v2 endpoint
         response = requests.post(
-            "https://api.heygen.com/v1/video/generate",
+            "https://api.heygen.com/v2/video/generate",
             headers=headers,
             data=json.dumps(data)
         )
@@ -517,27 +595,52 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
         log_info(f"HeyGen API response text: {response.text[:500]}{'...' if len(response.text) > 500 else ''}", "HeyGen API")
         
         # Check if response is actually JSON before parsing
-        if response.headers.get('content-type', '').startswith('application/json'):
+        content_type = response.headers.get('content-type', '').lower()
+        if 'application/json' in content_type:
             response_data = response.json()
         else:
-            log_error(f"HeyGen API returned non-JSON response: {response.text}", "HeyGen API")
+            log_error(f"HeyGen API returned non-JSON response (content-type: {content_type})", "HeyGen API")
             return {
                 "success": False,
-                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
+                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}, content-type: {content_type}): {response.text[:200]}"
             }
         
-        if response.status_code == 200 and "data" in response_data:
-            log_info(f"Custom background video creation initiated, video_id: {response_data['data'].get('video_id')}", "HeyGen API")
+        # Handle v2 API response format
+        if response.status_code == 200:
+            if "error" in response_data and response_data["error"] is None:
+                # v2 success format
+                video_id = response_data.get("data", {}).get("video_id")
+                if video_id:
+                    log_info(f"Custom background video creation initiated (v2), video_id: {video_id}", "HeyGen API")
+                    return {
+                        "success": True, 
+                        "video_id": video_id
+                    }
+            elif "code" in response_data and response_data["code"] == 100:
+                # Legacy format support
+                video_id = response_data.get("data", {}).get("video_id")
+                if video_id:
+                    log_info(f"Custom background video creation initiated (legacy), video_id: {video_id}", "HeyGen API")
+                    return {
+                        "success": True, 
+                        "video_id": video_id
+                    }
+            
+            # Error case
+            error_msg = response_data.get("error", {}).get("message") if response_data.get("error") else "Unknown v2 API error"
+            log_error(f"HeyGen v2 API error: {error_msg}", "HeyGen API")
             return {
-                "success": True, 
-                "video_id": response_data['data'].get('video_id')
+                "success": False,
+                "error": error_msg,
+                "details": response_data
             }
         else:
-            error_msg = f"Custom background video creation failed: {response_data.get('message', 'Unknown error')}"
+            error_msg = f"Custom background video creation failed: HTTP {response.status_code}"
             log_error(error_msg, "HeyGen API")
             return {
                 "success": False,
-                "error": error_msg
+                "error": error_msg,
+                "details": response_data if 'response_data' in locals() else None
             }
     except Exception as e:
         error_msg = f"Exception in custom background video creation: {str(e)}"
@@ -549,7 +652,7 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
 
 def get_video_details(api_key: str, video_id: str):
     """
-    Get detailed information about a video
+    Get detailed information about a video - FIXED V2 VERSION
     
     Args:
         api_key: HeyGen API key
@@ -564,9 +667,9 @@ def get_video_details(api_key: str, video_id: str):
     }
     
     try:
-        log_info(f"Fetching details for video {video_id}", "HeyGen API")
+        log_info(f"Fetching details for video {video_id} (v2)", "HeyGen API")
         
-        # Use the correct v2 API endpoint instead of deprecated v1
+        # FIXED: Use the correct v2 API endpoint
         response = requests.get(
             f"https://api.heygen.com/v2/video/{video_id}",
             headers=headers
@@ -586,11 +689,18 @@ def get_video_details(api_key: str, video_id: str):
                 "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
             }
         
-        # Handle both v1 and v2 response formats for compatibility
+        # Handle both v2 and v1 response formats for compatibility
         if response.status_code == 200:
-            # v2 API format: {"code": 100, "data": {...}, "message": "Success"}
-            if "data" in response_data and response_data.get("code") == 100:
+            # v2 API format: {"error": null, "data": {...}}
+            if "error" in response_data and response_data["error"] is None:
                 log_info(f"Retrieved details for video {video_id}, status: {response_data['data'].get('status')}", "HeyGen API")
+                return {
+                    "success": True, 
+                    "details": response_data["data"]
+                }
+            # v2 API format: {"code": 100, "data": {...}, "message": "Success"}
+            elif "data" in response_data and response_data.get("code") == 100:
+                log_info(f"Retrieved details for video {video_id} (legacy format), status: {response_data['data'].get('status')}", "HeyGen API")
                 return {
                     "success": True, 
                     "details": response_data["data"]
