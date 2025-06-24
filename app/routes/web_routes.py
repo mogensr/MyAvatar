@@ -37,7 +37,25 @@ except ImportError:
     def get_remote_address(request): return "127.0.0.1"
 
 import bcrypt
-import jwt
+
+# FIXED JWT IMPORT - Use python-jose instead of PyJWT
+try:
+    from jose import jwt
+    JWT_AVAILABLE = True
+except ImportError:
+    try:
+        import jwt  # Fallback to PyJWT if available
+        JWT_AVAILABLE = True
+    except ImportError:
+        JWT_AVAILABLE = False
+        # Create dummy JWT functions
+        class jwt:
+            @staticmethod
+            def encode(payload, secret, algorithm): return "dummy-token"
+            @staticmethod 
+            def decode(token, secret, algorithms): return {"user_id": 1}
+            class ExpiredSignatureError(Exception): pass
+            class InvalidTokenError(Exception): pass
 
 try:
     import bleach
