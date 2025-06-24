@@ -52,7 +52,7 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
                 },
                 "voice": {
                     "type": "audio",
-                    "input_audio": audio_url  # FIXED: Use input_audio for v2
+                    "audio_url": audio_url  # FIXED: Use audio_url as required by HeyGen
                 },
                 "background": {
                     "type": "color",
@@ -569,7 +569,7 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
                 },
                 "voice": {
                     "type": "audio",
-                    "input_audio": audio_url
+                    "audio_url": audio_url
                 },
                 "background": background
             }
