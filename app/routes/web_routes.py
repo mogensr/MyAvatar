@@ -788,8 +788,30 @@ async def error_page(request: Request):
 # Health check route
 @router.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return JSONResponse({"status": "ok", "timestamp": datetime.now().isoformat()})
+    """Health check endpoint with database connectivity test"""
+    try:
+        # Test database connectivity
+        db_status = "healthy"
+        try:
+            # Simple database query to test connection
+            db.get_total_users()
+        except Exception as db_error:
+            db_status = "unhealthy"
+            log_error("Database health check failed", "Health", db_error)
+        
+        return {
+            "status": "healthy" if db_status == "healthy" else "degraded",
+            "database": db_status,
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        log_error("Health check failed", "Health", e)
+        return {
+            "status": "unhealthy", 
+            "error": str(e), 
+            "timestamp": datetime.now().isoformat()
+        }
 
 # Webhook routes for external services
 @router.post("/webhook/heygen")
