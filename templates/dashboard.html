@@ -866,7 +866,14 @@
         }
         
         .status-completed { background: var(--gradient-success); }
-        .status-processing { background: var(--gradient-warning); }
+        .status-processing { 
+            background: var(--gradient-warning); 
+            animation: pulse 2s infinite;
+        }
+        .status-pending { 
+            background: var(--info); 
+            animation: pulse 2s infinite;
+        }
         .status-failed { background: var(--danger); }
         
         .video-duration {
@@ -911,6 +918,7 @@
         .video-actions {
             display: flex;
             gap: 0.6rem; /* 80% of original 0.75rem */
+            flex-wrap: wrap;
         }
         
         .video-action {
@@ -938,6 +946,11 @@
             color: var(--gray-700);
         }
         
+        .video-action.refresh-btn {
+            background: var(--gradient-warning);
+            color: white;
+        }
+        
         .video-action:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
@@ -957,6 +970,35 @@
             font-size: 4rem;
             margin-bottom: 1.5rem;
             opacity: 0.5;
+        }
+
+        /* Video Status Indicator */
+        .status-indicator {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all var(--transition-base);
+        }
+
+        .status-indicator.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .status-indicator.processing {
+            border-color: var(--warning);
+        }
+
+        .status-indicator.completed {
+            border-color: var(--success);
         }
         
         /* Responsive Design */
@@ -1039,6 +1081,11 @@
     </style>
 </head>
 <body>
+    <!-- Status Indicator -->
+    <div id="statusIndicator" class="status-indicator">
+        <div id="statusContent"></div>
+    </div>
+
     <!-- App Container -->
     <div class="app-container">
         <!-- Sidebar -->
@@ -1340,11 +1387,11 @@
                 <div class="videos-grid">
                     {% if videos %}
                         {% for video in videos[:3] %}
-                        <div class="video-card" data-video-id="{{ video.id }}">
+                        <div class="video-card" data-video-id="{{ video.heygen_video_id or video.id }}" data-status="{{ video.status }}">
                             <div class="video-thumbnail">
-                                {% if video.status == 'completed' and video.video_path %}
+                                {% if video.status == 'completed' and video.video_url %}
                                     <video controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
-                                        <source src="{{ video.video_path }}" type="video/mp4">
+                                        <source src="{{ video.video_url }}" type="video/mp4">
                                         <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
                                     </video>
                                 {% else %}
@@ -1365,20 +1412,28 @@
                             <div class="video-info">
                                 <div class="video-title">{{ video.title or 'Untitled Video' }}</div>
                                 <div class="video-meta">
-                                    <span><i class="fas fa-calendar"></i> {{ video.created_at if video.created_at else 'Unknown' }}</span>
-                                    <span><i class="fas fa-film"></i> {{ video.video_format or '16:9' }}</span>
+                                    <span><i class="fas fa-calendar"></i> {{ video.created_at.strftime('%Y-%m-%d') if video.created_at else 'Unknown' }}</span>
+                                    <span><i class="fas fa-film"></i> {{ video.format or '16:9' }}</span>
                                 </div>
                                 
-                                {% if video.status == 'completed' and video.video_path %}
-                                    <div class="video-actions">
-                                        <a href="{{ video.video_path }}" target="_blank" class="video-action primary">
+                                <div class="video-actions">
+                                    {% if video.status == 'completed' and video.video_url %}
+                                        <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" target="_blank" class="video-action primary">
                                             <i class="fas fa-play"></i> Play
                                         </a>
-                                        <a href="{{ video.video_path }}" download class="video-action secondary">
+                                        <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" download class="video-action secondary">
                                             <i class="fas fa-download"></i> Download
                                         </a>
-                                    </div>
-                                {% endif %}
+                                    {% elif video.status in ['processing', 'pending'] %}
+                                        <button onclick="refreshVideoStatus('{{ video.heygen_video_id or video.id }}')" class="video-action refresh-btn">
+                                            <i class="fas fa-sync-alt"></i> Refresh
+                                        </button>
+                                    {% elif video.status == 'failed' %}
+                                        <span class="video-action secondary" style="opacity: 0.6;">
+                                            <i class="fas fa-exclamation-triangle"></i> Failed
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         {% endfor %}
@@ -1396,6 +1451,10 @@
     
     <!-- JavaScript -->
     <script>
+        // Global variables for video monitoring
+        let videoUpdateInterval = null;
+        let processingVideos = new Set();
+
         // Initialize user data
         document.addEventListener('DOMContentLoaded', function() {
             const username = '{{ username }}';
@@ -1403,9 +1462,134 @@
                 document.getElementById('userName').textContent = username;
                 document.getElementById('userAvatar').textContent = username.charAt(0).toUpperCase();
             }
+
+            // Initialize video status monitoring
+            initVideoStatusMonitoring();
         });
         
-        // UI Functions
+        // ==================== VIDEO STATUS MONITORING ==================== 
+        function initVideoStatusMonitoring() {
+            console.log('🚀 Initializing video status monitoring...');
+            
+            // Find all processing/pending videos
+            const processingCards = document.querySelectorAll('[data-status="processing"], [data-status="pending"]');
+            
+            processingCards.forEach(card => {
+                const videoId = card.getAttribute('data-video-id');
+                if (videoId) {
+                    processingVideos.add(videoId);
+                }
+            });
+
+            if (processingVideos.size > 0) {
+                console.log(`📹 Found ${processingVideos.size} processing videos: ${Array.from(processingVideos).join(', ')}`);
+                startVideoStatusUpdater();
+                showStatusIndicator('processing', `Monitoring ${processingVideos.size} video(s)...`);
+            } else {
+                console.log('✅ No processing videos found');
+            }
+        }
+
+        function startVideoStatusUpdater() {
+            // Clear existing interval
+            if (videoUpdateInterval) {
+                clearInterval(videoUpdateInterval);
+            }
+
+            // Start checking every 30 seconds
+            videoUpdateInterval = setInterval(async () => {
+                if (processingVideos.size === 0) {
+                    console.log('🛑 No more processing videos, stopping monitor');
+                    clearInterval(videoUpdateInterval);
+                    hideStatusIndicator();
+                    return;
+                }
+
+                console.log(`🔍 Checking ${processingVideos.size} processing videos...`);
+                
+                for (const videoId of processingVideos) {
+                    await checkVideoStatus(videoId, false); // false = auto-check, not manual
+                }
+            }, 30000); // 30 seconds
+        }
+
+        async function checkVideoStatus(videoId, isManual = true) {
+            try {
+                console.log(`🎬 Checking video ${videoId}...`);
+
+                const response = await fetch(`/api/video-status/${videoId}`);
+                
+                if (response.ok) {
+                    // Video is completed!
+                    console.log(`✅ Video ${videoId} is now complete!`);
+                    processingVideos.delete(videoId);
+                    
+                    if (isManual) {
+                        showStatusIndicator('completed', 'Video completed! Refreshing...');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showStatusIndicator('completed', 'Video completed! Page will refresh...');
+                        setTimeout(() => location.reload(), 3000);
+                    }
+                } else if (response.status === 202) {
+                    // Still processing
+                    const data = await response.json();
+                    console.log(`⏳ Video ${videoId} still ${data.status || 'processing'}...`);
+                    
+                    if (isManual) {
+                        showStatusIndicator('processing', `Video is still ${data.status || 'processing'}. Please wait...`);
+                        setTimeout(() => hideStatusIndicator(), 3000);
+                    }
+                } else if (response.status === 400) {
+                    // Failed
+                    const data = await response.json();
+                    console.log(`❌ Video ${videoId} failed: ${data.error}`);
+                    processingVideos.delete(videoId);
+                    
+                    if (isManual) {
+                        alert(`Video generation failed: ${data.error}`);
+                        location.reload();
+                    } else {
+                        showStatusIndicator('failed', 'Video generation failed. Refreshing...');
+                        setTimeout(() => location.reload(), 3000);
+                    }
+                } else {
+                    console.log(`⚠️ Unexpected response for video ${videoId}: ${response.status}`);
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error checking video ${videoId}:`, error);
+                if (isManual) {
+                    alert('Error checking video status. Please try again.');
+                }
+            }
+        }
+
+        function refreshVideoStatus(videoId) {
+            console.log(`🔄 Manually refreshing video ${videoId}...`);
+            checkVideoStatus(videoId, true);
+        }
+
+        function showStatusIndicator(status, message) {
+            const indicator = document.getElementById('statusIndicator');
+            const content = document.getElementById('statusContent');
+            
+            content.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-${status === 'processing' ? 'clock' : status === 'completed' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            indicator.className = `status-indicator show ${status}`;
+        }
+
+        function hideStatusIndicator() {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.classList.remove('show');
+        }
+
+        // ==================== UI FUNCTIONS ==================== 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
@@ -1527,6 +1711,13 @@
                     });
                 }
             });
+        });
+
+        // Cleanup when page unloads
+        window.addEventListener('beforeunload', function() {
+            if (videoUpdateInterval) {
+                clearInterval(videoUpdateInterval);
+            }
         });
     </script>
 </body>
