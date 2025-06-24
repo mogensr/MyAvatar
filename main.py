@@ -94,13 +94,13 @@ router_errors = []
 
 # Import and register routes safely
 route_imports = [
-    ("app.routes.api_routes", "api_router"),
-    ("app.routes.web_routes", "web_router"), 
-    ("app.routes.finance_routes", "finance_router"),
-    ("app.routes.health_routes", "health_router"),
-    ("app.routes.admin_routes", "admin_router"),
-    ("app.routes.debug_routes", "debug_router"),
-    ("app.routes.voice_routes", "voice_router"),
+    ("app.routes.api_routes", "router"),
+    ("app.routes.web_routes", "router"), 
+    ("app.routes.finance_routes", "router"),
+    ("app.routes.health_routes", "router"),
+    ("app.routes.admin_routes", "router"),
+    ("app.routes.debug_routes", "router"),
+    ("app.routes.voice_routes", "router"),
 ]
 
 for module_name, router_name in route_imports:
