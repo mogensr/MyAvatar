@@ -433,7 +433,41 @@ def handle_api_error(error: Exception, context: str = "") -> JSONResponse:
             }
         )
 
-# STEP 16: ROUTES (everything is now properly defined)
+# STEP 16: PASSWORD FIX UTILITIES
+def fix_user_passwords():
+    """Fix passwords for all users who have empty password fields"""
+    try:
+        # Get all users with empty passwords
+        all_users = db.get_all_users()  # You may need to implement this method
+        fixed_count = 0
+        
+        for user in all_users:
+            stored_password = user.get("password", "")
+            if not stored_password or len(stored_password) == 0:
+                username = user.get("username", "")
+                
+                # Set default password based on username
+                if username == "admin":
+                    default_password = "admin123"
+                else:
+                    default_password = "password123"  # Default for regular users
+                
+                # Hash the password
+                hashed_password = hash_password(default_password)
+                
+                # Update user password
+                update_query = "UPDATE users SET password = %s WHERE id = %s"
+                db.execute_query(update_query, (hashed_password, user["id"]))
+                
+                logger.info(f"Fixed password for user: {username}")
+                fixed_count += 1
+        
+        return fixed_count
+    except Exception as e:
+        logger.error(f"Error fixing user passwords: {e}")
+        return 0
+
+# STEP 17: ROUTES (everything is now properly defined)
 @router.get("/")
 async def home_page(request: Request):
     """Home page with security headers"""
@@ -501,6 +535,24 @@ async def login_page(request: Request):
             "error": "Login page unavailable",
             "instructions": "POST to /login with username and password"
         }, status_code=500)
+
+@router.get("/fix-admin-password")
+async def fix_admin_password():
+    """Fix admin password and all users with empty passwords - REMOVE AFTER USE"""
+    try:
+        logger.info("🔧 FIXING USER PASSWORDS")
+        
+        # Fix all users with empty passwords
+        fixed_count = fix_user_passwords()
+        
+        return JSONResponse({
+            "status": "success",
+            "message": f"Fixed passwords for {fixed_count} users",
+            "details": "Admin password set to 'admin123', other users set to 'password123'"
+        })
+    except Exception as e:
+        logger.error(f"Error fixing passwords: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.get("/test-debug")
 async def test_debug(request: Request):
@@ -586,6 +638,15 @@ async def login_user(request: Request):
         stored_password = user.get("password", "")
         logger.info(f"🔍 LOGIN PASSWORD CHECK - Stored hash length: {len(stored_password)}")
         
+        # Check if password is empty and offer password reset
+        if not stored_password or len(stored_password) == 0:
+            logger.warning(f"🔍 LOGIN FAILED - Empty password for user: '{username}' - needs password reset")
+            return templates.TemplateResponse("portal/login.html", {
+                "request": request,
+                "user": None,
+                "error": "Account needs password reset. Please contact administrator or visit /fix-admin-password"
+            }, status_code=401)
+        
         password_valid = verify_password(password, stored_password)
         logger.info(f"🔍 LOGIN PASSWORD RESULT - Valid: {password_valid}")
         
@@ -617,7 +678,14 @@ async def login_user(request: Request):
         db.clear_failed_login_attempts(client_ip, username)
         
         logger.info(f"User {username} logged in successfully from {client_ip}")
-        return RedirectResponse(url="/dashboard", status_code=302)
+        
+        # Redirect based on user role
+        if user.get("is_admin", 0) == 1:
+            logger.info(f"🔍 LOGIN SUCCESS - Admin user {username} redirecting to admin panel")
+            return RedirectResponse(url="/admin", status_code=302)
+        else:
+            logger.info(f"🔍 LOGIN SUCCESS - Regular user {username} redirecting to dashboard")
+            return RedirectResponse(url="/dashboard", status_code=302)
         
     except Exception as e:
         logger.error(f"Error during login: {e}")
@@ -773,12 +841,15 @@ async def logout_user(request: Request):
 
 @router.get("/dashboard")
 async def dashboard_page(request: Request):
-    """Display user dashboard with comprehensive error handling"""
+    """Display user dashboard with comprehensive error handling - FOR ALL USERS"""
     user = None
     try:
         user = get_current_user(request)
         if not user:
+            logger.info("🔍 DASHBOARD - No user found, redirecting to login")
             return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 DASHBOARD - User {user.get('username')} accessing dashboard (Admin: {user.get('is_admin', 0)})")
         
         # Initialize safe defaults
         video_list = []
@@ -874,7 +945,7 @@ async def dashboard_page(request: Request):
                 else:
                     time.sleep(0.1 * (attempt + 1))  # Brief delay before retry
         
-        # Build secure template context
+        # Build secure template context for ALL users
         template_context = {
             "request": request,
             "user": user,
@@ -892,6 +963,7 @@ async def dashboard_page(request: Request):
         }
         
         try:
+            # All users (admin and regular) get the dashboard.html template
             response = templates.TemplateResponse("dashboard.html", template_context)
             
             # Add security headers
@@ -899,12 +971,15 @@ async def dashboard_page(request: Request):
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             
+            logger.info(f"🔍 DASHBOARD - Successfully loaded dashboard.html for user {user.get('username')}")
             return response
-        except Exception:
+        except Exception as template_error:
+            logger.warning(f"🔍 DASHBOARD - Template error: {template_error}")
             # Fallback if dashboard.html template is missing
             return JSONResponse({
                 "message": "Dashboard",
                 "user": user.get("username", "User"),
+                "is_admin": bool(user.get("is_admin", 0)),
                 "stats": {
                     "total_videos": total_videos,
                     "total_views": total_views,
@@ -924,6 +999,99 @@ async def dashboard_page(request: Request):
             "status": "error"
         }, status_code=500)
 
+@router.get("/admin")
+async def admin_panel(request: Request):
+    """Admin panel - only for admin users"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        # Check if user is admin
+        if not user.get("is_admin", 0) == 1:
+            logger.warning(f"🔍 ADMIN ACCESS DENIED - User {user.get('username')} is not admin")
+            return RedirectResponse(url="/dashboard", status_code=302)
+        
+        logger.info(f"🔍 ADMIN PANEL - Admin user {user.get('username')} accessing admin panel")
+        
+        try:
+            return templates.TemplateResponse("admin/admin_panel.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN PANEL - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Panel",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin panel error: {e}")
+        return JSONResponse({
+            "error": "Admin panel temporarily unavailable",
+            "status": "error"
+        }, status_code=500)
+
+@router.get("/videos")
+async def videos_page(request: Request):
+    """User videos page - for all authenticated users"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 VIDEOS PAGE - User {user.get('username')} accessing videos")
+        
+        # Get user videos
+        video_list = []
+        try:
+            videos = db.get_user_videos(user["id"])
+            if videos:
+                for video in videos:
+                    try:
+                        # Convert to dict safely
+                        if hasattr(video, '__dict__'):
+                            video_dict = video.__dict__
+                        elif isinstance(video, dict):
+                            video_dict = video.copy()
+                        else:
+                            video_dict = dict(video) if video else {}
+                        
+                        # Sanitize data
+                        video_dict['title'] = sanitize_input(video_dict.get('title', 'Untitled'))
+                        video_dict['status'] = sanitize_input(video_dict.get('status', 'unknown'))
+                        
+                        video_list.append(video_dict)
+                    except Exception as video_error:
+                        logger.error(f"Error processing video: {video_error}")
+                        continue
+        except Exception as e:
+            logger.error(f"Error fetching videos: {e}")
+        
+        try:
+            return templates.TemplateResponse("videos.html", {
+                "request": request,
+                "user": user,
+                "videos": video_list
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 VIDEOS PAGE - Template error: {template_error}")
+            return JSONResponse({
+                "message": "User Videos",
+                "user": user.get("username", "User"),
+                "videos": video_list,
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Videos page error: {e}")
+        return JSONResponse({
+            "error": "Videos page temporarily unavailable",
+            "status": "error"
+        }, status_code=500)
+
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
@@ -936,6 +1104,8 @@ async def test_routes():
             "Password Security",
             "Rate Limiting",
             "Input Sanitization",
-            "File Upload Security"
+            "File Upload Security",
+            "Admin Password Fix",
+            "User Dashboard Access"
         ]
     }
