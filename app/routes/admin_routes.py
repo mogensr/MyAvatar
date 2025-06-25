@@ -53,13 +53,9 @@ async def admin_dashboard(request: Request):
         raise
     except Exception as e:
         log_error("Error displaying admin dashboard", "AdminRoutes", e)
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "error_title": "Admin Dashboard Error",
-                "error_message": "An error occurred loading the admin dashboard."
-            }
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Admin dashboard error", "detail": str(e)}
         )
 
 @router.get("/manage-passwords")
@@ -97,13 +93,9 @@ async def manage_passwords(request: Request, message: Optional[str] = None, mess
         raise
     except Exception as e:
         log_error("Error displaying password management page", "AdminRoutes", e)
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "error_title": "Password Management Error",
-                "error_message": "An error occurred loading the password management page."
-            }
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Password management error", "detail": str(e)}
         )
 
 @router.post("/api/admin/reset-password", response_class=JSONResponse)
@@ -471,13 +463,9 @@ async def manage_users(request: Request):
         raise
     except Exception as e:
         log_error("Error displaying user management page", "AdminRoutes", e)
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "error_title": "User Management Error",
-                "error_message": "An error occurred loading the user management page."
-            }
+        return JSONResponse(
+            status_code=500,
+            content={"error": "User management error", "detail": str(e)}
         )
 
 @router.get("/manage-videos/{user_id}")
@@ -524,13 +512,9 @@ async def manage_user_videos(request: Request, user_id: int):
         raise
     except Exception as e:
         log_error("Error displaying video management page", "AdminRoutes", e)
-        return templates.TemplateResponse(
-            "error.html",
-            {
-                "request": request,
-                "error_title": "Video Management Error", 
-                "error_message": "An error occurred loading the video management page."
-            }
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Video management error", "detail": str(e)}
         )
 
 @router.post("/delete-video/{video_id}")
