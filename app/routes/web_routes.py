@@ -817,7 +817,7 @@ async def logout_user(request: Request):
 
 @router.get("/dashboard")
 async def dashboard_page(request: Request):
-    """Display user dashboard with comprehensive error handling - FOR ALL USERS"""
+    """Display user dashboard with comprehensive error handling - FOR ALL USERS - FIXED VIDEO DISPLAY"""
     user = None
     try:
         user = get_current_user(request)
@@ -827,101 +827,78 @@ async def dashboard_page(request: Request):
         
         logger.info(f"🔍 DASHBOARD - User {user.get('username')} accessing dashboard (Admin: {user.get('is_admin', 0)})")
         
-        # Initialize safe defaults
-        video_list = []
-        avatar_list = []
-        total_videos = 0
+        # Get user's videos - FIXED VERSION
+        videos = db.get_user_videos(user["id"])
+        
+        # Debug: Log what we're getting
+        print(f"Dashboard - User ID: {user['id']}, Videos found: {len(videos) if videos else 0}")
+        if videos:
+            print(f"First video: {videos[0]}")
+        
+        # Make sure videos is a list
+        if not videos:
+            videos = []
+        
+        # Process videos to ensure proper format
+        processed_videos = []
+        for video in videos:
+            if isinstance(video, dict):
+                # Ensure video_url is set correctly from video_path
+                video_url = video.get('video_path') or video.get('video_url')
+                if video_url:
+                    video['video_url'] = video_url
+                
+                # Ensure all required fields exist with safe defaults
+                video['title'] = sanitize_input(video.get('title', 'Untitled Video'))
+                video['status'] = sanitize_input(video.get('status', 'unknown'))
+                video['duration'] = video.get('duration', '')
+                video['format'] = video.get('format', '16:9')
+                
+                # Handle created_at datetime formatting
+                if 'created_at' in video and video['created_at']:
+                    try:
+                        if isinstance(video['created_at'], str):
+                            # Already a string, keep as is
+                            pass
+                        elif hasattr(video['created_at'], 'strftime'):
+                            # It's a datetime object, convert to string for template
+                            video['created_at'] = video['created_at']
+                        else:
+                            video['created_at'] = str(video['created_at'])
+                    except Exception as date_error:
+                        logger.error(f"Error processing created_at: {date_error}")
+                        video['created_at'] = 'Unknown'
+                
+                processed_videos.append(video)
+        
+        # Initialize safe defaults for stats
+        total_videos = len(processed_videos)
         total_duration_hours = 0
         total_views = 0
         total_shares = 0
         
-        # Safely get user videos with retry logic
-        for attempt in range(3):
+        # Calculate stats from videos
+        for video in processed_videos:
             try:
-                videos = db.get_user_videos(user["id"])
-                if videos:
-                    video_list = []
-                    for video in videos:
-                        try:
-                            # Safely convert video to dict if needed
-                            if hasattr(video, '__dict__'):
-                                video_dict = video.__dict__
-                            elif isinstance(video, dict):
-                                video_dict = video.copy()
-                            else:
-                                video_dict = dict(video) if video else {}
-                            
-                            # Sanitize and clean datetime fields
-                            if 'created_at' in video_dict and video_dict['created_at']:
-                                try:
-                                    if isinstance(video_dict['created_at'], str):
-                                        video_dict['created_at'] = datetime.fromisoformat(video_dict['created_at'].replace('Z', '+00:00'))
-                                    video_dict['created_at_formatted'] = video_dict['created_at'].strftime('%Y-%m-%d %H:%M')
-                                except Exception:
-                                    video_dict['created_at_formatted'] = 'Unknown'
-                            else:
-                                video_dict['created_at_formatted'] = 'Unknown'
-                            
-                            # Ensure required fields exist and sanitize
-                            video_dict['title'] = sanitize_input(video_dict.get('title', 'Untitled'))
-                            video_dict['status'] = sanitize_input(video_dict.get('status', 'unknown'))
-                            video_dict['duration'] = max(0, int(video_dict.get('duration', 0)))
-                            video_dict['views'] = max(0, int(video_dict.get('views', 0)))
-                            video_dict['shares'] = max(0, int(video_dict.get('shares', 0)))
-                            
-                            video_list.append(video_dict)
-                        except Exception as video_error:
-                            logger.error(f"Error processing video record: {video_error}")
-                            continue
-                    
-                    total_videos = len(video_list)
-                    total_duration_hours = sum(v.get('duration', 0) for v in video_list) // 3600
-                    total_views = sum(v.get('views', 0) for v in video_list)
-                    total_shares = sum(v.get('shares', 0) for v in video_list)
-                
-                break  # Success, exit retry loop
-                
-            except Exception as video_error:
-                if attempt == 2:  # Last attempt
-                    logger.error(f"Failed to fetch user videos after 3 attempts: {video_error}")
-                else:
-                    time.sleep(0.1 * (attempt + 1))  # Brief delay before retry
+                duration = video.get('duration', 0)
+                if isinstance(duration, (int, float)):
+                    total_duration_hours += duration
+                views = video.get('views', 0)
+                if isinstance(views, (int, float)):
+                    total_views += views
+                shares = video.get('shares', 0)
+                if isinstance(shares, (int, float)):
+                    total_shares += shares
+            except Exception as stat_error:
+                logger.error(f"Error calculating stats: {stat_error}")
+                continue
         
-        # Safely get user avatars with retry logic
-        for attempt in range(3):
-            try:
-                avatars = db.get_user_avatars(user["id"])
-                if avatars:
-                    avatar_list = []
-                    for avatar in avatars:
-                        try:
-                            # Safely convert avatar to dict
-                            if hasattr(avatar, '__dict__'):
-                                avatar_dict = avatar.__dict__
-                            elif isinstance(avatar, dict):
-                                avatar_dict = avatar.copy()
-                            else:
-                                avatar_dict = dict(avatar) if avatar else {}
-                            
-                            # Ensure required fields and sanitize
-                            avatar_dict['name'] = sanitize_input(avatar_dict.get('name', 'Unnamed Avatar'))
-                            avatar_dict['avatar_id'] = sanitize_input(avatar_dict.get('avatar_id', ''))
-                            avatar_dict['image_url'] = avatar_dict.get('image_url', '/static/images/default-avatar.png')
-                            
-                            avatar_list.append(avatar_dict)
-                        except Exception as avatar_error:
-                            logger.error(f"Error processing avatar record: {avatar_error}")
-                            continue
-                
-                break  # Success, exit retry loop
-                
-            except Exception as avatar_error:
-                if attempt == 2:  # Last attempt
-                    logger.error(f"Failed to fetch user avatars after 3 attempts: {avatar_error}")
-                else:
-                    time.sleep(0.1 * (attempt + 1))  # Brief delay before retry
+        # Format duration
+        hours = int(total_duration_hours // 3600) if total_duration_hours > 0 else 0
+        minutes = int((total_duration_hours % 3600) // 60) if total_duration_hours > 0 else 0
+        duration_str = f"{hours}h {minutes}m" if hours > 0 or minutes > 0 else "0h 0m"
         
-        # Build secure template context for ALL users
+        # Build template context
         template_context = {
             "request": request,
             "user": user,
@@ -930,13 +907,14 @@ async def dashboard_page(request: Request):
             "avatar_id": sanitize_input(user.get("avatar_id", "")),
             "user_id": int(user.get("id", 0)),
             "api_key": user.get("api_key", "") or os.getenv("HEYGEN_API_KEY", ""),
-            "videos": video_list,
-            "avatars": avatar_list,
+            "videos": processed_videos,  # FIXED: Pass processed videos
             "total_videos": total_videos,
-            "total_duration": f"{total_duration_hours}h" if total_duration_hours > 0 else "0h",
-            "total_views": total_views,
-            "total_shares": total_shares,
+            "total_duration": duration_str,
+            "total_views": str(total_views),
+            "total_shares": str(total_shares),
         }
+        
+        logger.info(f"🔍 DASHBOARD - Passing {len(processed_videos)} videos to template")
         
         try:
             # All users (admin and regular) get the dashboard.html template
@@ -947,7 +925,7 @@ async def dashboard_page(request: Request):
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             
-            logger.info(f"🔍 DASHBOARD - Successfully loaded dashboard.html for user {user.get('username')}")
+            logger.info(f"🔍 DASHBOARD - Successfully loaded dashboard.html for user {user.get('username')} with {len(processed_videos)} videos")
             return response
         except Exception as template_error:
             logger.warning(f"🔍 DASHBOARD - Template error: {template_error}")
@@ -959,9 +937,9 @@ async def dashboard_page(request: Request):
                 "stats": {
                     "total_videos": total_videos,
                     "total_views": total_views,
-                    "total_duration": f"{total_duration_hours}h",
+                    "total_duration": duration_str,
                 },
-                "videos": video_list[:5],  # Show first 5 videos
+                "videos": processed_videos[:5],  # Show first 5 videos
                 "status": "Template not found - using JSON response"
             })
         
@@ -1509,58 +1487,42 @@ async def debug_videos(request: Request, user_id: int):
     try:
         user = get_current_user(request)
         if not user:
-            return JSONResponse({"error": "Not logged in"})
+            return JSONResponse({"error": "Not authenticated"}, status_code=401)
         
-        logger.info(f"🔍 DEBUG VIDEOS - Checking videos for user ID: {user_id}")
+        # Get database instance
+        db_instance = db
         
-        # Try different methods to get videos
-        debug_info = {
-            "user_id": user_id,
-            "current_user": user.get("username"),
-            "database_methods": [method for method in dir(db) if 'video' in method.lower()],
-        }
+        # Check if get_user_videos method exists
+        if not hasattr(db_instance, 'get_user_videos'):
+            return JSONResponse({"error": "get_user_videos method not found in Database class"})
         
         # Try to get videos
-        try:
-            videos = db.get_user_videos(user_id)
-            debug_info["videos_found"] = len(videos) if videos else 0
-            
-            # Convert videos to JSON-serializable format
-            if videos:
-                safe_videos = []
-                for video in videos[:3]:  # Show first 3
-                    if isinstance(video, dict):
-                        safe_video = {}
-                        for key, value in video.items():
-                            # Convert datetime objects to strings
-                            if hasattr(value, 'isoformat'):  # datetime object
-                                safe_video[key] = str(value)
-                            else:
-                                safe_video[key] = value
-                        safe_videos.append(safe_video)
-                    else:
-                        safe_videos.append(str(video))
-                debug_info["videos"] = safe_videos
-            else:
-                debug_info["videos"] = None
-                
-            debug_info["get_user_videos_success"] = True
-        except Exception as e:
-            debug_info["get_user_videos_error"] = str(e)
-            debug_info["get_user_videos_success"] = False
+        videos = db_instance.get_user_videos(user_id)
         
-        # Try to get user info
-        try:
-            user_info = db.get_user_by_id(user_id)
-            debug_info["user_exists"] = user_info is not None
-            debug_info["username"] = user_info.get("username", "Unknown") if user_info else None
-        except Exception as e:
-            debug_info["user_lookup_error"] = str(e)
+        # Convert datetime objects to strings for JSON serialization
+        serializable_videos = []
+        if videos:
+            for video in videos:
+                if isinstance(video, dict):
+                    serializable_video = {}
+                    for key, value in video.items():
+                        if hasattr(value, 'isoformat'):  # datetime object
+                            serializable_video[key] = value.isoformat()
+                        else:
+                            serializable_video[key] = value
+                    serializable_videos.append(serializable_video)
+                else:
+                    serializable_videos.append(str(video))
         
-        return JSONResponse(debug_info)
+        return JSONResponse({
+            "user_id": user_id,
+            "videos_found": len(videos) if videos else 0,
+            "videos": serializable_videos,
+            "method_exists": True
+        })
         
     except Exception as e:
-        return JSONResponse({"error": str(e)})
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @router.get("/test-routes")
 async def test_routes():
@@ -1578,6 +1540,7 @@ async def test_routes():
             "Admin Password Fix",
             "User Dashboard Access",
             "Complete Admin Panel Routes",
-            "Video Debug Route"
+            "Video Debug Route",
+            "FIXED Dashboard Video Display"
         ]
     }
