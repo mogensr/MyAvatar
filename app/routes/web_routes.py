@@ -1156,10 +1156,14 @@ async def admin_upload_avatar(request: Request):
         
         logger.info(f"🔍 ADMIN UPLOAD AVATAR - Admin user {user.get('username')} accessing upload avatar")
         
+        # For the main admin avatars page, we can show a general management interface
+        # or redirect to a specific user. For now, let's show the template
         try:
             return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
-                "user": user
+                "user": user,
+                "user_to_manage": user,  # Show current admin user's avatars by default
+                "avatars": []  # Empty for now, or get admin's avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN UPLOAD AVATAR - Template error: {template_error}")
@@ -1172,6 +1176,55 @@ async def admin_upload_avatar(request: Request):
     except Exception as e:
         logger.error(f"Admin upload avatar page error: {e}")
         return JSONResponse({"error": "Admin upload avatar page unavailable"}, status_code=500)
+
+@router.get("/admin/manage-avatars/{user_id}")
+async def admin_manage_avatars_for_user(request: Request, user_id: int):
+    """Admin manage avatars for specific user"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN MANAGE AVATARS - Admin user {user.get('username')} managing avatars for user ID: {user_id}")
+        
+        # Get the user whose avatars we're managing
+        try:
+            target_user = db.get_user_by_id(user_id)
+            if not target_user:
+                return RedirectResponse(url="/admin/users", status_code=302)
+        except Exception as e:
+            logger.error(f"Error fetching user for avatar management: {e}")
+            return RedirectResponse(url="/admin/users", status_code=302)
+        
+        # Get user's avatars
+        try:
+            user_avatars = db.get_user_avatars(user_id)
+            if not user_avatars:
+                user_avatars = []
+        except Exception as e:
+            logger.error(f"Error fetching user avatars: {e}")
+            user_avatars = []
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_avatars.html", {
+                "request": request,
+                "user": user,
+                "user_to_manage": target_user,
+                "avatars": user_avatars
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN MANAGE AVATARS - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Manage Avatars",
+                "user": user.get("username", "Admin"),
+                "target_user": target_user.get("username", "Unknown"),
+                "avatars_count": len(user_avatars),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin manage avatars page error: {e}")
+        return JSONResponse({"error": "Admin manage avatars page unavailable"}, status_code=500)
 
 @router.get("/admin/manage-voices")
 async def admin_manage_voices(request: Request):
@@ -1347,11 +1400,11 @@ async def admin_user_avatars(request: Request, user_id: int):
             user_avatars = []
         
         try:
-            return templates.TemplateResponse("portal/admin_user_avatars.html", {
+            return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
                 "user": user,
-                "target_user": target_user,
-                "user_avatars": user_avatars
+                "user_to_manage": target_user,  # Changed from target_user to user_to_manage
+                "avatars": user_avatars  # Changed from user_avatars to avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN USER AVATARS - Template error: {template_error}")
