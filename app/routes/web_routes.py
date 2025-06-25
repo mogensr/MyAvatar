@@ -554,6 +554,72 @@ async def fix_admin_password():
         logger.error(f"Error fixing passwords: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
 
+@router.get("/force-fix-admin")
+async def force_fix_admin():
+    """Force fix admin password directly"""
+    try:
+        # Hash the password
+        hashed_password = hash_password('admin123')
+        
+        # Direct SQL update - adjust based on your database type
+        try:
+            # For PostgreSQL
+            query = "UPDATE users SET password = %s WHERE username = %s"
+            result = db.execute_query(query, (hashed_password, 'admin'))
+            
+            return JSONResponse({
+                "status": "success", 
+                "message": "Admin password updated directly",
+                "query_result": str(result)
+            })
+        except Exception as e1:
+            try:
+                # For SQLite
+                query = "UPDATE users SET password = ? WHERE username = ?"
+                result = db.execute_query(query, (hashed_password, 'admin'))
+                
+                return JSONResponse({
+                    "status": "success", 
+                    "message": "Admin password updated directly (SQLite)",
+                    "query_result": str(result)
+                })
+            except Exception as e2:
+                return JSONResponse({
+                    "error": f"Both methods failed. PostgreSQL: {e1}, SQLite: {e2}"
+                })
+                
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+@router.get("/debug-users")
+async def debug_users():
+    """Debug route to see all users in database"""
+    try:
+        # Try different methods to get users
+        try:
+            all_users = db.get_all_users()
+            user_count = len(all_users) if all_users else 0
+        except Exception as e:
+            all_users = None
+            user_count = f"Error: {e}"
+        
+        # Try to get admin user specifically
+        try:
+            admin_user = db.get_user_by_username("admin")
+            admin_password_length = len(admin_user.get("password", "")) if admin_user else "No admin user"
+        except Exception as e:
+            admin_user = None
+            admin_password_length = f"Error: {e}"
+        
+        return JSONResponse({
+            "total_users": user_count,
+            "admin_user_exists": admin_user is not None,
+            "admin_password_length": admin_password_length,
+            "all_users": all_users[:3] if all_users else None  # Show first 3 users
+        })
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
 @router.get("/test-debug")
 async def test_debug(request: Request):
     """Test route to verify server is receiving requests"""
