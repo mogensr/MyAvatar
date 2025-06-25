@@ -508,6 +508,21 @@ async def test_debug(request: Request):
     logger.info("🔍 TEST DEBUG ROUTE ACCESSED")
     return JSONResponse({"status": "Server is receiving requests", "timestamp": str(datetime.now())})
 
+@router.post("/test-form")
+async def test_form_submission(request: Request):
+    """Test route to verify form submissions work"""
+    try:
+        form = await request.form()
+        logger.info(f"🔍 TEST FORM - Received form data: {dict(form)}")
+        return JSONResponse({
+            "status": "success",
+            "message": "Form submission working",
+            "received_data": dict(form)
+        })
+    except Exception as e:
+        logger.error(f"🔍 TEST FORM - Error: {e}")
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 @router.post("/login")
 @limiter.limit(config.RATE_LIMIT_LOGIN)
 async def login_user(request: Request):
