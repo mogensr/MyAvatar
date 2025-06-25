@@ -1015,7 +1015,7 @@
             updateProgressModal('⏳ Submitting your video request...', 10);
             
             // Submit to text-to-video API endpoint with FormData
-            fetch('/api/create-text-video', {
+            fetch('/api/videos/create-from-text', {
                 method: 'POST',
                 // Don't set Content-Type header - let browser set it for FormData
                 body: formData

@@ -1481,6 +1481,111 @@ async def admin_delete_user(request: Request, user_id: int):
         logger.error(f"Admin delete user error: {e}")
         return RedirectResponse(url="/admin/users", status_code=302)
 
+@router.get("/voice-recording")
+async def voice_recording_page(request: Request):
+    """Voice recording page for creating videos from audio"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🎤 VOICE RECORDING - User {user.get('username')} accessing voice recording page")
+        
+        # Get user's avatars for selection
+        user_avatars = []
+        try:
+            # Use the same database method as dashboard
+            videos = db.get_user_videos(user["id"])  # This works, so let's use similar pattern
+            
+            # For now, create a default avatar based on user's avatar_id
+            if user.get("avatar_id"):
+                user_avatars = [
+                    {
+                        'id': user.get("avatar_id"),
+                        'name': 'Your Avatar',
+                        'image_path': None
+                    }
+                ]
+            else:
+                user_avatars = [
+                    {
+                        'id': 'default_avatar',
+                        'name': 'Default Avatar',
+                        'image_path': None
+                    }
+                ]
+        except Exception as e:
+            logger.error(f"Error setting up avatars: {e}")
+            user_avatars = [
+                {
+                    'id': 'default_avatar',
+                    'name': 'Default Avatar',
+                    'image_path': None
+                }
+            ]
+        
+        return templates.TemplateResponse("voice_recording.html", {
+            "request": request,
+            "user": user,
+            "username": sanitize_input(user.get("username", "User")),
+            "avatars": user_avatars
+        })
+        
+    except Exception as e:
+        logger.error(f"Voice recording page error: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+@router.get("/text-to-video")
+async def text_to_video_page(request: Request):
+    """Text-to-video creation page"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"📝 TEXT-TO-VIDEO - User {user.get('username')} accessing text-to-video page")
+        
+        # Get user's avatars for selection
+        user_avatars = []
+        try:
+            # For now, create a default avatar based on user's avatar_id
+            if user.get("avatar_id"):
+                user_avatars = [
+                    {
+                        'id': user.get("avatar_id"),
+                        'name': 'Your Avatar',
+                        'image_path': None
+                    }
+                ]
+            else:
+                user_avatars = [
+                    {
+                        'id': 'default_avatar',
+                        'name': 'Default Avatar',
+                        'image_path': None
+                    }
+                ]
+        except Exception as e:
+            logger.error(f"Error setting up avatars: {e}")
+            user_avatars = [
+                {
+                    'id': 'default_avatar',
+                    'name': 'Default Avatar',
+                    'image_path': None
+                }
+            ]
+        
+        return templates.TemplateResponse("text_video_component.html", {
+            "request": request,
+            "user": user,
+            "username": sanitize_input(user.get("username", "User")),
+            "avatars": user_avatars
+        })
+        
+    except Exception as e:
+        logger.error(f"Text-to-video page error: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
 @router.get("/debug-videos/{user_id}")
 async def debug_videos(request: Request, user_id: int):
     """Debug route to check videos for a specific user"""
