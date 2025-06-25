@@ -4,8 +4,6 @@ API routes for MyAvatar
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile, File, Path
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path as PathLib
 from datetime import datetime, timedelta
 from typing import Optional
 from ..api.heygen import (create_video_from_audio_file, create_video_from_text,
@@ -20,87 +18,6 @@ from ..utils.avatar_utils import ensure_avatar_persistence
 
 # Create router
 router = APIRouter(prefix="/api", tags=["api"])
-
-# Template setup
-templates_path = PathLib(__file__).parent.parent.parent / "templates"
-templates = Jinja2Templates(directory=str(templates_path))
-
-@router.get("/voice-recording")
-async def voice_recording_page(request: Request):
-    """Voice recording page for creating videos from audio"""
-    try:
-        user = get_current_user(request)
-        if not user:
-            return RedirectResponse(url="/login", status_code=302)
-        
-        log_info(f"🎤 VOICE RECORDING - User {user.get('username')} accessing voice recording page", "API")
-        
-        # Get user's avatars for selection
-        user_avatars = []
-        try:
-            avatars = execute_query(
-                "SELECT * FROM user_avatars WHERE user_id = ? ORDER BY is_default DESC, avatar_name ASC",
-                (int(user["id"]),),
-                fetch_all=True
-            )
-            
-            if avatars:
-                for avatar in avatars:
-                    try:
-                        # Convert to dict safely
-                        if isinstance(avatar, dict):
-                            avatar_dict = avatar.copy()
-                        else:
-                            # Handle SQLite Row objects
-                            avatar_dict = {}
-                            for key in avatar.keys():
-                                avatar_dict[key] = avatar[key]
-                        
-                        # Sanitize avatar data
-                        avatar_dict['name'] = avatar_dict.get('avatar_name', avatar_dict.get('name', 'Avatar'))
-                        avatar_dict['id'] = avatar_dict.get('avatar_id', avatar_dict.get('id', ''))
-                        avatar_dict['image_path'] = avatar_dict.get('avatar_image_url', avatar_dict.get('image_path', ''))
-                        
-                        user_avatars.append(avatar_dict)
-                    except Exception as avatar_error:
-                        log_error(f"Error processing avatar: {avatar_error}", "API")
-                        continue
-        except Exception as e:
-            log_error(f"Error fetching user avatars: {e}", "API")
-        
-        # If no avatars, add a default one based on user's avatar_id
-        if not user_avatars and user.get("avatar_id"):
-            user_avatars = [
-                {
-                    'id': user.get("avatar_id"),
-                    'name': 'Your Avatar',
-                    'image_path': None
-                }
-            ]
-        
-        # If still no avatars, add a fallback
-        if not user_avatars:
-            user_avatars = [
-                {
-                    'id': 'default_avatar',
-                    'name': 'Default Avatar',
-                    'image_path': None
-                }
-            ]
-        
-        return templates.TemplateResponse("voice_recording.html", {
-            "request": request,
-            "user": user,
-            "username": user.get("username", "User"),
-            "avatars": user_avatars
-        })
-        
-    except Exception as e:
-        log_error(f"Voice recording page error: {e}", "API")
-        return JSONResponse({
-            "error": "Voice recording page temporarily unavailable",
-            "status": "error"
-        }, status_code=500)
 
 @router.get("/videos")
 async def get_videos(request: Request):
@@ -827,7 +744,10 @@ async def get_video_status(request: Request, video_id: str):
                                 "error": "Video generation failed. Please try creating a new video.",
                                 "status": video_status
                             }
-                        )
+                        )git add app/routes/api_routes.py
+git add templates/dashboard.html  
+git commit -m "Move voice recording route from api_routes to web_routes"
+git push
                 else:
                     log_error(f"Failed to get video details from HeyGen: {result.get('error', 'Unknown error')}", "API")
         
