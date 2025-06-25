@@ -191,7 +191,37 @@ else:
     limiter = Limiter()
 
 router = APIRouter()
-templates = Jinja2Templates(directory=str(Path(__file__).parent.parent.parent / "templates"))
+
+# Robust template directory detection
+def find_templates_directory():
+    """Find templates directory with multiple fallback paths"""
+    possible_paths = [
+        Path(__file__).parent.parent.parent / "templates",  # From app/routes/web_routes.py -> project_root/templates
+        Path("templates"),  # Relative to current working directory
+        Path("/app/templates"),  # Common container path
+        Path("./templates"),  # Explicit relative
+        Path(__file__).parent.parent / "templates",  # From app/routes -> app/templates
+    ]
+    
+    for path in possible_paths:
+        if path.exists() and path.is_dir():
+            try:
+                # Check if it has some expected template files
+                template_files = list(path.glob("*.html"))
+                if template_files:
+                    print(f"Found templates directory: {path} with {len(template_files)} HTML files")
+                    return str(path)
+            except Exception as e:
+                print(f"Error checking template path {path}: {e}")
+                continue
+    
+    # Fallback - use the first path even if it doesn't exist
+    fallback_path = str(possible_paths[0])
+    print(f"No templates directory found, using fallback: {fallback_path}")
+    return fallback_path
+
+templates_dir = find_templates_directory()
+templates = Jinja2Templates(directory=templates_dir)
 
 # Configure Jinja2 for security
 try:
