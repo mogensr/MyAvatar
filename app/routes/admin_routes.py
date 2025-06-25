@@ -182,6 +182,55 @@ async def reset_password(request: Request):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/migrate-database")
+async def migrate_database_get(request: Request):
+    """Migrate database to add missing description column (GET endpoint)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Check if column already exists
+        try:
+            test_result = execute_query("SELECT description FROM videos LIMIT 1", fetch_one=True)
+            return JSONResponse(
+                content={
+                    "success": True,
+                    "message": "Database migration not needed - description column already exists"
+                }
+            )
+        except:
+            # Column doesn't exist, proceed with migration
+            pass
+        
+        if USE_POSTGRES:
+            execute_query("ALTER TABLE videos ADD COLUMN description TEXT")
+        else:
+            execute_query("ALTER TABLE videos ADD COLUMN description TEXT DEFAULT ''")
+        
+        log_info(f"Admin {admin_user['username']} migrated database to add missing description column", "AdminRoutes")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Database migrated successfully - description column added to videos table"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error(f"Error migrating database", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.post("/api/admin/migrate-database", response_class=JSONResponse)
 async def migrate_database(request: Request):
     """Migrate database to add missing description column"""
