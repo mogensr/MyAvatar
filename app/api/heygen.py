@@ -243,32 +243,22 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         response = requests.post(
             "https://api.heygen.com/v2/video/generate",
             headers=headers,
-            data=json.dumps(data),
-            timeout=30
+            data=json.dumps(data)
         )
         
         # Log raw response for debugging
         log_info(f"HeyGen API response status: {response.status_code}", "HeyGen API")
         log_info(f"HeyGen API response headers: {dict(response.headers)}", "HeyGen API")
-        log_info(f"HeyGen API response text: {response.text[:1000]}{'...' if len(response.text) > 1000 else ''}", "HeyGen API")
+        log_info(f"HeyGen API response text: {response.text[:500]}{'...' if len(response.text) > 500 else ''}", "HeyGen API")
         
         # Check if response is actually JSON before parsing
-        content_type = response.headers.get('content-type', '').lower()
-        if 'application/json' in content_type:
-            try:
-                response_data = response.json()
-                log_info(f"HeyGen API v2 response JSON: {json.dumps(response_data)}", "HeyGen API")
-            except json.JSONDecodeError as e:
-                log_error(f"Failed to parse JSON despite content-type header: {e}", "HeyGen API")
-                return {
-                    "success": False,
-                    "error": f"Invalid JSON response from HeyGen API: {response.text[:200]}"
-                }
+        if response.headers.get('content-type', '').startswith('application/json'):
+            response_data = response.json()
         else:
-            log_error(f"HeyGen API returned non-JSON response (content-type: {content_type})", "HeyGen API")
+            log_error(f"HeyGen API returned non-JSON response: {response.text}", "HeyGen API")
             return {
                 "success": False,
-                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}, content-type: {content_type}): {response.text[:200]}"
+                "error": f"HeyGen API returned non-JSON response (status: {response.status_code}): {response.text}"
             }
         
         # Handle v2 API response format
@@ -677,11 +667,11 @@ def get_video_details(api_key: str, video_id: str):
     }
     
     try:
-        log_info(f"Fetching details for video {video_id} (v2)", "HeyGen API")
+        log_info(f"Fetching details for video {video_id} (v1)", "HeyGen API")
         
-        # FIXED: Use the correct v2 API endpoint
+        # FIXED: Use the correct v1 API endpoint for video status
         response = requests.get(
-            f"https://api.heygen.com/v2/video/{video_id}",
+            f"https://api.heygen.com/v1/video_status.get?video_id={video_id}",
             headers=headers
         )
         
