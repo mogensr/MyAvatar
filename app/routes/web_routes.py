@@ -438,16 +438,24 @@ def handle_api_error(error: Exception, context: str = "") -> JSONResponse:
 async def home_page(request: Request):
     """Home page with security headers"""
     try:
+        # DEBUG: Log when home page is accessed
+        logger.info("🔍 HOME PAGE ACCESSED - GET /")
+        
         user = get_current_user(request)
         if user:
+            logger.info(f"🔍 HOME PAGE - User already logged in: {user.get('username')}, redirecting to dashboard")
             return RedirectResponse(url="/dashboard", status_code=302)
+        
+        logger.info("🔍 HOME PAGE - No user logged in, showing home page")
             
         try:
             response = templates.TemplateResponse("index.html", {
                 "request": request,
                 "user": None
             })
-        except Exception:
+            logger.info("🔍 HOME PAGE - Successfully loaded index.html template")
+        except Exception as template_error:
+            logger.warning(f"🔍 HOME PAGE - Template error: {template_error}")
             # Fallback if index.html template is missing
             return JSONResponse({
                 "message": "MyAvatar Home Page",
