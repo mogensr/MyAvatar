@@ -475,28 +475,30 @@ async def home_page(request: Request):
 async def login_page(request: Request):
     """Display login page"""
     try:
+        # DEBUG: Log when login page is accessed
+        logger.info("🔍 LOGIN PAGE ACCESSED - GET /login")
+        
         user = get_current_user(request)
         if user:
             return RedirectResponse(url="/dashboard", status_code=302)
-            
-        try:
-            return templates.TemplateResponse("portal/login.html", {
-                "request": request,
-                "user": None
-            })
-        except Exception:
-            # Fallback if login.html template is missing
-            return JSONResponse({
-                "message": "Login Page",
-                "status": "Template not found - using JSON response",
-                "instructions": "POST to /login with username and password"
-            })
+        
+        return templates.TemplateResponse("portal/login.html", {
+            "request": request,
+            "user": None,
+            "error": None
+        })
     except Exception as e:
         logger.error(f"Error loading login page: {e}")
         return JSONResponse({
             "error": "Login page unavailable",
-            "status": "error"
+            "instructions": "POST to /login with username and password"
         }, status_code=500)
+
+@router.get("/test-debug")
+async def test_debug(request: Request):
+    """Test route to verify server is receiving requests"""
+    logger.info("🔍 TEST DEBUG ROUTE ACCESSED")
+    return JSONResponse({"status": "Server is receiving requests", "timestamp": str(datetime.now())})
 
 @router.post("/login")
 @limiter.limit(config.RATE_LIMIT_LOGIN)
