@@ -1277,12 +1277,14 @@
                                 
                                 {% if video.status == 'completed' and video.video_path %}
                                     <div class="video-actions">
-                                        <a href="{{ video.video_path }}" target="_blank" class="video-action primary">
-                                            <i class="fas fa-play"></i> Play
-                                        </a>
-                                        <button onclick="downloadVideo({{ video.id }})" class="video-action secondary">
-                                            <i class="fas fa-download"></i> Download
-                                        </button>
+                                        {% if video.status == 'completed' and video.video_url %}
+                                            <button onclick="playVideo('{{ video.heygen_video_id or video.id }}')" class="video-action primary">
+                                                <i class="fas fa-play"></i> Play
+                                            </button>
+                                            <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" download class="video-action secondary">
+                                                <i class="fas fa-download"></i> Download
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
                             </div>
@@ -1357,6 +1359,13 @@
             ];
             
             alert('🚀 Premium Features Coming Soon!\n\n' + features.join('\n') + '\n\nUpgrade to unlock advanced AI video creation tools!');
+        }
+        
+        function playVideo(videoId) {
+            const video = document.querySelector(`[data-video-id="${videoId}"] .video-thumbnail video`);
+            if (video) {
+                video.play();
+            }
         }
         
         function downloadVideo(videoId) {
