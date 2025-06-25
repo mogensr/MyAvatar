@@ -191,6 +191,7 @@ def init_database():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             format TEXT DEFAULT '16:9',
             title TEXT,
+            description TEXT,
             voice_id TEXT,
             template_id TEXT,
             background_config TEXT,
