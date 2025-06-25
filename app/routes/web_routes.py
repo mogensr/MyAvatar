@@ -64,28 +64,21 @@ except ImportError:
     class RateLimitExceeded(Exception): pass
     def get_remote_address(request): return "127.0.0.1"
 
-# STEP 4: Import database with fallbacks
+# STEP 4: Import database - NO MOCKS, REAL IMPLEMENTATION ONLY
 try:
-    from app.db.database import get_db_connection, Database
+    from app.db.user_manager import Database
     db = Database()
-except ImportError:
+    print("✅ Successfully imported Database from app.db.user_manager")
+except ImportError as e:
     try:
-        from database import Database
+        from ..db.user_manager import Database
         db = Database()
-    except ImportError:
-        # Create minimal database interface
-        class Database:
-            def get_user_by_username(self, username): return None
-            def get_user_by_id(self, user_id): return None
-            def get_user_videos(self, user_id): return []
-            def get_user_avatars(self, user_id): return []
-            def create_user(self, user_data): return 1
-            def update_user_login(self, user_id): pass
-            def get_failed_login_attempts(self, ip, username): return 0
-            def record_failed_login(self, ip, username): pass
-            def clear_failed_login_attempts(self, ip, username): pass
-            def get_user_by_email(self, email): return None
-        db = Database()
+        print("✅ Successfully imported Database from ..db.user_manager")
+    except ImportError as e2:
+        print(f"❌ CRITICAL: Failed to import real Database class!")
+        print(f"Import error 1: {e}")
+        print(f"Import error 2: {e2}")
+        raise ImportError("Real Database class is required - no mocks allowed!")
 
 # STEP 5: Import logging functions with fallbacks
 try:
