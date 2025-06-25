@@ -442,7 +442,7 @@ def fix_user_passwords():
         fixed_count = 0
         
         for user in all_users:
-            stored_password = user.get("password", "")
+            stored_password = user.get("hashed_password", "")  # FIXED: Use correct database field name
             if not stored_password or len(stored_password) == 0:
                 username = user.get("username", "")
                 
@@ -456,7 +456,7 @@ def fix_user_passwords():
                 hashed_password = hash_password(default_password)
                 
                 # Update user password
-                update_query = "UPDATE users SET password = %s WHERE id = %s"
+                update_query = "UPDATE users SET hashed_password = %s WHERE id = %s"  # FIXED: Use correct field name
                 db.execute_query(update_query, (hashed_password, user["id"]))
                 
                 logger.info(f"Fixed password for user: {username}")
@@ -716,6 +716,58 @@ async def create_new_admin():
     except Exception as e:
         return JSONResponse({"error": str(e)})
 
+@router.get("/direct-create-admin")
+async def direct_create_admin():
+    """Create admin user by directly accessing database connection"""
+    try:
+        hashed_password = hash_password('admin123')
+        api_key = generate_api_key()
+        
+        # Try to access the database connection directly
+        if hasattr(db, 'get_connection'):
+            conn = db.get_connection()
+        elif hasattr(db, 'conn'):
+            conn = db.conn
+        elif hasattr(db, 'connection'):
+            conn = db.connection
+        else:
+            return JSONResponse({"error": "Cannot access database connection"})
+        
+        # Direct SQL insert
+        cursor = conn.cursor()
+        
+        insert_query = """
+        INSERT INTO users (username, email, password, api_key, is_admin, is_locked, avatar_id, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """
+        
+        cursor.execute(insert_query, (
+            'directadmin',
+            'directadmin@myavatar.com',
+            hashed_password,
+            api_key,
+            1,  # is_admin
+            0,  # is_locked
+            '',  # avatar_id
+            datetime.now().isoformat()
+        ))
+        
+        user_id = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "Admin user created via direct database access",
+            "username": "directadmin",
+            "password": "admin123",
+            "user_id": user_id
+        })
+        
+    except Exception as e:
+        return JSONResponse({"error": f"Direct database access failed: {e}"})
+
 @router.get("/test-debug")
 async def test_debug(request: Request):
     """Test route to verify server is receiving requests"""
@@ -797,7 +849,7 @@ async def login_user(request: Request):
         logger.info(f"🔍 LOGIN USER FOUND - ID: {user.get('id')}, Username: '{user.get('username')}', Email: '{user.get('email')}'")
         
         # Verify password
-        stored_password = user.get("password", "")
+        stored_password = user.get("hashed_password", "")  # FIXED: Use correct database field name
         logger.info(f"🔍 LOGIN PASSWORD CHECK - Stored hash length: {len(stored_password)}")
         
         # Check if password is empty and offer password reset
@@ -955,7 +1007,7 @@ async def register_user(request: Request):
         user_data = {
             "username": username,
             "email": email,
-            "password": hashed_password,
+            "hashed_password": hashed_password,  # FIXED: Use correct database field name
             "api_key": api_key,
             "is_admin": 0,
             "is_locked": 0,
