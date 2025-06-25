@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Form, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from datetime import datetime, timedelta
 from typing import Optional
+import uuid
 from ..api.heygen import (create_video_from_audio_file, create_video_from_text,
                           get_available_avatars, get_available_voices, 
                           create_video_with_template, create_video_with_background,
-                          get_video_details)
+                          get_video_details, test_heygen_connection)
 from ..db.database import execute_query
 from ..auth.authentication import get_current_user, is_admin
 from ..storage.file_storage import upload_avatar_to_cloudinary, upload_audio_to_cloudinary
@@ -18,6 +19,9 @@ from ..utils.avatar_utils import ensure_avatar_persistence
 
 # Create router
 router = APIRouter(prefix="/api", tags=["api"])
+
+# TEST MODE - Set to True to bypass HeyGen API for testing
+TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
 
 @router.get("/videos")
 async def get_videos(request: Request):
@@ -309,6 +313,7 @@ async def create_video_from_text_endpoint(
     request: Request,
     text: str = Form(...),
     format: str = Form("16:9"),
+    avatar_id: str = Form(None),
     voice_id: str = Form(None),  # Changed to None default to allow system to find the right voice ID
     title: str = Form(None)
 ):
@@ -331,22 +336,23 @@ async def create_video_from_text_endpoint(
             )
             
         # Get user's avatar ID
-        avatar_id = user.get("avatar_id")
         if not avatar_id:
-            # Get default avatar for user
-            avatar = execute_query(
-                "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
-                (int(user["id"]),),
-                fetch_one=True
-            )
-            
-            if avatar:
-                avatar_id = avatar["avatar_id"]
-            else:
-                return JSONResponse(
-                    status_code=400,
-                    content={"success": False, "error": "No avatar available"}
+            avatar_id = user.get("avatar_id")
+            if not avatar_id:
+                # Get default avatar for user
+                avatar = execute_query(
+                    "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+                    (int(user["id"]),),
+                    fetch_one=True
                 )
+                
+                if avatar:
+                    avatar_id = avatar["avatar_id"]
+                else:
+                    return JSONResponse(
+                        status_code=400,
+                        content={"success": False, "error": "No avatar available"}
+                    )
         
         # Check if this is a public avatar (not starting with "custom-")
         is_public_avatar = not avatar_id.startswith("custom-")
@@ -422,7 +428,8 @@ async def create_video_from_audio_endpoint(
     audio: UploadFile = File(...),
     format: str = Form("16:9"),
     avatar_id: str = Form(None),
-    title: str = Form(None)
+    title: str = Form(None),
+    description: str = Form(None)
 ):
     """
     Create a video from audio file - UPDATED to accept avatar_id from form
@@ -484,10 +491,10 @@ async def create_video_from_audio_endpoint(
         # FIXED: Added avatar_id and audio_path to the INSERT statement
         execute_query(
             """
-            INSERT INTO videos (user_id, avatar_id, audio_path, heygen_video_id, status, format, title)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO videos (user_id, avatar_id, audio_path, heygen_video_id, status, format, title, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (user_id, str(avatar_id), audio_url, str(heygen_video_id), "processing", str(format), str(title))
+            (user_id, str(avatar_id), audio_url, str(heygen_video_id), "processing", str(format), str(title), str(description))
         )
         
         log_info(f"Audio-to-video created: {heygen_video_id} with avatar: {avatar_id}", "API")
@@ -744,10 +751,7 @@ async def get_video_status(request: Request, video_id: str):
                                 "error": "Video generation failed. Please try creating a new video.",
                                 "status": video_status
                             }
-                        )git add app/routes/api_routes.py
-git add templates/dashboard.html  
-git commit -m "Move voice recording route from api_routes to web_routes"
-git push
+                        )
                 else:
                     log_error(f"Failed to get video details from HeyGen: {result.get('error', 'Unknown error')}", "API")
         
@@ -767,6 +771,48 @@ git push
         
     except Exception as e:
         log_error(f"Error downloading video {video_id}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/test/heygen-status")
+async def test_heygen_status(request: Request):
+    """
+    Test HeyGen API connection and status
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+            
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "No HeyGen API key configured"}
+            )
+            
+        # Test basic connection
+        from ..api.heygen import test_heygen_connection, get_available_voices
+        
+        connection_test = test_heygen_connection(api_key)
+        voices_result = get_available_voices(api_key)
+        
+        return JSONResponse(content={
+            "success": True,
+            "connection_test": connection_test,
+            "voices_available": voices_result.get("success", False),
+            "voices_count": len(voices_result.get("voices", [])) if voices_result.get("success") else 0,
+            "api_key_present": bool(api_key),
+            "api_key_length": len(api_key) if api_key else 0
+        })
+        
+    except Exception as e:
+        log_error("Error testing HeyGen API status", "API", e)
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
