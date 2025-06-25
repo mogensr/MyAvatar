@@ -507,7 +507,11 @@ async def login_user(request: Request):
         username = sanitize_input(str(form.get("username", "")))
         password = str(form.get("password", ""))
         
+        # DEBUG: Log the login attempt
+        logger.info(f"🔍 LOGIN ATTEMPT - Username: '{username}', Password length: {len(password)}")
+        
         if not username or not password:
+            logger.warning(f"🔍 LOGIN FAILED - Missing credentials: username='{username}', password_len={len(password)}")
             return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
@@ -518,6 +522,8 @@ async def login_user(request: Request):
         client_ip = get_remote_address(request)
         failed_attempts = db.get_failed_login_attempts(client_ip, username)
         
+        logger.info(f"🔍 LOGIN CHECK - IP: {client_ip}, Failed attempts: {failed_attempts}")
+        
         if failed_attempts >= 5:
             logger.warning(f"Too many failed login attempts from {client_ip} for {username}")
             return templates.TemplateResponse("portal/login.html", {
@@ -527,8 +533,10 @@ async def login_user(request: Request):
             }, status_code=429)
         
         # Get user from database
+        logger.info(f"🔍 LOGIN LOOKUP - Searching for user: '{username}'")
         user = db.get_user_by_username(username)
         if not user:
+            logger.warning(f"🔍 LOGIN FAILED - User not found: '{username}'")
             db.record_failed_login(client_ip, username)
             return templates.TemplateResponse("portal/login.html", {
                 "request": request,
@@ -536,8 +544,17 @@ async def login_user(request: Request):
                 "error": "Invalid username or password"
             }, status_code=401)
         
+        logger.info(f"🔍 LOGIN USER FOUND - ID: {user.get('id')}, Username: '{user.get('username')}', Email: '{user.get('email')}'")
+        
         # Verify password
-        if not verify_password(password, user.get("password", "")):
+        stored_password = user.get("password", "")
+        logger.info(f"🔍 LOGIN PASSWORD CHECK - Stored hash length: {len(stored_password)}")
+        
+        password_valid = verify_password(password, stored_password)
+        logger.info(f"🔍 LOGIN PASSWORD RESULT - Valid: {password_valid}")
+        
+        if not password_valid:
+            logger.warning(f"🔍 LOGIN FAILED - Invalid password for user: '{username}'")
             db.record_failed_login(client_ip, username)
             return templates.TemplateResponse("portal/login.html", {
                 "request": request,
@@ -547,6 +564,7 @@ async def login_user(request: Request):
         
         # Check if account is locked
         if user.get("is_locked", False):
+            logger.warning(f"🔍 LOGIN FAILED - Account locked: '{username}'")
             return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
@@ -554,6 +572,7 @@ async def login_user(request: Request):
             }, status_code=403)
         
         # Create secure session
+        logger.info(f"🔍 LOGIN SUCCESS - Creating session for user: '{username}'")
         token = session_manager.create_session(user["id"], request)
         request.session["access_token"] = token
         
