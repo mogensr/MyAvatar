@@ -96,12 +96,21 @@ async def download_video(request: Request, video_id: str):
                 content={"success": False, "error": "Not authenticated"}
             )
         
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
-            (video_id, video_id),
-            fetch_one=True
-        )
+        # Get video from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            # Numeric ID - check both id and heygen_video_id fields
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
         
         if not video:
             return JSONResponse(
@@ -203,12 +212,21 @@ async def debug_video(request: Request, video_id: str):
                 content={"success": False, "error": "Not authenticated"}
             )
         
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
-            (video_id, video_id),
-            fetch_one=True
-        )
+        # Get video from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            # Numeric ID - check both id and heygen_video_id fields
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
         
         if not video:
             return JSONResponse(
@@ -248,12 +266,21 @@ async def get_video(request: Request, video_id: str):
                 content={"success": False, "error": "Not authenticated"}
             )
             
-        # First try to get from local database
-        video = execute_query(
-            "SELECT * FROM videos WHERE heygen_video_id = %s",
-            (video_id,),
-            fetch_one=True
-        )
+        # First try to get from local database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            # Numeric ID - check both id and heygen_video_id fields
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
         
         if not video:
             return JSONResponse(
@@ -682,12 +709,21 @@ async def get_video_status(request: Request, video_id: str):
                 content={"success": False, "error": "Not authenticated"}
             )
         
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
-            (video_id, video_id),
-            fetch_one=True
-        )
+        # Get video from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            # Numeric ID - check both id and heygen_video_id fields
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
         
         if not video:
             return JSONResponse(
