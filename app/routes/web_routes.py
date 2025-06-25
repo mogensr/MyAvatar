@@ -155,7 +155,14 @@ class Config:
         """Get environment variable with fallback instead of failing"""
         value = os.getenv(key)
         if not value or value in ["your-secret-key-change-this", "change-this"]:
-            logger.warning(f"Using fallback value for {key}")
+            # Use safe logging that handles cases where logger might not be fully initialized
+            try:
+                if 'logger' in globals() and logger:
+                    logger.warning(f"Using fallback value for {key}")
+                else:
+                    print(f"WARNING: Using fallback value for {key}")
+            except:
+                print(f"WARNING: Using fallback value for {key}")
             return fallback
         return value
     
@@ -165,9 +172,16 @@ class Config:
             # Ensure upload directory exists
             self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            logger.warning(f"Could not create upload directory: {e}")
+            # Use safe logging that handles cases where logger might not be fully initialized
+            try:
+                if 'logger' in globals() and logger:
+                    logger.warning(f"Could not create upload directory: {e}")
+                else:
+                    print(f"WARNING: Could not create upload directory: {e}")
+            except:
+                print(f"WARNING: Could not create upload directory: {e}")
 
-# STEP 8: Initialize configuration (NOW Config class is defined)
+# STEP 8: Initialize configuration (NOW Config class is defined and logger is available)
 config = Config()
 
 # STEP 9: Initialize components that depend on config
