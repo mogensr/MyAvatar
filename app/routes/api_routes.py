@@ -153,7 +153,7 @@ async def download_video(request: Request, video_id: str):
                     if video_url:
                         # Update the database with the video URL
                         execute_query(
-                            "UPDATE videos SET video_url = %s, status = %s WHERE id = %s",
+                            "UPDATE videos SET video_path = %s, status = %s WHERE id = %s",
                             (video_url, video_status, video["id"])
                         )
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
@@ -313,7 +313,7 @@ async def get_video(request: Request, video_id: str):
                 
                 if status != video["status"] or (video_url and not video["video_url"]):
                     execute_query(
-                        "UPDATE videos SET status = %s, video_url = %s WHERE heygen_video_id = %s",
+                        "UPDATE videos SET status = %s, video_path = %s WHERE heygen_video_id = %s",
                         (status, video_url, video_id)
                     )
                     
@@ -766,7 +766,7 @@ async def get_video_status(request: Request, video_id: str):
                     if video_url:
                         # Update the database with the video URL
                         execute_query(
-                            "UPDATE videos SET video_url = %s, status = %s WHERE id = %s",
+                            "UPDATE videos SET video_path = %s, status = %s WHERE id = %s",
                             (video_url, video_status, video["id"])
                         )
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
@@ -923,8 +923,8 @@ async def heygen_webhook(request: Request):
         # Update video based on event type
         if event_type == "avatar_video.success" and video_url:
             execute_query(
-                "UPDATE videos SET status = %s, video_url = %s WHERE id = %s",
-                ("completed", video_url, video["id"])
+                "UPDATE videos SET video_path = %s, status = %s WHERE id = %s",
+                (video_url, "completed", video["id"])
             )
             log_info(f"Updated video {video['id']} via webhook: status=completed, url={video_url}", "API")
         elif event_type == "avatar_video.fail":
