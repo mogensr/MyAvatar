@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.sessions import SessionMiddleware  # ADDED: Import SessionMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -71,6 +72,12 @@ app.add_middleware(
     allow_credentials=True,  
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# ADDED: Session middleware for login functionality
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.getenv("SESSION_SECRET_KEY", "your-super-secret-session-key-change-this-in-production")
 )
 
 # Exception handler
