@@ -436,3 +436,192 @@ async def make_me_admin(request: Request):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+@router.get("/users")
+async def manage_users(request: Request):
+    """Admin user management page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get all users with video counts
+        users = execute_query("""
+            SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin,
+                   COUNT(v.id) as video_count
+            FROM users u
+            LEFT JOIN videos v ON u.id = v.user_id
+            GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin
+            ORDER BY u.id
+        """, fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "admin_manage_users.html",
+            {
+                "request": request,
+                "user": user,
+                "users": users,
+                "title": "Manage Users"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying user management page", "AdminRoutes", e)
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error_title": "User Management Error",
+                "error_message": "An error occurred loading the user management page."
+            }
+        )
+
+@router.get("/manage-videos/{user_id}")
+async def manage_user_videos(request: Request, user_id: int):
+    """Admin video management page for specific user"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details
+        user_to_manage = execute_query(
+            "SELECT id, username, email FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get all videos for this user
+        videos = execute_query("""
+            SELECT id, title, status, heygen_video_id, created_at, video_url, video_path
+            FROM videos 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "admin_manage_videos.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "videos": videos,
+                "total_videos": len(videos),
+                "title": f"Manage Videos - {user_to_manage['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying video management page", "AdminRoutes", e)
+        return templates.TemplateResponse(
+            "error.html",
+            {
+                "request": request,
+                "error_title": "Video Management Error", 
+                "error_message": "An error occurred loading the video management page."
+            }
+        )
+
+@router.post("/delete-video/{video_id}")
+async def delete_video(request: Request, video_id: int):
+    """Delete a specific video (admin only)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get video details first
+        video = execute_query(
+            "SELECT id, user_id, title FROM videos WHERE id = %s",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if not video:
+            return RedirectResponse(
+                url=f"/admin/users?error=video_not_found",
+                status_code=303
+            )
+        
+        # Delete the video
+        execute_query("DELETE FROM videos WHERE id = %s", (video_id,))
+        
+        log_info(f"Admin {admin_user['username']} deleted video {video_id} ('{video['title']}')", "AdminRoutes")
+        
+        return RedirectResponse(
+            url=f"/admin/manage-videos/{video['user_id']}?success=video_deleted",
+            status_code=303
+        )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error deleting video", "AdminRoutes", e)
+        return RedirectResponse(
+            url="/admin/users?error=delete_failed",
+            status_code=303
+        )
+
+@router.post("/clear-user-videos/{user_id}")
+async def clear_user_videos(request: Request, user_id: int):
+    """Clear all videos for a specific user (admin only)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details
+        user_to_manage = execute_query(
+            "SELECT id, username FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(
+                url="/admin/users?error=user_not_found",
+                status_code=303
+            )
+        
+        # Count videos before deletion
+        video_count = execute_query(
+            "SELECT COUNT(*) as count FROM videos WHERE user_id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        # Delete all videos for this user
+        execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+        
+        log_info(f"Admin {admin_user['username']} cleared {video_count['count']} videos for user {user_to_manage['username']}", "AdminRoutes")
+        
+        return RedirectResponse(
+            url=f"/admin/manage-videos/{user_id}?success=all_videos_cleared",
+            status_code=303
+        )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error clearing user videos", "AdminRoutes", e)
+        return RedirectResponse(
+            url=f"/admin/manage-videos/{user_id}?error=clear_failed",
+            status_code=303
+        )
