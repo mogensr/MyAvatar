@@ -1524,11 +1524,9 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Check if HeyGen says video is completed
-                    if (data.heygen_result && data.heygen_result.success && 
-                        data.heygen_result.details && data.heygen_result.details.status === 'completed') {
-                        // Video is completed!
-                        console.log(`✅ Video ${videoId} is now complete!`);
+                    // Check database status first - if it's completed, we're done!
+                    if (data.video_db && data.video_db.status === 'completed') {
+                        console.log(`✅ Video ${videoId} is complete in database!`);
                         processingVideos.delete(videoId);
                         
                         if (isManual) {
@@ -1537,6 +1535,18 @@
                         } else {
                             showStatusIndicator('completed', 'Video completed! Page will refresh...');
                             setTimeout(() => location.reload(), 3000);
+                        }
+                        return; // Stop checking
+                    }
+                    
+                    // If database shows processing, check HeyGen status
+                    if (data.heygen_result && data.heygen_result.success && 
+                        data.heygen_result.details && data.heygen_result.details.status === 'completed') {
+                        // Video is completed in HeyGen but not yet updated in database
+                        console.log(`✅ Video ${videoId} completed in HeyGen, waiting for database update...`);
+                        
+                        if (isManual) {
+                            showStatusIndicator('processing', 'Video completed, updating database...');
                         }
                     } else {
                         // Still processing
