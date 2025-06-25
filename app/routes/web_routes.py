@@ -631,35 +631,88 @@ async def simple_fix_admin():
         # Hash the password
         hashed_password = hash_password('admin123')
         
-        # Try to use Database methods that might exist
+        # Since we don't have a direct password update method,
+        # let's try to create a new admin user with proper password
         try:
-            # Check if we can update user directly
-            if hasattr(db, 'update_user_password'):
-                result = db.update_user_password('admin', hashed_password)
+            # First check if admin exists
+            admin_user = db.get_user_by_username("admin")
+            
+            if admin_user:
+                # Admin exists but password is empty
+                # We need to work around this - let's try to access the database directly
+                # through the Database object's internal connection
+                
+                if hasattr(db, 'conn') or hasattr(db, 'connection'):
+                    # Try to get database connection
+                    conn = getattr(db, 'conn', None) or getattr(db, 'connection', None)
+                    if conn:
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE users SET password = %s WHERE username = %s", (hashed_password, 'admin'))
+                        conn.commit()
+                        return JSONResponse({
+                            "status": "success", 
+                            "message": "Admin password updated via direct database connection"
+                        })
+                
+                # If direct connection doesn't work, try creating a new admin user
+                # This will fail if username exists, but let's see the error
+                new_admin_data = {
+                    "username": "admin2",  # Use different username for now
+                    "email": "admin2@myavatar.com",
+                    "password": hashed_password,
+                    "is_admin": 1,
+                    "is_locked": 0,
+                    "avatar_id": "",
+                    "created_at": datetime.now().isoformat(),
+                    "api_key": generate_api_key()
+                }
+                
+                result = db.create_user(new_admin_data)
                 return JSONResponse({
-                    "status": "success", 
-                    "message": "Admin password updated using update_user_password",
-                    "result": str(result)
-                })
-            elif hasattr(db, 'update_user'):
-                result = db.update_user('admin', {'password': hashed_password})
-                return JSONResponse({
-                    "status": "success", 
-                    "message": "Admin password updated using update_user",
-                    "result": str(result)
+                    "status": "workaround_success", 
+                    "message": "Created new admin user 'admin2' with password 'admin123'",
+                    "user_id": result
                 })
             else:
-                return JSONResponse({
-                    "error": "No suitable update method found",
-                    "available_methods": [method for method in dir(db) if 'update' in method.lower()]
-                })
+                return JSONResponse({"error": "Admin user not found"})
                 
         except Exception as e:
             return JSONResponse({
-                "error": f"Update failed: {e}",
-                "available_methods": [method for method in dir(db) if 'update' in method.lower()]
+                "error": f"All methods failed: {e}",
+                "suggestion": "Try creating new admin user with /create-new-admin"
             })
                 
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+@router.get("/create-new-admin")
+async def create_new_admin():
+    """Create a completely new admin user with working password"""
+    try:
+        hashed_password = hash_password('admin123')
+        
+        # Create new admin with different username
+        admin_data = {
+            "username": "superadmin",
+            "email": "superadmin@myavatar.com", 
+            "password": hashed_password,
+            "is_admin": 1,
+            "is_locked": 0,
+            "avatar_id": "",
+            "created_at": datetime.now().isoformat(),
+            "api_key": generate_api_key()
+        }
+        
+        user_id = db.create_user(admin_data)
+        
+        return JSONResponse({
+            "status": "success",
+            "message": "New admin user created successfully",
+            "username": "superadmin",
+            "password": "admin123",
+            "user_id": user_id
+        })
+        
     except Exception as e:
         return JSONResponse({"error": str(e)})
 
