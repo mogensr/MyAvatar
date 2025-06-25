@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
-from ..db.database import execute_query
+from ..db.database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_current_user, require_admin, get_password_hash, validate_password_strength
 from ..storage.file_storage import upload_avatar_to_cloudinary
 from ..logger.log_handler import log_info, log_error, log_warning
@@ -177,6 +177,45 @@ async def reset_password(request: Request):
         raise
     except Exception as e:
         log_error(f"Error resetting password", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.post("/api/admin/migrate-database", response_class=JSONResponse)
+async def migrate_database(request: Request):
+    """Migrate database to add missing description column"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        if USE_POSTGRES:
+            execute_query("ALTER TABLE videos ADD COLUMN description TEXT")
+        else:
+            execute_query("ALTER TABLE videos ADD COLUMN description TEXT DEFAULT ''")
+        
+        log_info(f"Admin {admin_user['username']} migrated database to add missing description column", "AdminRoutes")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": "Database migrated successfully"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error(f"Error migrating database", "AdminRoutes", e)
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
