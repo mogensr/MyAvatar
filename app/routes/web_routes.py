@@ -1494,31 +1494,35 @@ async def voice_recording_page(request: Request):
         # Get user's avatars for selection
         user_avatars = []
         try:
-            # Use the same database method as dashboard
-            videos = db.get_user_videos(user["id"])  # This works, so let's use similar pattern
+            # Get real avatars from database
+            user_avatars = db.get_user_avatars(user["id"])
             
-            # For now, create a default avatar based on user's avatar_id
-            if user.get("avatar_id"):
-                user_avatars = [
-                    {
-                        'id': user.get("avatar_id"),
-                        'name': 'Your Avatar',
-                        'image_path': None
-                    }
-                ]
-            else:
-                user_avatars = [
-                    {
-                        'id': 'default_avatar',
-                        'name': 'Default Avatar',
-                        'image_path': None
-                    }
-                ]
+            # If no avatars found, create a fallback
+            if not user_avatars:
+                if user.get("avatar_id"):
+                    user_avatars = [
+                        {
+                            'id': user.get("avatar_id"),
+                            'avatar_id': user.get("avatar_id"),
+                            'name': 'Your Avatar',
+                            'image_path': None
+                        }
+                    ]
+                else:
+                    user_avatars = [
+                        {
+                            'id': 'default_avatar',
+                            'avatar_id': 'default_avatar',
+                            'name': 'Default Avatar',
+                            'image_path': None
+                        }
+                    ]
         except Exception as e:
-            logger.error(f"Error setting up avatars: {e}")
+            logger.error(f"Error loading avatars: {e}")
             user_avatars = [
                 {
                     'id': 'default_avatar',
+                    'avatar_id': 'default_avatar',
                     'name': 'Default Avatar',
                     'image_path': None
                 }
@@ -1548,28 +1552,35 @@ async def text_to_video_page(request: Request):
         # Get user's avatars for selection
         user_avatars = []
         try:
-            # For now, create a default avatar based on user's avatar_id
-            if user.get("avatar_id"):
-                user_avatars = [
-                    {
-                        'id': user.get("avatar_id"),
-                        'name': 'Your Avatar',
-                        'image_path': None
-                    }
-                ]
-            else:
-                user_avatars = [
-                    {
-                        'id': 'default_avatar',
-                        'name': 'Default Avatar',
-                        'image_path': None
-                    }
-                ]
+            # Get real avatars from database
+            user_avatars = db.get_user_avatars(user["id"])
+            
+            # If no avatars found, create a fallback
+            if not user_avatars:
+                if user.get("avatar_id"):
+                    user_avatars = [
+                        {
+                            'id': user.get("avatar_id"),
+                            'avatar_id': user.get("avatar_id"),
+                            'name': 'Your Avatar',
+                            'image_path': None
+                        }
+                    ]
+                else:
+                    user_avatars = [
+                        {
+                            'id': 'default_avatar',
+                            'avatar_id': 'default_avatar',
+                            'name': 'Default Avatar',
+                            'image_path': None
+                        }
+                    ]
         except Exception as e:
-            logger.error(f"Error setting up avatars: {e}")
+            logger.error(f"Error loading avatars: {e}")
             user_avatars = [
                 {
                     'id': 'default_avatar',
+                    'avatar_id': 'default_avatar',
                     'name': 'Default Avatar',
                     'image_path': None
                 }
