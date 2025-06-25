@@ -665,16 +665,16 @@
                     <div class="avatar-grid" id="avatarGrid">
                         {% if avatars %}
                             {% for avatar in avatars %}
-                            <div class="avatar-option" data-avatar-id="{{ avatar.id }}" onclick="selectAvatar(this)">
+                            <div class="avatar-option" data-avatar-id="{{ avatar.avatar_id }}" onclick="selectAvatar(this)">
                                 <div class="avatar-image">
-                                    {% if avatar.image_path %}
-                                        <img src="{{ avatar.image_path }}" alt="{{ avatar.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.avatar_name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                                     {% else %}
                                         <i class="fas fa-user"></i>
                                     {% endif %}
                                 </div>
-                                <div class="avatar-name">{{ avatar.name or 'Avatar' }}</div>
-                                <div class="avatar-id">ID: {{ avatar.id }}</div>
+                                <div class="avatar-name">{{ avatar.avatar_name or 'Avatar' }}</div>
+                                <div class="avatar-id">ID: {{ avatar.avatar_id }}</div>
                             </div>
                             {% endfor %}
                         {% else %}
