@@ -30,10 +30,10 @@
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
-    <form method="post" action="/auth/register">
+    <form method="post" action="/register">
         <div class="mb-3">
             <label for="name" class="form-label">Navn</label>
-            <input type="text" class="form-control" id="useravatar_name" name="useravatar_name" required>
+            <input type="text" class="form-control" id="username" name="username" required>
         </div>
         <div class="mb-3">
             <label for="email" class="form-label">Email</label>
@@ -43,11 +43,15 @@
             <label for="password" class="form-label">Adgangskode</label>
             <input type="password" class="form-control" id="password" name="password" required>
         </div>
+        <div class="mb-3">
+            <label for="confirm_password" class="form-label">Bekræft Adgangskode</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+        </div>
         <button type="submit" class="btn btn-success w-100">Opret Bruger</button>
     </form>
     <hr>
     <div class="text-center">
-        <a href="/auth/login">Tilbage til login</a>
+        <a href="/login">Tilbage til login</a>
     </div>
 </div>
 </body>
