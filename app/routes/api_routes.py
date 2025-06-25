@@ -428,10 +428,10 @@ async def create_video_from_text_endpoint(
         
         execute_query(
             """
-            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, audio_path)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title))
+            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), None)
         )
         
         log_info(f"Text-to-video created: {heygen_video_id}", "API")
