@@ -63,7 +63,9 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
         "dimension": {
             "width": width,
             "height": height
-        }
+        },
+        "callback_id": f"myavatar_audio_{avatar_id}",
+        "callback_url": "https://app.myavatar.dk/api/heygen/webhook"
     }
     
     try:
@@ -151,7 +153,10 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
     except Exception as e:
         error_msg = f"Exception in HeyGen API call: {str(e)}"
         log_error(error_msg, "HeyGen API", e)
-        return {"success": False, "error": error_msg}
+        return {
+            "success": False,
+            "error": error_msg
+        }
 
 def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format: str = "16:9", voice_id: str = None):
     """
@@ -206,7 +211,9 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         "dimension": {
             "width": width,
             "height": height
-        }
+        },
+        "callback_id": f"myavatar_text_{avatar_id}",
+        "callback_url": "https://app.myavatar.dk/api/heygen/webhook"
     }
     
     # Check if this is a public avatar (not starting with custom-)
@@ -313,7 +320,10 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
     except Exception as e:
         error_msg = f"Exception in HeyGen API call: {str(e)}"
         log_error(error_msg, "HeyGen API", e)
-        return {"success": False, "error": error_msg}
+        return {
+            "success": False,
+            "error": error_msg
+        }
 
 def get_available_avatars(api_key: str):
     """
