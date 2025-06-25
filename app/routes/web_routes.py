@@ -1524,7 +1524,26 @@ async def debug_videos(request: Request, user_id: int):
         try:
             videos = db.get_user_videos(user_id)
             debug_info["videos_found"] = len(videos) if videos else 0
-            debug_info["videos"] = videos[:3] if videos else None  # Show first 3
+            
+            # Convert videos to JSON-serializable format
+            if videos:
+                safe_videos = []
+                for video in videos[:3]:  # Show first 3
+                    if isinstance(video, dict):
+                        safe_video = {}
+                        for key, value in video.items():
+                            # Convert datetime objects to strings
+                            if hasattr(value, 'isoformat'):  # datetime object
+                                safe_video[key] = str(value)
+                            else:
+                                safe_video[key] = value
+                        safe_videos.append(safe_video)
+                    else:
+                        safe_videos.append(str(video))
+                debug_info["videos"] = safe_videos
+            else:
+                debug_info["videos"] = None
+                
             debug_info["get_user_videos_success"] = True
         except Exception as e:
             debug_info["get_user_videos_error"] = str(e)
