@@ -1418,9 +1418,9 @@
                                 
                                 <div class="video-actions">
                                     {% if video.status == 'completed' and video.video_url %}
-                                        <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" target="_blank" class="video-action primary">
+                                        <button onclick="playVideo('{{ video.heygen_video_id or video.id }}')" class="video-action primary">
                                             <i class="fas fa-play"></i> Play
-                                        </a>
+                                        </button>
                                         <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" download class="video-action secondary">
                                             <i class="fas fa-download"></i> Download
                                         </a>
@@ -1687,6 +1687,13 @@
             window.open(`/api/videos/${videoId}/download`, '_blank');
         }
         
+        function playVideo(videoId) {
+            const video = document.querySelector(`[data-video-id="${videoId}"] .video-thumbnail video`);
+            if (video) {
+                video.play();
+            }
+        }
+        
         // Load saved theme
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) {
@@ -1718,7 +1725,4 @@
         });
     </script>
 </body>
-</html>-video';    // Text-to-speech page (existing route)
-                } else {
-                    // Fallback for any other methods
-                    window.location.href = '/text-to
+</html>
