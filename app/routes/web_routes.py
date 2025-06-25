@@ -1254,32 +1254,142 @@ async def admin_manage_data(request: Request):
         logger.error(f"Admin manage data page error: {e}")
         return JSONResponse({"error": "Admin manage data page unavailable"}, status_code=500)
 
-@router.get("/admin/manage-videos")
-async def admin_manage_videos(request: Request):
-    """Admin manage videos page"""
+@router.get("/admin/edit-user/{user_id}")
+async def admin_edit_user(request: Request, user_id: int):
+    """Admin edit user page"""
     try:
         user = get_current_user(request)
         if not user or not user.get("is_admin", 0) == 1:
             return RedirectResponse(url="/login", status_code=302)
         
-        logger.info(f"🔍 ADMIN MANAGE VIDEOS - Admin user {user.get('username')} accessing manage videos")
+        logger.info(f"🔍 ADMIN EDIT USER - Admin user {user.get('username')} editing user ID: {user_id}")
+        
+        # Get the user to edit
+        try:
+            edit_user = db.get_user_by_id(user_id)
+            if not edit_user:
+                return RedirectResponse(url="/admin/users", status_code=302)
+        except Exception as e:
+            logger.error(f"Error fetching user to edit: {e}")
+            return RedirectResponse(url="/admin/users", status_code=302)
         
         try:
-            return templates.TemplateResponse("portal/admin_manage_videos.html", {
+            return templates.TemplateResponse("portal/admin_edit_user.html", {
                 "request": request,
-                "user": user
+                "user": user,
+                "edit_user": edit_user
             })
         except Exception as template_error:
-            logger.warning(f"🔍 ADMIN MANAGE VIDEOS - Template error: {template_error}")
+            logger.warning(f"🔍 ADMIN EDIT USER - Template error: {template_error}")
             return JSONResponse({
-                "message": "Admin Manage Videos",
+                "message": "Admin Edit User",
                 "user": user.get("username", "Admin"),
+                "edit_user": edit_user.get("username", "Unknown"),
                 "status": "Template not found - using JSON response"
             })
         
     except Exception as e:
-        logger.error(f"Admin manage videos page error: {e}")
-        return JSONResponse({"error": "Admin manage videos page unavailable"}, status_code=500)
+        logger.error(f"Admin edit user page error: {e}")
+        return JSONResponse({"error": "Admin edit user page unavailable"}, status_code=500)
+
+@router.post("/admin/edit-user/{user_id}")
+async def admin_update_user(request: Request, user_id: int):
+    """Handle user update"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        form = await request.form()
+        
+        # Get updated data from form
+        updated_data = {}
+        for field in ['username', 'email', 'display_name', 'bio', 'company']:
+            if field in form:
+                updated_data[field] = sanitize_input(str(form.get(field, "")))
+        
+        logger.info(f"🔍 ADMIN UPDATE USER - Admin {user.get('username')} updating user ID: {user_id}")
+        
+        # Here you would update the user in database
+        # For now, just redirect back to users list
+        return RedirectResponse(url="/admin/users", status_code=302)
+        
+    except Exception as e:
+        logger.error(f"Admin update user error: {e}")
+        return RedirectResponse(url="/admin/users", status_code=302)
+
+@router.get("/admin/user-avatars/{user_id}")
+async def admin_user_avatars(request: Request, user_id: int):
+    """Admin user avatars page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN USER AVATARS - Admin user {user.get('username')} viewing avatars for user ID: {user_id}")
+        
+        # Get the user whose avatars we're viewing
+        try:
+            target_user = db.get_user_by_id(user_id)
+            if not target_user:
+                return RedirectResponse(url="/admin/users", status_code=302)
+        except Exception as e:
+            logger.error(f"Error fetching user for avatars: {e}")
+            return RedirectResponse(url="/admin/users", status_code=302)
+        
+        # Get user's avatars
+        try:
+            user_avatars = db.get_user_avatars(user_id)
+            if not user_avatars:
+                user_avatars = []
+        except Exception as e:
+            logger.error(f"Error fetching user avatars: {e}")
+            user_avatars = []
+        
+        try:
+            return templates.TemplateResponse("portal/admin_user_avatars.html", {
+                "request": request,
+                "user": user,
+                "target_user": target_user,
+                "user_avatars": user_avatars
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN USER AVATARS - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin User Avatars",
+                "user": user.get("username", "Admin"),
+                "target_user": target_user.get("username", "Unknown"),
+                "avatars_count": len(user_avatars),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin user avatars page error: {e}")
+        return JSONResponse({"error": "Admin user avatars page unavailable"}, status_code=500)
+
+@router.get("/admin/delete-user/{user_id}")
+async def admin_delete_user(request: Request, user_id: int):
+    """Delete user (with confirmation)"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN DELETE USER - Admin user {user.get('username')} deleting user ID: {user_id}")
+        
+        # Don't allow deleting the current admin user
+        if user_id == user.get("id"):
+            logger.warning(f"🔍 ADMIN DELETE USER - Admin tried to delete themselves")
+            return RedirectResponse(url="/admin/users", status_code=302)
+        
+        # Here you would delete the user from database
+        # For now, just redirect back to users list
+        logger.info(f"🔍 ADMIN DELETE USER - User ID {user_id} would be deleted here")
+        return RedirectResponse(url="/admin/users", status_code=302)
+        
+    except Exception as e:
+        logger.error(f"Admin delete user error: {e}")
+        return RedirectResponse(url="/admin/users", status_code=302)
 
 @router.get("/test-routes")
 async def test_routes():
