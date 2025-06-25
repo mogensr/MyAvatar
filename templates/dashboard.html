@@ -1571,6 +1571,7 @@
         }
 
         function refreshVideoStatus(videoId) {
+            alert(`Debug: refreshVideoStatus called with videoId: ${videoId}`);
             console.log(`🔄 Manually refreshing video ${videoId}...`);
             checkVideoStatus(videoId, true);
         }
