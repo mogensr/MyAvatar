@@ -1068,6 +1068,195 @@ async def videos_page(request: Request):
             "status": "error"
         }, status_code=500)
 
+@router.get("/admin/users")
+async def admin_users(request: Request):
+    """Admin users management page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN USERS - Admin user {user.get('username')} accessing users management")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_users.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN USERS - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Users Management",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin users page error: {e}")
+        return JSONResponse({"error": "Admin users page unavailable"}, status_code=500)
+
+@router.get("/admin/create-user")
+async def admin_create_user(request: Request):
+    """Admin create user page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN CREATE USER - Admin user {user.get('username')} accessing create user")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_create_user.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN CREATE USER - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Create User",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin create user page error: {e}")
+        return JSONResponse({"error": "Admin create user page unavailable"}, status_code=500)
+
+@router.get("/admin/upload-avatar")
+async def admin_upload_avatar(request: Request):
+    """Admin upload avatar page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN UPLOAD AVATAR - Admin user {user.get('username')} accessing upload avatar")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_avatars.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN UPLOAD AVATAR - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Upload Avatar",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin upload avatar page error: {e}")
+        return JSONResponse({"error": "Admin upload avatar page unavailable"}, status_code=500)
+
+@router.get("/admin/manage-voices")
+async def admin_manage_voices(request: Request):
+    """Admin manage voices page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN MANAGE VOICES - Admin user {user.get('username')} accessing manage voices")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_voices.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN MANAGE VOICES - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Manage Voices",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin manage voices page error: {e}")
+        return JSONResponse({"error": "Admin manage voices page unavailable"}, status_code=500)
+
+@router.get("/admin/manage-passwords")
+async def admin_manage_passwords(request: Request):
+    """Admin manage passwords page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN MANAGE PASSWORDS - Admin user {user.get('username')} accessing manage passwords")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_passwords.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN MANAGE PASSWORDS - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Manage Passwords",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin manage passwords page error: {e}")
+        return JSONResponse({"error": "Admin manage passwords page unavailable"}, status_code=500)
+
+@router.get("/admin/manage-data")
+async def admin_manage_data(request: Request):
+    """Admin manage data page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN MANAGE DATA - Admin user {user.get('username')} accessing manage data")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_data.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN MANAGE DATA - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Manage Data",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin manage data page error: {e}")
+        return JSONResponse({"error": "Admin manage data page unavailable"}, status_code=500)
+
+@router.get("/admin/manage-videos")
+async def admin_manage_videos(request: Request):
+    """Admin manage videos page"""
+    try:
+        user = get_current_user(request)
+        if not user or not user.get("is_admin", 0) == 1:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🔍 ADMIN MANAGE VIDEOS - Admin user {user.get('username')} accessing manage videos")
+        
+        try:
+            return templates.TemplateResponse("portal/admin_manage_videos.html", {
+                "request": request,
+                "user": user
+            })
+        except Exception as template_error:
+            logger.warning(f"🔍 ADMIN MANAGE VIDEOS - Template error: {template_error}")
+            return JSONResponse({
+                "message": "Admin Manage Videos",
+                "user": user.get("username", "Admin"),
+                "status": "Template not found - using JSON response"
+            })
+        
+    except Exception as e:
+        logger.error(f"Admin manage videos page error: {e}")
+        return JSONResponse({"error": "Admin manage videos page unavailable"}, status_code=500)
+
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
@@ -1082,6 +1271,7 @@ async def test_routes():
             "Input Sanitization",
             "File Upload Security",
             "Admin Password Fix",
-            "User Dashboard Access"
+            "User Dashboard Access",
+            "Complete Admin Panel Routes"
         ]
     }
