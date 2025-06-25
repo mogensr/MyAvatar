@@ -881,19 +881,30 @@ async def heygen_webhook(request: Request):
         payload = await request.json()
         log_info(f"Received HeyGen webhook: {payload}", "API")
         
-        # Extract video information from webhook
-        video_id = payload.get("video_id")
-        status = payload.get("status")
-        video_url = payload.get("video_url")
+        # Extract event information from HeyGen webhook format
+        event_type = payload.get("event_type")
+        event_data = payload.get("event_data", {})
+        
+        if not event_type or not event_data:
+            log_error("HeyGen webhook missing event_type or event_data", "API")
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "Invalid webhook format"}
+            )
+        
+        # Extract video information from event_data
+        video_id = event_data.get("video_id")
+        video_url = event_data.get("url")
+        callback_id = event_data.get("callback_id")
         
         if not video_id:
-            log_error("HeyGen webhook missing video_id", "API")
+            log_error("HeyGen webhook missing video_id in event_data", "API")
             return JSONResponse(
                 status_code=400,
                 content={"success": False, "error": "Missing video_id"}
             )
         
-        log_info(f"HeyGen webhook for video {video_id}: status={status}, has_url={bool(video_url)}", "API")
+        log_info(f"HeyGen webhook for video {video_id}: event_type={event_type}, has_url={bool(video_url)}", "API")
         
         # Find the video in our database using HeyGen video ID
         video = execute_query(
@@ -909,26 +920,22 @@ async def heygen_webhook(request: Request):
                 content={"success": False, "error": "Video not found"}
             )
         
-        # Update video status and URL if completed
-        if status == "completed" and video_url:
+        # Update video based on event type
+        if event_type == "avatar_video.success" and video_url:
             execute_query(
                 "UPDATE videos SET status = %s, video_url = %s WHERE id = %s",
                 ("completed", video_url, video["id"])
             )
             log_info(f"Updated video {video['id']} via webhook: status=completed, url={video_url}", "API")
-        elif status == "failed":
+        elif event_type == "avatar_video.fail":
+            error_msg = event_data.get("msg", "Video generation failed")
             execute_query(
-                "UPDATE videos SET status = %s WHERE id = %s",
-                ("failed", video["id"])
+                "UPDATE videos SET status = %s, error_message = %s WHERE id = %s",
+                ("failed", error_msg, video["id"])
             )
-            log_info(f"Updated video {video['id']} via webhook: status=failed", "API")
+            log_info(f"Updated video {video['id']} via webhook: status=failed, error={error_msg}", "API")
         else:
-            # Update status only
-            execute_query(
-                "UPDATE videos SET status = %s WHERE id = %s",
-                (status, video["id"])
-            )
-            log_info(f"Updated video {video['id']} via webhook: status={status}", "API")
+            log_warning(f"Unknown event type {event_type} for video {video_id}", "API")
         
         return JSONResponse(
             content={"success": True, "message": "Webhook processed successfully"}
