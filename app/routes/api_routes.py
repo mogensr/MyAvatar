@@ -812,6 +812,59 @@ async def get_video_status(request: Request, video_id: str):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/debug-video-status/{video_id}")
+async def debug_video_status(request: Request, video_id: str):
+    """
+    Debug endpoint to test video status checking
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE heygen_video_id = %s",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+        
+        # Test HeyGen API call
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            return JSONResponse(
+                status_code=500,
+                content={"success": False, "error": "No API key available"}
+            )
+        
+        # Call HeyGen API
+        result = get_video_details(api_key, video_id)
+        
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "video_db": dict(video),
+                "heygen_result": result
+            }
+        )
+        
+    except Exception as e:
+        log_error(f"Debug video status error: {str(e)}", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.post("/heygen/webhook")
 async def heygen_webhook(request: Request):
     """
