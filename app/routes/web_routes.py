@@ -359,18 +359,18 @@ class SessionManager:
 # STEP 13: Initialize session manager (after SessionManager class is defined)
 session_manager = SessionManager()
 
-# STEP 14: User authentication function (after session_manager is available)
+# STEP 14: User authentication function (after session_manager is available) - UPDATED FOR JWT COOKIES
 def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
-    """Get current user with enhanced security"""
+    """Get current user with enhanced security using JWT cookies"""
     try:
-        token = request.session.get("access_token")
+        # Get token from cookie instead of session
+        token = request.cookies.get("access_token")
         if not token:
             return None
         
         # Validate session
         session = session_manager.validate_session(token, request)
         if not session:
-            request.session.clear()
             return None
         
         # Validate JWT
@@ -381,7 +381,6 @@ def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
                 return None
         except jwt.ExpiredSignatureError:
             session_manager.active_sessions.pop(token, None)
-            request.session.clear()
             return None
         except jwt.InvalidTokenError:
             return None
@@ -536,274 +535,10 @@ async def login_page(request: Request):
             "instructions": "POST to /login with username and password"
         }, status_code=500)
 
-@router.get("/fix-admin-password")
-async def fix_admin_password():
-    """Fix admin password and all users with empty passwords - REMOVE AFTER USE"""
-    try:
-        logger.info("🔧 FIXING USER PASSWORDS")
-        
-        # Fix all users with empty passwords
-        fixed_count = fix_user_passwords()
-        
-        return JSONResponse({
-            "status": "success",
-            "message": f"Fixed passwords for {fixed_count} users",
-            "details": "Admin password set to 'admin123', other users set to 'password123'"
-        })
-    except Exception as e:
-        logger.error(f"Error fixing passwords: {e}")
-        return JSONResponse({"error": str(e)}, status_code=500)
-
-@router.get("/force-fix-admin")
-async def force_fix_admin():
-    """Force fix admin password directly"""
-    try:
-        # Hash the password
-        hashed_password = hash_password('admin123')
-        
-        # Direct SQL update - adjust based on your database type
-        try:
-            # For PostgreSQL
-            query = "UPDATE users SET password = %s WHERE username = %s"
-            result = db.execute_query(query, (hashed_password, 'admin'))
-            
-            return JSONResponse({
-                "status": "success", 
-                "message": "Admin password updated directly",
-                "query_result": str(result)
-            })
-        except Exception as e1:
-            try:
-                # For SQLite
-                query = "UPDATE users SET password = ? WHERE username = ?"
-                result = db.execute_query(query, (hashed_password, 'admin'))
-                
-                return JSONResponse({
-                    "status": "success", 
-                    "message": "Admin password updated directly (SQLite)",
-                    "query_result": str(result)
-                })
-            except Exception as e2:
-                return JSONResponse({
-                    "error": f"Both methods failed. PostgreSQL: {e1}, SQLite: {e2}"
-                })
-                
-    except Exception as e:
-        return JSONResponse({"error": str(e)})
-
-@router.get("/debug-users")
-async def debug_users():
-    """Debug route to see all users in database"""
-    try:
-        # First, let's see what methods the Database object has
-        db_methods = [method for method in dir(db) if not method.startswith('_')]
-        
-        # Try different methods to get users
-        try:
-            all_users = db.get_all_users()
-            user_count = len(all_users) if all_users else 0
-        except Exception as e:
-            all_users = None
-            user_count = f"Error: {e}"
-        
-        # Try to get admin user specifically
-        try:
-            admin_user = db.get_user_by_username("admin")
-            admin_password_length = len(admin_user.get("password", "")) if admin_user else "No admin user"
-        except Exception as e:
-            admin_user = None
-            admin_password_length = f"Error: {e}"
-        
-        return JSONResponse({
-            "database_methods": db_methods,
-            "total_users": user_count,
-            "admin_user_exists": admin_user is not None,
-            "admin_password_length": admin_password_length,
-            "all_users": all_users[:3] if all_users else None  # Show first 3 users
-        })
-    except Exception as e:
-        return JSONResponse({"error": str(e)})
-
-@router.get("/simple-fix-admin")
-async def simple_fix_admin():
-    """Simple admin password fix using available Database methods"""
-    try:
-        # Hash the password
-        hashed_password = hash_password('admin123')
-        
-        # Since we don't have a direct password update method,
-        # let's try to create a new admin user with proper password
-        try:
-            # First check if admin exists
-            admin_user = db.get_user_by_username("admin")
-            
-            if admin_user:
-                # Admin exists but password is empty
-                # We need to work around this - let's try to access the database directly
-                # through the Database object's internal connection
-                
-                if hasattr(db, 'conn') or hasattr(db, 'connection'):
-                    # Try to get database connection
-                    conn = getattr(db, 'conn', None) or getattr(db, 'connection', None)
-                    if conn:
-                        cursor = conn.cursor()
-                        cursor.execute("UPDATE users SET password = %s WHERE username = %s", (hashed_password, 'admin'))
-                        conn.commit()
-                        return JSONResponse({
-                            "status": "success", 
-                            "message": "Admin password updated via direct database connection"
-                        })
-                
-                # If direct connection doesn't work, try creating a new admin user
-                # This will fail if username exists, but let's see the error
-                new_admin_data = {
-                    "username": "admin2",  # Use different username for now
-                    "email": "admin2@myavatar.com",
-                    "password": hashed_password,
-                    "is_admin": 1,
-                    "is_locked": 0,
-                    "avatar_id": "",
-                    "created_at": datetime.now().isoformat(),
-                    "api_key": generate_api_key()
-                }
-                
-                result = db.create_user(new_admin_data)
-                return JSONResponse({
-                    "status": "workaround_success", 
-                    "message": "Created new admin user 'admin2' with password 'admin123'",
-                    "user_id": result
-                })
-            else:
-                return JSONResponse({"error": "Admin user not found"})
-                
-        except Exception as e:
-            return JSONResponse({
-                "error": f"All methods failed: {e}",
-                "suggestion": "Try creating new admin user with /create-new-admin"
-            })
-                
-    except Exception as e:
-        return JSONResponse({"error": str(e)})
-
-@router.get("/create-new-admin")
-async def create_new_admin():
-    """Create a completely new admin user with working password"""
-    try:
-        hashed_password = hash_password('admin123')
-        
-        # Create new admin with different username
-        admin_data = {
-            "username": "superadmin",
-            "email": "superadmin@myavatar.com", 
-            "password": hashed_password,
-            "is_admin": 1,
-            "is_locked": 0,
-            "avatar_id": "",
-            "created_at": datetime.now().isoformat(),
-            "api_key": generate_api_key()
-        }
-        
-        user_id = db.create_user(admin_data)
-        
-        return JSONResponse({
-            "status": "success",
-            "message": "New admin user created successfully",
-            "username": "superadmin",
-            "password": "admin123",
-            "user_id": user_id
-        })
-        
-    except Exception as e:
-        return JSONResponse({"error": str(e)})
-
-@router.get("/direct-create-admin")
-async def direct_create_admin():
-    """Create admin user by directly accessing database connection"""
-    try:
-        hashed_password = hash_password('admin123')
-        api_key = generate_api_key()
-        
-        # Try to access the database connection directly
-        if hasattr(db, 'get_connection'):
-            conn = db.get_connection()
-        elif hasattr(db, 'conn'):
-            conn = db.conn
-        elif hasattr(db, 'connection'):
-            conn = db.connection
-        else:
-            return JSONResponse({"error": "Cannot access database connection"})
-        
-        # Direct SQL insert
-        cursor = conn.cursor()
-        
-        insert_query = """
-        INSERT INTO users (username, email, password, api_key, is_admin, is_locked, avatar_id, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING id
-        """
-        
-        cursor.execute(insert_query, (
-            'directadmin',
-            'directadmin@myavatar.com',
-            hashed_password,
-            api_key,
-            1,  # is_admin
-            0,  # is_locked
-            '',  # avatar_id
-            datetime.now().isoformat()
-        ))
-        
-        user_id = cursor.fetchone()[0]
-        conn.commit()
-        cursor.close()
-        
-        return JSONResponse({
-            "status": "success",
-            "message": "Admin user created via direct database access",
-            "username": "directadmin",
-            "password": "admin123",
-            "user_id": user_id
-        })
-        
-    except Exception as e:
-        return JSONResponse({"error": f"Direct database access failed: {e}"})
-
-@router.get("/test-debug")
-async def test_debug(request: Request):
-    """Test route to verify server is receiving requests"""
-    logger.info("🔍 TEST DEBUG ROUTE ACCESSED")
-    return JSONResponse({"status": "Server is receiving requests", "timestamp": str(datetime.now())})
-
-@router.get("/debug-route-test")
-async def debug_route_test():
-    """Simple test to verify our routes are working"""
-    logger.info("🔍 DEBUG ROUTE TEST - Route is accessible!")
-    return JSONResponse({
-        "status": "success",
-        "message": "Web routes are working correctly",
-        "timestamp": str(datetime.now()),
-        "route": "/debug-route-test"
-    })
-
-@router.post("/test-form")
-async def test_form_submission(request: Request):
-    """Test route to verify form submissions work"""
-    try:
-        form = await request.form()
-        logger.info(f"🔍 TEST FORM - Received form data: {dict(form)}")
-        return JSONResponse({
-            "status": "success",
-            "message": "Form submission working",
-            "received_data": dict(form)
-        })
-    except Exception as e:
-        logger.error(f"🔍 TEST FORM - Error: {e}")
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
 @router.post("/login")
 @limiter.limit(config.RATE_LIMIT_LOGIN)
 async def login_user(request: Request):
-    """Handle user login with security measures"""
+    """Handle user login with security measures - UPDATED FOR JWT COOKIES"""
     try:
         form = await request.form()
         username = sanitize_input(str(form.get("username", "")))
@@ -882,10 +617,9 @@ async def login_user(request: Request):
                 "error": "Account is temporarily locked. Please contact support."
             }, status_code=403)
         
-        # Create secure session
-        logger.info(f"🔍 LOGIN SUCCESS - Creating session for user: '{username}'")
+        # Create secure session using JWT token in cookie instead of session
+        logger.info(f"🔍 LOGIN SUCCESS - Creating JWT token for user: '{username}'")
         token = session_manager.create_session(user["id"], request)
-        request.session["access_token"] = token
         
         # Update last login and clear failed attempts
         db.update_user_login(user["id"])
@@ -893,13 +627,25 @@ async def login_user(request: Request):
         
         logger.info(f"User {username} logged in successfully from {client_ip}")
         
-        # Redirect based on user role
+        # Create redirect response and set JWT cookie
         if user.get("is_admin", 0) == 1:
             logger.info(f"🔍 LOGIN SUCCESS - Admin user {username} redirecting to admin panel")
-            return RedirectResponse(url="/admin", status_code=302)
+            response = RedirectResponse(url="/admin", status_code=302)
         else:
             logger.info(f"🔍 LOGIN SUCCESS - Regular user {username} redirecting to dashboard")
-            return RedirectResponse(url="/dashboard", status_code=302)
+            response = RedirectResponse(url="/dashboard", status_code=302)
+        
+        # Set JWT token as HTTP-only cookie
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            secure=True,  # Use HTTPS in production
+            samesite="lax",
+            max_age=86400  # 24 hours
+        )
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error during login: {e}")
@@ -931,7 +677,7 @@ async def register_page(request: Request):
 @router.post("/register")
 @limiter.limit(config.RATE_LIMIT_REGISTER)
 async def register_user(request: Request):
-    """Handle user registration with enhanced validation"""
+    """Handle user registration with enhanced validation - UPDATED FOR JWT COOKIES"""
     try:
         form = await request.form()
         username = sanitize_input(str(form.get("username", "")))
@@ -1024,12 +770,23 @@ async def register_user(request: Request):
                 "error": "Registration failed. Please try again."
             }, status_code=500)
         
-        # Auto-login after registration
+        # Auto-login after registration using JWT cookie
         token = session_manager.create_session(user_id, request)
-        request.session["access_token"] = token
         
         logger.info(f"New user registered: {username}")
-        return RedirectResponse(url="/dashboard", status_code=302)
+        
+        # Create redirect response and set JWT cookie
+        response = RedirectResponse(url="/dashboard", status_code=302)
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            secure=True,  # Use HTTPS in production
+            samesite="lax",
+            max_age=86400  # 24 hours
+        )
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error during registration: {e}")
@@ -1041,17 +798,22 @@ async def register_user(request: Request):
 
 @router.get("/logout")
 async def logout_user(request: Request):
-    """Handle user logout with session cleanup"""
+    """Handle user logout with session cleanup - UPDATED FOR JWT COOKIES"""
     try:
-        token = request.session.get("access_token")
+        token = request.cookies.get("access_token")
         if token:
             session_manager.active_sessions.pop(token, None)
-        request.session.clear()
-        return RedirectResponse(url="/", status_code=302)
+        
+        # Create redirect response and clear cookie
+        response = RedirectResponse(url="/", status_code=302)
+        response.delete_cookie("access_token")
+        return response
     except Exception as e:
         logger.error(f"Error during logout: {e}")
         # Still redirect even if cleanup fails
-        return RedirectResponse(url="/", status_code=302)
+        response = RedirectResponse(url="/", status_code=302)
+        response.delete_cookie("access_token")
+        return response
 
 @router.get("/dashboard")
 async def dashboard_page(request: Request):
@@ -1314,7 +1076,7 @@ async def test_routes():
         "routes_loaded": True,
         "features": [
             "Authentication",
-            "Session Management", 
+            "JWT Cookie Session Management", 
             "Password Security",
             "Rate Limiting",
             "Input Sanitization",
