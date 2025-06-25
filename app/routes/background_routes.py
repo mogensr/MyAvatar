@@ -129,7 +129,7 @@ async def upload_background(
         background_id = execute_query(
             """
             INSERT INTO backgrounds (name, description, category, file_path, thumbnail_path, is_default)
-            VALUES (?, ?, ?, ?, ?, 0)
+            VALUES (%s, %s, %s, %s, %s, 0)
             RETURNING id
             """,
             (name, description, category, file_path, thumbnail_path),
@@ -176,7 +176,7 @@ async def replace_video_background(
     try:
         # Check if video exists and belongs to user
         video = execute_query(
-            "SELECT * FROM videos WHERE id = ? AND user_id = ?",
+            "SELECT * FROM videos WHERE id = %s AND user_id = %s",
             (video_id, user["id"]),
             fetch_one=True
         )
@@ -189,7 +189,7 @@ async def replace_video_background(
         
         # Check if background exists
         background = execute_query(
-            "SELECT * FROM backgrounds WHERE id = ?",
+            "SELECT * FROM backgrounds WHERE id = %s",
             (background_id,),
             fetch_one=True
         )
@@ -228,7 +228,7 @@ async def replace_video_background(
         
         # Update video record with pending background change
         execute_query(
-            "UPDATE videos SET background_id = ?, status = 'processing_background' WHERE id = ?",
+            "UPDATE videos SET background_id = %s, status = 'processing_background' WHERE id = %s",
             (background_id, video_id)
         )
         
@@ -271,14 +271,14 @@ async def process_video_background(
             if connection_status.get('status') != 'ok':
                 logger.error(f"BackgroundFX service is not healthy: {connection_status}")
                 execute_query(
-                    "UPDATE videos SET status = 'error', error_message = 'Background service unavailable' WHERE id = ?",
+                    "UPDATE videos SET status = 'error', error_message = 'Background service unavailable' WHERE id = %s",
                     (video_id,)
                 )
                 return
         except Exception as e:
             logger.error(f"BackgroundFX connection check failed: {e}")
             execute_query(
-                "UPDATE videos SET status = 'error', error_message = 'Background service connection failed' WHERE id = ?",
+                "UPDATE videos SET status = 'error', error_message = 'Background service connection failed' WHERE id = %s",
                 (video_id,)
             )
             return
@@ -325,8 +325,8 @@ async def process_video_background(
         execute_query(
             """
             UPDATE videos 
-            SET file_path = ?, background_id = ?, status = 'completed' 
-            WHERE id = ?
+            SET file_path = %s, background_id = %s, status = 'completed' 
+            WHERE id = %s
             """,
             (output_path, background_id, video_id)
         )
@@ -337,7 +337,7 @@ async def process_video_background(
         logger.error(f"Error processing video background: {e}")
         # Update status to error
         execute_query(
-            "UPDATE videos SET status = 'error' WHERE id = ?",
+            "UPDATE videos SET status = 'error' WHERE id = %s",
             (video_id,)
         )
 

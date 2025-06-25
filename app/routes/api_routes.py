@@ -48,7 +48,7 @@ async def get_videos(request: Request):
             )
         else:
             videos = execute_query(
-                "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC",
+                "SELECT * FROM videos WHERE user_id = %s ORDER BY created_at DESC",
                 (int(user["id"]),),
                 fetch_all=True
             )
@@ -98,7 +98,7 @@ async def download_video(request: Request, video_id: str):
         
         # Get video from database
         video = execute_query(
-            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
             (video_id, video_id),
             fetch_one=True
         )
@@ -144,7 +144,7 @@ async def download_video(request: Request, video_id: str):
                     if video_url:
                         # Update the database with the video URL
                         execute_query(
-                            "UPDATE videos SET video_url = ?, status = ? WHERE id = ?",
+                            "UPDATE videos SET video_url = %s, status = %s WHERE id = %s",
                             (video_url, video_status, video["id"])
                         )
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
@@ -205,7 +205,7 @@ async def debug_video(request: Request, video_id: str):
         
         # Get video from database
         video = execute_query(
-            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
             (video_id, video_id),
             fetch_one=True
         )
@@ -250,7 +250,7 @@ async def get_video(request: Request, video_id: str):
             
         # First try to get from local database
         video = execute_query(
-            "SELECT * FROM videos WHERE heygen_video_id = ?",
+            "SELECT * FROM videos WHERE heygen_video_id = %s",
             (video_id,),
             fetch_one=True
         )
@@ -286,7 +286,7 @@ async def get_video(request: Request, video_id: str):
                 
                 if status != video["status"] or (video_url and not video["video_url"]):
                     execute_query(
-                        "UPDATE videos SET status = ?, video_url = ? WHERE heygen_video_id = ?",
+                        "UPDATE videos SET status = %s, video_url = %s WHERE heygen_video_id = %s",
                         (status, video_url, video_id)
                     )
                     
@@ -341,7 +341,7 @@ async def create_video_from_text_endpoint(
             if not avatar_id:
                 # Get default avatar for user
                 avatar = execute_query(
-                    "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+                    "SELECT avatar_id FROM user_avatars WHERE user_id = %s AND is_default = 1",
                     (int(user["id"]),),
                     fetch_one=True
                 )
@@ -362,7 +362,7 @@ async def create_video_from_text_endpoint(
             # Try to get voice ID from user_settings
             try:
                 user_voice = execute_query(
-                    "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_name = 'voice_id'",
+                    "SELECT setting_value FROM user_settings WHERE user_id = %s AND setting_name = 'voice_id'",
                     (int(user["id"]),),
                     fetch_one=True
                 )
@@ -403,7 +403,7 @@ async def create_video_from_text_endpoint(
         execute_query(
             """
             INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, voice_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), voice_id_value)
         )
@@ -456,7 +456,7 @@ async def create_video_from_audio_endpoint(
         if not avatar_id:
             # Get default avatar for user
             avatar = execute_query(
-                "SELECT avatar_id FROM user_avatars WHERE user_id = ? AND is_default = 1",
+                "SELECT avatar_id FROM user_avatars WHERE user_id = %s AND is_default = 1",
                 (int(user["id"]),),
                 fetch_one=True
             )
@@ -492,7 +492,7 @@ async def create_video_from_audio_endpoint(
         execute_query(
             """
             INSERT INTO videos (user_id, avatar_id, audio_path, heygen_video_id, status, format, title, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (user_id, str(avatar_id), audio_url, str(heygen_video_id), "processing", str(format), str(title), str(description))
         )
@@ -536,7 +536,7 @@ async def add_avatar(
         # If setting as default, clear other defaults
         if is_default:
             execute_query(
-                "UPDATE user_avatars SET is_default = 0 WHERE user_id = ?",
+                "UPDATE user_avatars SET is_default = 0 WHERE user_id = %s",
                 (int(user["id"]),)
             )
             
@@ -544,7 +544,7 @@ async def add_avatar(
         execute_query(
             """
             INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
             """,
             (int(user["id"]), avatar_id, avatar_name, avatar_image_url, is_default)
         )
@@ -552,7 +552,7 @@ async def add_avatar(
         # If default, also update user record
         if is_default:
             execute_query(
-                "UPDATE users SET avatar_id = ? WHERE id = ?",
+                "UPDATE users SET avatar_id = %s WHERE id = %s",
                 (avatar_id, int(user["id"]))
             )
             
@@ -586,7 +586,7 @@ async def get_avatars(request: Request):
             
         # Get user's avatars
         avatars = execute_query(
-            "SELECT * FROM user_avatars WHERE user_id = ?",
+            "SELECT * FROM user_avatars WHERE user_id = %s",
             (int(user["id"]),),
             fetch_all=True
         )
@@ -684,7 +684,7 @@ async def get_video_status(request: Request, video_id: str):
         
         # Get video from database
         video = execute_query(
-            "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
             (video_id, video_id),
             fetch_one=True
         )
@@ -730,7 +730,7 @@ async def get_video_status(request: Request, video_id: str):
                     if video_url:
                         # Update the database with the video URL
                         execute_query(
-                            "UPDATE videos SET video_url = ?, status = ? WHERE id = ?",
+                            "UPDATE videos SET video_url = %s, status = %s WHERE id = %s",
                             (video_url, video_status, video["id"])
                         )
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
