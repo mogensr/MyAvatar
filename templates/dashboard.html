@@ -1522,44 +1522,40 @@
             try {
                 console.log(`🎬 Checking video ${videoId}...`);
 
-                const response = await fetch(`/api/video-status/${videoId}`);
+                const response = await fetch(`/api/debug-video-status/${videoId}`);
                 
                 if (response.ok) {
-                    // Video is completed!
-                    console.log(`✅ Video ${videoId} is now complete!`);
-                    processingVideos.delete(videoId);
-                    
-                    if (isManual) {
-                        showStatusIndicator('completed', 'Video completed! Refreshing...');
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showStatusIndicator('completed', 'Video completed! Page will refresh...');
-                        setTimeout(() => location.reload(), 3000);
-                    }
-                } else if (response.status === 202) {
-                    // Still processing
                     const data = await response.json();
-                    console.log(`⏳ Video ${videoId} still ${data.status || 'processing'}...`);
                     
-                    if (isManual) {
-                        showStatusIndicator('processing', `Video is still ${data.status || 'processing'}. Please wait...`);
-                        setTimeout(() => hideStatusIndicator(), 3000);
-                    }
-                } else if (response.status === 400) {
-                    // Failed
-                    const data = await response.json();
-                    console.log(`❌ Video ${videoId} failed: ${data.error}`);
-                    processingVideos.delete(videoId);
-                    
-                    if (isManual) {
-                        alert(`Video generation failed: ${data.error}`);
-                        location.reload();
+                    // Check if HeyGen says video is completed
+                    if (data.heygen_result && data.heygen_result.success && 
+                        data.heygen_result.details && data.heygen_result.details.status === 'completed') {
+                        // Video is completed!
+                        console.log(`✅ Video ${videoId} is now complete!`);
+                        processingVideos.delete(videoId);
+                        
+                        if (isManual) {
+                            showStatusIndicator('completed', 'Video completed! Refreshing...');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showStatusIndicator('completed', 'Video completed! Page will refresh...');
+                            setTimeout(() => location.reload(), 3000);
+                        }
                     } else {
-                        showStatusIndicator('failed', 'Video generation failed. Refreshing...');
-                        setTimeout(() => location.reload(), 3000);
+                        // Still processing
+                        const status = data.heygen_result?.details?.status || 'processing';
+                        console.log(`⏳ Video ${videoId} still ${status}...`);
+                        
+                        if (isManual) {
+                            showStatusIndicator('processing', `Video is still ${status}. Please wait...`);
+                            setTimeout(() => hideStatusIndicator(), 3000);
+                        }
                     }
                 } else {
                     console.log(`⚠️ Unexpected response for video ${videoId}: ${response.status}`);
+                    if (isManual) {
+                        alert('Error checking video status. Please try again.');
+                    }
                 }
                 
             } catch (error) {
@@ -1571,7 +1567,6 @@
         }
 
         function refreshVideoStatus(videoId) {
-            alert(`Debug: refreshVideoStatus called with videoId: ${videoId}`);
             console.log(`🔄 Manually refreshing video ${videoId}...`);
             checkVideoStatus(videoId, true);
         }
