@@ -508,6 +508,17 @@ async def test_debug(request: Request):
     logger.info("🔍 TEST DEBUG ROUTE ACCESSED")
     return JSONResponse({"status": "Server is receiving requests", "timestamp": str(datetime.now())})
 
+@router.get("/debug-route-test")
+async def debug_route_test():
+    """Simple test to verify our routes are working"""
+    logger.info("🔍 DEBUG ROUTE TEST - Route is accessible!")
+    return JSONResponse({
+        "status": "success",
+        "message": "Web routes are working correctly",
+        "timestamp": str(datetime.now()),
+        "route": "/debug-route-test"
+    })
+
 @router.post("/test-form")
 async def test_form_submission(request: Request):
     """Test route to verify form submissions work"""
