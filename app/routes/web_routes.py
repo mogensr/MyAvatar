@@ -487,7 +487,7 @@ async def login_page(request: Request):
             return RedirectResponse(url="/dashboard", status_code=302)
             
         try:
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None
             })
@@ -515,7 +515,7 @@ async def login_user(request: Request):
         password = str(form.get("password", ""))
         
         if not username or not password:
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
                 "error": "Username and password are required"
@@ -527,7 +527,7 @@ async def login_user(request: Request):
         
         if failed_attempts >= 5:
             logger.warning(f"Too many failed login attempts from {client_ip} for {username}")
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
                 "error": "Too many failed attempts. Please try again later."
@@ -537,7 +537,7 @@ async def login_user(request: Request):
         user = db.get_user_by_username(username)
         if not user:
             db.record_failed_login(client_ip, username)
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
                 "error": "Invalid username or password"
@@ -546,7 +546,7 @@ async def login_user(request: Request):
         # Verify password
         if not verify_password(password, user.get("password", "")):
             db.record_failed_login(client_ip, username)
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
                 "error": "Invalid username or password"
@@ -554,7 +554,7 @@ async def login_user(request: Request):
         
         # Check if account is locked
         if user.get("is_locked", False):
-            return templates.TemplateResponse("login.html", {
+            return templates.TemplateResponse("portal/login.html", {
                 "request": request,
                 "user": None,
                 "error": "Account is temporarily locked. Please contact support."
@@ -573,7 +573,7 @@ async def login_user(request: Request):
         
     except Exception as e:
         logger.error(f"Error during login: {e}")
-        return templates.TemplateResponse("login.html", {
+        return templates.TemplateResponse("portal/login.html", {
             "request": request,
             "user": None,
             "error": "Login failed. Please try again."
@@ -587,13 +587,13 @@ async def register_page(request: Request):
         if user:
             return RedirectResponse(url="/dashboard", status_code=302)
             
-        return templates.TemplateResponse("register.html", {
+        return templates.TemplateResponse("portal/register.html", {
             "request": request,
             "user": None
         })
     except Exception as e:
         logger.error(f"Error loading register page: {e}")
-        return templates.TemplateResponse("register.html", {
+        return templates.TemplateResponse("portal/register.html", {
             "request": request,
             "user": None
         })
@@ -611,14 +611,14 @@ async def register_user(request: Request):
         
         # Enhanced validation
         if not username or not email or not password:
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "All fields are required"
             }, status_code=400)
         
         if len(username) < 3 or len(username) > 50:
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Username must be between 3 and 50 characters"
@@ -626,14 +626,14 @@ async def register_user(request: Request):
         
         # Check username for invalid characters
         if not username.replace('_', '').replace('-', '').isalnum():
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Username can only contain letters, numbers, hyphens, and underscores"
             }, status_code=400)
         
         if not validate_email(email):
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Please enter a valid email address"
@@ -642,14 +642,14 @@ async def register_user(request: Request):
         # Enhanced password validation
         is_strong, password_msg = validate_password_strength(password)
         if not is_strong:
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": password_msg
             }, status_code=400)
         
         if password != confirm_password:
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Passwords do not match"
@@ -657,14 +657,14 @@ async def register_user(request: Request):
         
         # Check if user already exists
         if db.get_user_by_username(username):
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Username already exists"
             }, status_code=409)
         
         if db.get_user_by_email(email):
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Email already registered"
@@ -688,7 +688,7 @@ async def register_user(request: Request):
         
         user_id = db.create_user(user_data)
         if not user_id:
-            return templates.TemplateResponse("register.html", {
+            return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Registration failed. Please try again."
@@ -703,7 +703,7 @@ async def register_user(request: Request):
         
     except Exception as e:
         logger.error(f"Error during registration: {e}")
-        return templates.TemplateResponse("register.html", {
+        return templates.TemplateResponse("portal/register.html", {
             "request": request,
             "user": None,
             "error": "Registration failed. Please try again."
