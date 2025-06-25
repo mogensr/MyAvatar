@@ -1503,6 +1503,46 @@ async def admin_delete_user(request: Request, user_id: int):
         logger.error(f"Admin delete user error: {e}")
         return RedirectResponse(url="/admin/users", status_code=302)
 
+@router.get("/debug-videos/{user_id}")
+async def debug_videos(request: Request, user_id: int):
+    """Debug route to check videos for a specific user"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"error": "Not logged in"})
+        
+        logger.info(f"🔍 DEBUG VIDEOS - Checking videos for user ID: {user_id}")
+        
+        # Try different methods to get videos
+        debug_info = {
+            "user_id": user_id,
+            "current_user": user.get("username"),
+            "database_methods": [method for method in dir(db) if 'video' in method.lower()],
+        }
+        
+        # Try to get videos
+        try:
+            videos = db.get_user_videos(user_id)
+            debug_info["videos_found"] = len(videos) if videos else 0
+            debug_info["videos"] = videos[:3] if videos else None  # Show first 3
+            debug_info["get_user_videos_success"] = True
+        except Exception as e:
+            debug_info["get_user_videos_error"] = str(e)
+            debug_info["get_user_videos_success"] = False
+        
+        # Try to get user info
+        try:
+            user_info = db.get_user_by_id(user_id)
+            debug_info["user_exists"] = user_info is not None
+            debug_info["username"] = user_info.get("username", "Unknown") if user_info else None
+        except Exception as e:
+            debug_info["user_lookup_error"] = str(e)
+        
+        return JSONResponse(debug_info)
+        
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
@@ -1518,6 +1558,7 @@ async def test_routes():
             "File Upload Security",
             "Admin Password Fix",
             "User Dashboard Access",
-            "Complete Admin Panel Routes"
+            "Complete Admin Panel Routes",
+            "Video Debug Route"
         ]
     }
