@@ -425,14 +425,13 @@ async def create_video_from_text_endpoint(
         
         # Ensure all values are properly typed for PostgreSQL
         user_id = int(user["id"]) if user["id"] else None
-        voice_id_value = str(voice_id) if voice_id else None
         
         execute_query(
             """
-            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, voice_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
-            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), voice_id_value)
+            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title))
         )
         
         log_info(f"Text-to-video created: {heygen_video_id}", "API")
