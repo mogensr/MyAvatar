@@ -776,6 +776,76 @@ async def get_video_status(request: Request, video_id: str):
             content={"success": False, "error": str(e)}
         )
 
+@router.post("/heygen/webhook")
+async def heygen_webhook(request: Request):
+    """
+    Webhook endpoint to receive HeyGen video completion notifications
+    """
+    try:
+        # Get the webhook payload
+        payload = await request.json()
+        log_info(f"Received HeyGen webhook: {payload}", "API")
+        
+        # Extract video information from webhook
+        video_id = payload.get("video_id")
+        status = payload.get("status")
+        video_url = payload.get("video_url")
+        
+        if not video_id:
+            log_error("HeyGen webhook missing video_id", "API")
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "Missing video_id"}
+            )
+        
+        log_info(f"HeyGen webhook for video {video_id}: status={status}, has_url={bool(video_url)}", "API")
+        
+        # Find the video in our database using HeyGen video ID
+        video = execute_query(
+            "SELECT * FROM videos WHERE heygen_video_id = %s",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if not video:
+            log_warning(f"HeyGen webhook for unknown video {video_id}", "API")
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Video not found"}
+            )
+        
+        # Update video status and URL if completed
+        if status == "completed" and video_url:
+            execute_query(
+                "UPDATE videos SET status = %s, video_url = %s WHERE id = %s",
+                ("completed", video_url, video["id"])
+            )
+            log_info(f"Updated video {video['id']} via webhook: status=completed, url={video_url}", "API")
+        elif status == "failed":
+            execute_query(
+                "UPDATE videos SET status = %s WHERE id = %s",
+                ("failed", video["id"])
+            )
+            log_info(f"Updated video {video['id']} via webhook: status=failed", "API")
+        else:
+            # Update status only
+            execute_query(
+                "UPDATE videos SET status = %s WHERE id = %s",
+                (status, video["id"])
+            )
+            log_info(f"Updated video {video['id']} via webhook: status={status}", "API")
+        
+        return JSONResponse(
+            content={"success": True, "message": "Webhook processed successfully"}
+        )
+        
+    except Exception as e:
+        log_error(f"Error processing HeyGen webhook", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.get("/test/heygen-status")
 async def test_heygen_status(request: Request):
     """
