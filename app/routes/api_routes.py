@@ -849,11 +849,17 @@ async def debug_video_status(request: Request, video_id: str):
         # Call HeyGen API
         result = get_video_details(api_key, video_id)
         
+        # Convert video record to JSON-serializable format
+        video_dict = dict(video)
+        for key, value in video_dict.items():
+            if hasattr(value, 'isoformat'):  # datetime object
+                video_dict[key] = value.isoformat()
+        
         return JSONResponse(
             status_code=200,
             content={
                 "success": True,
-                "video_db": dict(video),
+                "video_db": video_dict,
                 "heygen_result": result
             }
         )
