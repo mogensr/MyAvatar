@@ -182,6 +182,39 @@ async def reset_password(request: Request):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/check-user")
+async def check_user_status(request: Request):
+    """Check current user status and admin privileges"""
+    try:
+        # Try to get current user
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                content={
+                    "logged_in": False,
+                    "message": "No user logged in"
+                }
+            )
+        
+        return JSONResponse(
+            content={
+                "logged_in": True,
+                "user_id": user.get("id"),
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "is_admin": user.get("is_admin", False),
+                "message": "User found"
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            content={
+                "logged_in": False,
+                "error": str(e),
+                "message": "Error checking user status"
+            }
+        )
+
 @router.get("/migrate-database")
 async def migrate_database_get(request: Request):
     """Migrate database to add missing description column (GET endpoint)"""
@@ -265,6 +298,48 @@ async def migrate_database(request: Request):
         raise
     except Exception as e:
         log_error(f"Error migrating database", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/make-me-admin")
+async def make_me_admin(request: Request):
+    """Grant admin privileges to current user (for initial setup)"""
+    try:
+        # Get current user
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "success": False,
+                    "error": "Must be logged in to grant admin privileges"
+                }
+            )
+        
+        # Update user to admin
+        if USE_POSTGRES:
+            execute_query(
+                "UPDATE users SET is_admin = true WHERE id = %s",
+                (user["id"],)
+            )
+        else:
+            execute_query(
+                "UPDATE users SET is_admin = 1 WHERE id = ?",
+                (user["id"],)
+            )
+        
+        log_info(f"User {user['username']} granted admin privileges", "AdminRoutes")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Admin privileges granted to user {user['username']}"
+            }
+        )
+    except Exception as e:
+        log_error(f"Error granting admin privileges", "AdminRoutes", e)
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
