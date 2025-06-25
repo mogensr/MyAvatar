@@ -303,6 +303,98 @@ async def migrate_database(request: Request):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/debug-video/{video_id}")
+async def debug_video_status(request: Request, video_id: str):
+    """Debug endpoint to check video status and update from HeyGen"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get video from database
+        video = execute_query(
+            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+            (video_id, video_id),
+            fetch_one=True
+        )
+        
+        if not video:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": f"Video not found with ID: {video_id}"
+                }
+            )
+        
+        # Get HeyGen API key
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "HeyGen API key not configured"
+                }
+            )
+        
+        # Import get_video_details function
+        from ..api.heygen import get_video_details
+        
+        # Check status on HeyGen
+        heygen_video_id = video.get("heygen_video_id")
+        if not heygen_video_id:
+            return JSONResponse(
+                content={
+                    "success": False,
+                    "error": "Video has no HeyGen video ID"
+                }
+            )
+        
+        result = get_video_details(api_key, heygen_video_id)
+        
+        debug_info = {
+            "database_video": {
+                "id": video.get("id"),
+                "heygen_video_id": video.get("heygen_video_id"),
+                "status": video.get("status"),
+                "video_url": video.get("video_url"),
+                "user_id": video.get("user_id")
+            },
+            "heygen_api_result": result
+        }
+        
+        # If HeyGen says video is completed, update database
+        if result.get("success") and result.get("details"):
+            details = result["details"]
+            heygen_status = details.get("status")
+            heygen_video_url = (details.get("video_url") or 
+                               details.get("video_url_caption") or 
+                               details.get("url") or 
+                               details.get("download_url"))
+            
+            debug_info["heygen_details"] = {
+                "status": heygen_status,
+                "video_url": heygen_video_url
+            }
+            
+            if heygen_status == "completed" and heygen_video_url:
+                # Update database
+                execute_query(
+                    "UPDATE videos SET status = %s, video_url = %s WHERE id = %s",
+                    ("completed", heygen_video_url, video["id"])
+                )
+                debug_info["database_updated"] = True
+                log_info(f"Admin {admin_user['username']} manually updated video {video['id']} status", "AdminRoutes")
+            else:
+                debug_info["database_updated"] = False
+        
+        return JSONResponse(content=debug_info)
+        
+    except Exception as e:
+        log_error(f"Error debugging video status", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.get("/make-me-admin")
 async def make_me_admin(request: Request):
     """Grant admin privileges to current user (for initial setup)"""
