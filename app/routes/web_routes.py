@@ -595,6 +595,9 @@ async def force_fix_admin():
 async def debug_users():
     """Debug route to see all users in database"""
     try:
+        # First, let's see what methods the Database object has
+        db_methods = [method for method in dir(db) if not method.startswith('_')]
+        
         # Try different methods to get users
         try:
             all_users = db.get_all_users()
@@ -612,11 +615,51 @@ async def debug_users():
             admin_password_length = f"Error: {e}"
         
         return JSONResponse({
+            "database_methods": db_methods,
             "total_users": user_count,
             "admin_user_exists": admin_user is not None,
             "admin_password_length": admin_password_length,
             "all_users": all_users[:3] if all_users else None  # Show first 3 users
         })
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+@router.get("/simple-fix-admin")
+async def simple_fix_admin():
+    """Simple admin password fix using available Database methods"""
+    try:
+        # Hash the password
+        hashed_password = hash_password('admin123')
+        
+        # Try to use Database methods that might exist
+        try:
+            # Check if we can update user directly
+            if hasattr(db, 'update_user_password'):
+                result = db.update_user_password('admin', hashed_password)
+                return JSONResponse({
+                    "status": "success", 
+                    "message": "Admin password updated using update_user_password",
+                    "result": str(result)
+                })
+            elif hasattr(db, 'update_user'):
+                result = db.update_user('admin', {'password': hashed_password})
+                return JSONResponse({
+                    "status": "success", 
+                    "message": "Admin password updated using update_user",
+                    "result": str(result)
+                })
+            else:
+                return JSONResponse({
+                    "error": "No suitable update method found",
+                    "available_methods": [method for method in dir(db) if 'update' in method.lower()]
+                })
+                
+        except Exception as e:
+            return JSONResponse({
+                "error": f"Update failed: {e}",
+                "available_methods": [method for method in dir(db) if 'update' in method.lower()]
+            })
+                
     except Exception as e:
         return JSONResponse({"error": str(e)})
 
