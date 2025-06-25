@@ -1277,7 +1277,7 @@ async def admin_edit_user(request: Request, user_id: int):
             return templates.TemplateResponse("portal/admin_edit_user.html", {
                 "request": request,
                 "user": user,
-                "edit_user": edit_user
+                "user_to_edit": edit_user  # Changed from edit_user to user_to_edit
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN EDIT USER - Template error: {template_error}")
