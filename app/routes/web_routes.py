@@ -991,7 +991,7 @@ async def admin_panel(request: Request):
         logger.info(f"🔍 ADMIN PANEL - Admin user {user.get('username')} accessing admin panel")
         
         try:
-            return templates.TemplateResponse("admin/admin_panel.html", {
+            return templates.TemplateResponse("portal/admin_dashboard.html", {
                 "request": request,
                 "user": user
             })
