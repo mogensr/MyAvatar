@@ -299,15 +299,23 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     return True, "Password is strong"
 
 def create_access_token(user_id: int) -> str:
-    """Create JWT access token with enhanced security"""
-    expire = datetime.utcnow() + timedelta(hours=config.JWT_EXPIRATION_HOURS)
-    payload = {
+    """Create JWT access token using standardized authentication system"""
+    from ..auth.authentication import create_access_token as auth_create_token
+    
+    # Get user data using the db instance
+    user = db.get_user_by_id(user_id)
+    
+    if not user:
+        raise ValueError(f"User {user_id} not found")
+    
+    # Use standardized token creation
+    token_data = {
+        "sub": user['username'],
         "user_id": user_id,
-        "exp": expire,
-        "iat": datetime.utcnow(),
-        "jti": str(uuid.uuid4())  # JWT ID for token tracking
+        "admin": bool(user.get('is_admin', False))
     }
-    return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+    
+    return auth_create_token(token_data)
 
 # STEP 12: Session management class (after all dependencies available)
 class SessionManager:
