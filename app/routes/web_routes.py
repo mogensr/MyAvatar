@@ -191,7 +191,7 @@ else:
     limiter = Limiter()
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent.parent / "templates"))
 
 # Configure Jinja2 for security
 try:
