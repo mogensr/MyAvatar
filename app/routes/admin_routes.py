@@ -447,7 +447,7 @@ async def manage_users(request: Request):
         """, fetch_all=True)
         
         return templates.TemplateResponse(
-            "admin_manage_users.html",
+            "portal/admin_manage_users.html",
             {
                 "request": request,
                 "user": user,
@@ -494,7 +494,7 @@ async def manage_user_videos(request: Request, user_id: int):
         """, (user_id,), fetch_all=True)
         
         return templates.TemplateResponse(
-            "admin_manage_videos.html",
+            "portal/admin_manage_videos.html",
             {
                 "request": request,
                 "user": admin_user,
