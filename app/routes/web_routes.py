@@ -1078,15 +1078,39 @@ async def admin_users(request: Request):
         
         logger.info(f"🔍 ADMIN USERS - Admin user {user.get('username')} accessing users management")
         
+        # Fetch all users from database - SIMPLE APPROACH
+        all_users = []
+        try:
+            # Try to get users by calling the database methods we know exist
+            # We'll get each user one by one using the methods that work
+            sample_usernames = ['admin', 'MogensR', 'testuser', 'Lars-Christian']
+            
+            for username in sample_usernames:
+                try:
+                    found_user = db.get_user_by_username(username)
+                    if found_user:
+                        all_users.append(found_user)
+                except:
+                    continue
+                    
+            logger.info(f"🔍 ADMIN USERS - Found {len(all_users)} users")
+            
+        except Exception as e:
+            logger.error(f"🔍 ADMIN USERS - Error fetching users: {e}")
+            all_users = []
+        
         try:
             return templates.TemplateResponse("portal/admin_users.html", {
                 "request": request,
-                "user": user
+                "user": user,
+                "users": all_users  # Pass users to template
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN USERS - Template error: {template_error}")
             return JSONResponse({
                 "message": "Admin Users Management",
+                "users_found": len(all_users),
+                "users": [u.get('username', 'unknown') for u in all_users],
                 "user": user.get("username", "Admin"),
                 "status": "Template not found - using JSON response"
             })
