@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request, Form, HTTPException, Depends, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 
 # STEP 1: Configure logging FIRST (before anything uses logger)
 logging.basicConfig(
@@ -82,7 +83,7 @@ except ImportError as e:
 
 # STEP 5: Import logging functions with fallbacks
 try:
-    from app.logger.log_handler import log_error, log_info, log_warning
+    from ..logger.log_handler import log_error, log_info, log_warning
 except ImportError:
     # Fallback implementations
     def log_error(msg, context, exc=None): logger.error(f"[{context}] {msg}")
@@ -91,14 +92,17 @@ except ImportError:
 
 # Import database query function
 try:
-    from app.db.database import execute_query
+    from ..db.database import execute_query
 except ImportError:
-    try:
-        from ..db.database import execute_query
-    except ImportError:
-        def execute_query(query, params=(), fetch_one=False, fetch_all=False):
-            logger.error("execute_query not available - database import failed")
-            return None
+    def execute_query(query, params=(), fetch_one=False, fetch_all=False):
+        logger.error("execute_query not available - database import failed")
+        return None
+
+# Import document parser
+from ..utils.document_parser import parse_document, clean_and_truncate_text
+
+# Import security functions
+from ..utils.security import sanitize_input, validate_email
 
 # STEP 6: Define utility functions
 def validate_email(email: str) -> bool:
@@ -853,32 +857,59 @@ async def dashboard_page(request: Request):
         user_avatars = []
         try:
             avatars = db.get_user_avatars(user["id"])
+            logger.info(f"🎭 DASHBOARD - Raw avatars from DB: {avatars}")
+            
             if avatars:
                 for avatar in avatars:
                     if isinstance(avatar, dict):
                         # Prioritize HeyGen avatar image over old image_url
                         avatar_image = None
+                        avatar_name = avatar.get('name', 'Unnamed Avatar')
+                        
+                        # Try to get HeyGen image first
                         if avatar.get('heygen_avatar_id'):
-                            # Use HeyGen avatar image if available
                             heygen_data = avatar.get('heygen_data')
-                            if heygen_data and isinstance(heygen_data, dict):
-                                avatar_image = heygen_data.get('preview_image_url') or heygen_data.get('image_url')
+                            
+                            # Handle different formats of heygen_data
+                            if heygen_data:
+                                if isinstance(heygen_data, str):
+                                    try:
+                                        import json
+                                        heygen_data = json.loads(heygen_data)
+                                    except:
+                                        logger.warning(f"Could not parse heygen_data as JSON: {heygen_data}")
+                                        heygen_data = None
+                                
+                                if isinstance(heygen_data, dict):
+                                    # Try different possible image URL keys
+                                    avatar_image = (
+                                        heygen_data.get('preview_image_url') or 
+                                        heygen_data.get('image_url') or
+                                        heygen_data.get('avatar_image_url') or
+                                        heygen_data.get('thumbnail_url')
+                                    )
+                                    logger.info(f"🖼️ HeyGen image for {avatar_name}: {avatar_image}")
                         
                         # Fallback to old image_url if no HeyGen image
                         if not avatar_image:
                             avatar_image = avatar.get('image_url', '')
+                            logger.info(f"🖼️ Fallback image for {avatar_name}: {avatar_image}")
                         
                         user_avatars.append({
                             'id': avatar.get('id'),
-                            'name': sanitize_input(avatar.get('name', 'Unnamed Avatar')),
+                            'name': sanitize_input(avatar_name),
                             'image_url': avatar_image,
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', '')
                         })
-            logger.info(f"🎭 DASHBOARD - Found {len(user_avatars)} avatars for user {user.get('username')}")
+                        
+            logger.info(f"🎭 DASHBOARD - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50]}..." if avatar['image_url'] else f"   - Avatar: {avatar['name']} | No image")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50] if avatar['image_url'] else 'No image'}...")
+                
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
+            import traceback
+            logger.error(f"Avatar error traceback: {traceback.format_exc()}")
             user_avatars = []
         
         # Debug: Log what we're getting
@@ -1792,3 +1823,59 @@ async def get_user_videos_api(request: Request):
     except Exception as e:
         logger.error(f"Error fetching videos API: {e}")
         return JSONResponse({"error": "Failed to fetch videos"}, status_code=500)
+
+@router.post("/api/document-parser")
+async def document_parser_api(request: Request, file: UploadFile = File(...)):
+    """API endpoint to parse document files (.txt, .docx, .pdf)"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"error": "Not authenticated"}, status_code=401)
+        
+        # Validate file type
+        allowed_extensions = ['.txt', '.docx', '.pdf']
+        file_extension = '.' + file.filename.lower().split('.')[-1] if '.' in file.filename else ''
+        
+        if file_extension not in allowed_extensions:
+            return JSONResponse({
+                "error": f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}"
+            }, status_code=400)
+        
+        # Check file size (10MB limit)
+        file_content = await file.read()
+        if len(file_content) > 10 * 1024 * 1024:  # 10MB
+            return JSONResponse({
+                "error": "File too large. Maximum size is 10MB."
+            }, status_code=400)
+        
+        logger.info(f"📄 Parsing document: {file.filename} ({len(file_content)} bytes)")
+        
+        # Parse document
+        parsed_text = parse_document(file_content, file.filename)
+        
+        if parsed_text is None:
+            return JSONResponse({
+                "error": "Failed to parse document. Please check the file format."
+            }, status_code=400)
+        
+        # Clean and truncate text
+        result = clean_and_truncate_text(parsed_text, max_length=1500)
+        
+        logger.info(f"✅ Document parsed successfully: {len(result['text'])} characters")
+        
+        return JSONResponse({
+            "success": True,
+            "filename": file.filename,
+            "text": result['text'],
+            "truncated": result['truncated'],
+            "original_length": result['original_length'],
+            "final_length": len(result['text'])
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Error parsing document {file.filename}: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return JSONResponse({
+            "error": f"Failed to parse document: {str(e)}"
+        }, status_code=500)
