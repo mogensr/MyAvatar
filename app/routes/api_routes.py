@@ -16,6 +16,7 @@ from ..auth.authentication import get_current_user, is_admin
 from ..storage.file_storage import upload_avatar_to_cloudinary, upload_audio_to_cloudinary
 from ..logger.log_handler import log_info, log_error, log_warning
 from ..utils.avatar_utils import ensure_avatar_persistence
+from ..utils.heygen_image_utils import ensure_avatar_has_heygen_image
 
 # Create router
 router = APIRouter(prefix="/api", tags=["api"])
@@ -987,6 +988,67 @@ async def test_heygen_status(request: Request):
         
     except Exception as e:
         log_error("Error testing HeyGen API status", "API", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.post("/avatars/update-images")
+async def update_avatar_images(request: Request):
+    """
+    Update all user avatars with fresh HeyGen images
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+            
+        # Get user's avatars
+        user_avatars = execute_query(
+            "SELECT avatar_id, avatar_image_url FROM user_avatars WHERE user_id = %s",
+            (int(user["id"]),),
+            fetch_all=True
+        )
+        
+        if not user_avatars:
+            return JSONResponse(content={
+                "success": True,
+                "message": "No avatars to update",
+                "updated_count": 0
+            })
+        
+        api_key = os.getenv("HEYGEN_API_KEY") or user.get("api_key")
+        updated_count = 0
+        
+        # Update each avatar with fresh HeyGen image
+        for avatar in user_avatars:
+            avatar_data = dict(avatar)
+            avatar_id = avatar_data['avatar_id']
+            current_image = avatar_data['avatar_image_url']
+            
+            # Get the best HeyGen image
+            new_image_url = ensure_avatar_has_heygen_image(avatar_id, current_image, api_key)
+            
+            # Update if we got a different/better image
+            if new_image_url and new_image_url != current_image:
+                execute_query(
+                    "UPDATE user_avatars SET avatar_image_url = %s WHERE user_id = %s AND avatar_id = %s",
+                    (new_image_url, int(user["id"]), avatar_id)
+                )
+                updated_count += 1
+                log_info(f"Updated avatar image for {avatar_id}: {new_image_url}", "API")
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Updated {updated_count} avatar images",
+            "updated_count": updated_count
+        })
+        
+    except Exception as e:
+        log_error("Error updating avatar images", "API", e)
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}

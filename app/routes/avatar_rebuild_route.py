@@ -1,13 +1,14 @@
 """
 Avatar rebuild route for Railway deployment
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import Dict, Any
-import requests
-import os
-from datetime import datetime
+from ..auth.authentication import get_current_user, is_admin
+from ..api.heygen import get_available_avatars
 from ..db.database import execute_query
-from ..auth.authentication import get_current_user_admin
+from ..utils.heygen_image_utils import ensure_avatar_has_heygen_image
+from datetime import datetime
+import os
 
 router = APIRouter()
 
@@ -46,7 +47,7 @@ def rebuild_avatars_for_user_id(user_id: int):
     """Rebuild avatars for a specific user ID"""
     try:
         # Get HeyGen avatars
-        heygen_avatars = get_heygen_avatars()
+        heygen_avatars = get_available_avatars()
         
         # Clear existing avatars for this user
         execute_query(
@@ -56,11 +57,18 @@ def rebuild_avatars_for_user_id(user_id: int):
         
         # Add new avatars
         added_count = 0
-        for avatar in heygen_avatars:
+        api_key = os.getenv("HEYGEN_API_KEY")
+        for avatar in heygen_avatars.get("avatars", []):
             try:
                 avatar_id = avatar.get("avatar_id")
                 avatar_name = avatar.get("name", f"Avatar {avatar_id}")
-                preview_url = avatar.get("preview_image_url") or avatar.get("preview_video_url")
+                
+                # Use the utility function to get the best image URL
+                preview_url = ensure_avatar_has_heygen_image(
+                    avatar_id, 
+                    avatar.get("preview_image_url") or avatar.get("preview_video_url"),
+                    api_key
+                )
                 
                 if not avatar_id:
                     continue
@@ -85,11 +93,14 @@ def rebuild_avatars_for_user_id(user_id: int):
 @router.post("/admin/rebuild-avatars/{user_id}")
 async def rebuild_user_avatars(
     user_id: int,
-    current_user: Dict[str, Any] = Depends(get_current_user_admin)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Rebuild avatars for a specific user (Admin only)
     """
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Only admins can rebuild avatars")
+    
     try:
         result = rebuild_avatars_for_user_id(user_id)
         return {
@@ -102,11 +113,14 @@ async def rebuild_user_avatars(
 @router.post("/admin/rebuild-avatars-bulk")
 async def rebuild_avatars_bulk(
     user_ids: list[int],
-    current_user: Dict[str, Any] = Depends(get_current_user_admin)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Rebuild avatars for multiple users (Admin only)
     """
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Only admins can rebuild avatars")
+    
     results = []
     
     for user_id in user_ids:
