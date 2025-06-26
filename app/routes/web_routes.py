@@ -1200,17 +1200,20 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
                 user_avatars = []
                 
             # Also get user images from user_images table
+            logger.info(f"🔍 DEBUG: Querying user_images for user_id: {user_id}")
             user_images = execute_query(
                 "SELECT id, filename, file_path, created_at, 'Uploaded' as type FROM user_images WHERE user_id = ? ORDER BY created_at DESC",
                 (user_id,),
                 fetch_all=True
             )
+            logger.info(f"🔍 DEBUG: Found {len(user_images) if user_images else 0} user_images")
             if not user_images:
                 user_images = []
             
             # Convert user_images to dict format and combine with avatars
             user_images_dict = []
             for img in user_images:
+                logger.info(f"🔍 DEBUG: Processing image - ID: {img[0]}, File: {img[1]}")
                 user_images_dict.append({
                     'id': img[0],
                     'filename': img[1], 
@@ -1221,6 +1224,7 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
             
             # Combine avatars and images
             all_avatars = user_avatars + user_images_dict
+            logger.info(f"🔍 DEBUG: Total avatars to display: {len(all_avatars)}")
             
         except Exception as e:
             logger.error(f"Error fetching user avatars: {e}")

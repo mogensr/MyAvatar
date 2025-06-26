@@ -753,13 +753,13 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 # Insert new avatar
                 if USE_POSTGRES:
                     execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default, created_at) VALUES (%s, %s, %s, %s, %s, NOW())",
-                        (user_id, avatar_id, avatar_name, avatar_image_url, 0)
+                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (%s, %s, %s, %s)",
+                        (user_id, avatar_id, avatar_name, avatar_image_url)
                     )
                 else:
                     execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
-                        (user_id, avatar_id, avatar_name, avatar_image_url, 0)
+                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (?, ?, ?, ?)",
+                        (user_id, avatar_id, avatar_name, avatar_image_url)
                     )
                 log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
             
