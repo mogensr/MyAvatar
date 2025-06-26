@@ -1112,6 +1112,258 @@
             border-color: var(--success);
         }
         
+        /* Support Avatar Widget Styles */
+        .support-avatar-widget {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .support-avatar-widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .support-avatar-header {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            position: relative;
+        }
+        
+        .support-avatar-icon {
+            position: relative;
+            font-size: 24px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .avatar-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .support-avatar-info {
+            flex: 1;
+        }
+        
+        .support-avatar-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        
+        .support-avatar-status {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .support-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .support-toggle-icon.rotated {
+            transform: rotate(180deg);
+        }
+        
+        .support-chat-container {
+            background: white;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .support-chat-container.expanded {
+            max-height: 400px;
+        }
+        
+        .support-chat-messages {
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .support-message {
+            display: flex;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .bot-message .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .user-message {
+            flex-direction: row-reverse;
+        }
+        
+        .user-message .message-avatar {
+            background: #f0f0f0;
+            margin-left: 10px;
+            margin-right: 0;
+        }
+        
+        .message-content {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .user-message .message-content {
+            background: #007bff;
+            color: white;
+        }
+        
+        .message-content p {
+            margin: 0 0 8px 0;
+        }
+        
+        .message-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .message-content ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        .message-content li {
+            margin-bottom: 4px;
+        }
+        
+        .support-chat-input {
+            display: flex;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .support-chat-input input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .support-chat-input input:focus {
+            border-color: #667eea;
+        }
+        
+        .support-send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            margin-left: 10px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+        }
+        
+        .support-send-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .support-quick-actions {
+            padding: 10px 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .quick-action-btn {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 15px;
+            padding: 6px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #495057;
+        }
+        
+        .quick-action-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+        
+        /* Typing Indicator */
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
         /* Responsive Design */
         @media (max-width: 1024px) {
             .sidebar {
@@ -1291,6 +1543,64 @@
                             <i class="fas fa-cog"></i>
                             <span>Settings</span>
                         </a>
+                    </div>
+                </div>
+                
+                <!-- Interactive Support Avatar -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Support</div>
+                    <div class="support-avatar-widget" id="supportWidget">
+                        <div class="support-avatar-header" onclick="toggleSupportChat()">
+                            <div class="support-avatar-icon">
+                                <div class="avatar-pulse"></div>
+                                🤖
+                            </div>
+                            <div class="support-avatar-info">
+                                <div class="support-avatar-name">AI Assistant</div>
+                                <div class="support-avatar-status" id="supportStatus">Ready to help</div>
+                            </div>
+                            <i class="fas fa-chevron-up support-toggle-icon" id="supportToggleIcon"></i>
+                        </div>
+                        
+                        <div class="support-chat-container" id="supportChatContainer">
+                            <div class="support-chat-messages" id="supportMessages">
+                                <div class="support-message bot-message">
+                                    <div class="message-avatar">🤖</div>
+                                    <div class="message-content">
+                                        <p>Hi! I'm your AI assistant. I can help you with:</p>
+                                        <ul>
+                                            <li>Creating better videos</li>
+                                            <li>Troubleshooting issues</li>
+                                            <li>Feature suggestions</li>
+                                            <li>General questions</li>
+                                        </ul>
+                                        <p>How can I assist you today?</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="support-chat-input">
+                                <input type="text" 
+                                       id="supportInput" 
+                                       placeholder="Type your message..." 
+                                       onkeypress="handleSupportKeyPress(event)">
+                                <button onclick="sendSupportMessage()" class="support-send-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="support-quick-actions">
+                                <button onclick="sendQuickMessage('I need help with video creation')" class="quick-action-btn">
+                                    📹 Video Help
+                                </button>
+                                <button onclick="sendQuickMessage('I found a bug')" class="quick-action-btn">
+                                    🐛 Report Bug
+                                </button>
+                                <button onclick="sendQuickMessage('I have a feature idea')" class="quick-action-btn">
+                                    💡 Feature Idea
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </nav>
@@ -1924,6 +2234,148 @@
                 clearInterval(videoUpdateInterval);
             }
         });
+
+        // Support Avatar Functionality
+        let supportChatExpanded = false;
+        let supportConversationId = null;
+        
+        function toggleSupportChat() {
+            const container = document.getElementById('supportChatContainer');
+            const icon = document.getElementById('supportToggleIcon');
+            
+            supportChatExpanded = !supportChatExpanded;
+            
+            if (supportChatExpanded) {
+                container.classList.add('expanded');
+                icon.classList.add('rotated');
+                
+                // Focus on input when opened
+                setTimeout(() => {
+                    document.getElementById('supportInput').focus();
+                }, 300);
+            } else {
+                container.classList.remove('expanded');
+                icon.classList.remove('rotated');
+            }
+        }
+        
+        function handleSupportKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendSupportMessage();
+            }
+        }
+        
+        function sendSupportMessage() {
+            const input = document.getElementById('supportInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message to chat
+            addSupportMessage(message, 'user');
+            
+            // Clear input
+            input.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Send to backend
+            fetch('/api/support-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    message: message,
+                    conversation_id: supportConversationId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideTypingIndicator();
+                
+                if (data.success) {
+                    supportConversationId = data.conversation_id;
+                    addSupportMessage(data.response, 'bot');
+                    
+                    // Update status if needed
+                    if (data.admin_notified) {
+                        updateSupportStatus('Admin notified');
+                    }
+                } else {
+                    addSupportMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                }
+            })
+            .catch(error => {
+                console.error('Support chat error:', error);
+                hideTypingIndicator();
+                addSupportMessage('Sorry, I\'m having trouble connecting. Please try again later.', 'bot');
+            });
+        }
+        
+        function sendQuickMessage(message) {
+            const input = document.getElementById('supportInput');
+            input.value = message;
+            sendSupportMessage();
+        }
+        
+        function addSupportMessage(message, type) {
+            const messagesContainer = document.getElementById('supportMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `support-message ${type}-message`;
+            
+            const avatar = type === 'bot' ? '🤖' : '👤';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            const messagesContainer = document.getElementById('supportMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'support-message bot-message typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        function updateSupportStatus(status) {
+            const statusElement = document.getElementById('supportStatus');
+            statusElement.textContent = status;
+            
+            // Reset status after 3 seconds
+            setTimeout(() => {
+                statusElement.textContent = 'Ready to help';
+            }, 3000);
+        }
     </script>
 </body>
 </html>
