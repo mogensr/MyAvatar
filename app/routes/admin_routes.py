@@ -795,3 +795,72 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             content={"success": False, "error": f"Server error: {str(e)}"},
             status_code=500
         )
+
+@router.post("/delete-image/{image_id}")
+async def delete_user_image(request: Request, image_id: int):
+    """Delete a user image (admin only)"""
+    user_id = None
+    try:
+        # Verify admin access
+        admin_user = require_admin(request)
+        
+        # Get image details before deletion
+        image = execute_query(
+            "SELECT id, user_id, filename, file_path FROM user_images WHERE id = ?",
+            (image_id,),
+            fetch_one=True
+        )
+        
+        if not image:
+            return RedirectResponse(
+                url="/admin/users?error=image_not_found",
+                status_code=303
+            )
+        
+        user_id = image[1]  # Store user_id for redirect
+        
+        # Get user info for logging
+        user = execute_query(
+            "SELECT username FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        # Delete the physical file if it exists
+        try:
+            if image[3]:  # file_path
+                file_path = Path(image[3])
+                if file_path.exists():
+                    file_path.unlink()
+                    log_info(f"Deleted physical file: {file_path}", "AdminRoutes")
+        except Exception as file_error:
+            log_warning(f"Could not delete physical file {image[3]}: {str(file_error)}", "AdminRoutes")
+        
+        # Delete from database
+        execute_query("DELETE FROM user_images WHERE id = ?", (image_id,))
+        
+        log_info(f"Admin {admin_user['username']} deleted image {image_id} ('{image[2]}') for user {user[0] if user else 'Unknown'}", "AdminRoutes")
+        
+        return RedirectResponse(
+            url=f"/admin/manage-images/{user_id}?success=image_deleted",
+            status_code=303
+        )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login?error=admin_required", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/admin/users?error=access_denied", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error deleting user image", "AdminRoutes", e)
+        if user_id:
+            return RedirectResponse(
+                url=f"/admin/manage-images/{user_id}?error=delete_failed",
+                status_code=303
+            )
+        else:
+            return RedirectResponse(
+                url="/admin/users?error=delete_failed",
+                status_code=303
+            )

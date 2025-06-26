@@ -89,6 +89,17 @@ except ImportError:
     def log_info(msg, context): logger.info(f"[{context}] {msg}")
     def log_warning(msg, context): logger.warning(f"[{context}] {msg}")
 
+# Import database query function
+try:
+    from app.db.database import execute_query
+except ImportError:
+    try:
+        from ..db.database import execute_query
+    except ImportError:
+        def execute_query(query, params=(), fetch_one=False, fetch_all=False):
+            logger.error("execute_query not available - database import failed")
+            return None
+
 # STEP 6: Define utility functions
 def validate_email(email: str) -> bool:
     """Basic email validation"""
@@ -1182,21 +1193,45 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
             logger.error(f"Error fetching user for avatar management: {e}")
             return RedirectResponse(url="/admin/users", status_code=302)
         
-        # Get user's avatars
+        # Get user's avatars and images
         try:
             user_avatars = db.get_user_avatars(user_id)
             if not user_avatars:
                 user_avatars = []
+                
+            # Also get user images from user_images table
+            user_images = execute_query(
+                "SELECT id, filename, file_path, created_at, 'Uploaded' as type FROM user_images WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,),
+                fetch_all=True
+            )
+            if not user_images:
+                user_images = []
+            
+            # Convert user_images to dict format and combine with avatars
+            user_images_dict = []
+            for img in user_images:
+                user_images_dict.append({
+                    'id': img[0],
+                    'filename': img[1], 
+                    'file_path': img[2],
+                    'created_at': img[3],
+                    'type': img[4]
+                })
+            
+            # Combine avatars and images
+            all_avatars = user_avatars + user_images_dict
+            
         except Exception as e:
             logger.error(f"Error fetching user avatars: {e}")
-            user_avatars = []
+            all_avatars = []
         
         try:
             return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
                 "user": user,
-                "user_to_manage": target_user,
-                "avatars": user_avatars
+                "user_to_manage": target_user,  # Changed from target_user to user_to_manage
+                "avatars": all_avatars  # Changed from user_avatars to all_avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN MANAGE AVATARS - Template error: {template_error}")
@@ -1204,7 +1239,7 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
                 "message": "Admin Manage Avatars",
                 "user": user.get("username", "Admin"),
                 "target_user": target_user.get("username", "Unknown"),
-                "avatars_count": len(user_avatars),
+                "avatars_count": len(all_avatars),
                 "status": "Template not found - using JSON response"
             })
         
@@ -1435,21 +1470,45 @@ async def admin_user_avatars(request: Request, user_id: int):
             logger.error(f"Error fetching user for avatars: {e}")
             return RedirectResponse(url="/admin/users", status_code=302)
         
-        # Get user's avatars
+        # Get user's avatars and images
         try:
             user_avatars = db.get_user_avatars(user_id)
             if not user_avatars:
                 user_avatars = []
+                
+            # Also get user images from user_images table
+            user_images = execute_query(
+                "SELECT id, filename, file_path, created_at, 'Uploaded' as type FROM user_images WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,),
+                fetch_all=True
+            )
+            if not user_images:
+                user_images = []
+            
+            # Convert user_images to dict format and combine with avatars
+            user_images_dict = []
+            for img in user_images:
+                user_images_dict.append({
+                    'id': img[0],
+                    'filename': img[1], 
+                    'file_path': img[2],
+                    'created_at': img[3],
+                    'type': img[4]
+                })
+            
+            # Combine avatars and images
+            all_avatars = user_avatars + user_images_dict
+            
         except Exception as e:
             logger.error(f"Error fetching user avatars: {e}")
-            user_avatars = []
+            all_avatars = []
         
         try:
             return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
                 "user": user,
                 "user_to_manage": target_user,  # Changed from target_user to user_to_manage
-                "avatars": user_avatars  # Changed from user_avatars to avatars
+                "avatars": all_avatars  # Changed from user_avatars to all_avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN USER AVATARS - Template error: {template_error}")
@@ -1457,7 +1516,7 @@ async def admin_user_avatars(request: Request, user_id: int):
                 "message": "Admin User Avatars",
                 "user": user.get("username", "Admin"),
                 "target_user": target_user.get("username", "Unknown"),
-                "avatars_count": len(user_avatars),
+                "avatars_count": len(all_avatars),
                 "status": "Template not found - using JSON response"
             })
         
