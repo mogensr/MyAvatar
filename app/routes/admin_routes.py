@@ -799,6 +799,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
 @router.post("/delete-image/{image_id}")
 async def delete_user_image(request: Request, image_id: str):
     """Delete a user avatar (admin only)"""
+    log_info(f"🚨 DELETE ROUTE CALLED! image_id: {image_id}", "AdminRoutes")
     user_id = None
     try:
         log_info(f"🔍 DEBUG: Delete request for image_id: {image_id} (type: {type(image_id)})", "AdminRoutes")
