@@ -159,11 +159,12 @@ async def download_video(request: Request, video_id: str):
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
                     elif video_status in ["processing", "pending", "waiting"]:
                         return JSONResponse(
-                            status_code=202,
+                            status_code=200,
                             content={
-                                "success": False, 
-                                "error": f"Video is still {video_status}. Please try again in a few minutes.",
-                                "status": video_status
+                                "success": True, 
+                                "message": f"Video is still {video_status}. Please wait...",
+                                "status": video_status,
+                                "processing": True
                             }
                         )
                     elif video_status == "failed":
@@ -772,11 +773,12 @@ async def get_video_status(request: Request, video_id: str):
                         log_info(f"Updated video {video['id']} with URL and status {video_status}", "API")
                     elif video_status in ["processing", "pending", "waiting"]:
                         return JSONResponse(
-                            status_code=202,
+                            status_code=200,
                             content={
-                                "success": False, 
-                                "error": f"Video is still {video_status}. Please try again in a few minutes.",
-                                "status": video_status
+                                "success": True, 
+                                "message": f"Video is still {video_status}. Please wait...",
+                                "status": video_status,
+                                "processing": True
                             }
                         )
                     elif video_status == "failed":
