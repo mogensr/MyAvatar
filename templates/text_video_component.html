@@ -702,8 +702,7 @@
                 
                 <div class="file-upload-container">
                     <label class="form-label">Or Upload Text File</label>
-                    <div class="file-upload-area" onclick="document.getElementById('fileInput').click()" 
-                         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)">
+                    <div class="file-upload-area" id="fileUploadArea">
                         <i class="fas fa-cloud-upload upload-icon"></i>
                         <div class="upload-title">Drop file here or click to upload</div>
                         <div class="upload-subtitle">Upload your text content from a file</div>
@@ -774,6 +773,26 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkSetupComplete();
+            
+            // Add click handler to file upload area
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            fileUploadArea.addEventListener('click', function() {
+                document.getElementById('fileInput').click();
+            });
+            
+            // Add drag event handlers
+            fileUploadArea.addEventListener('dragenter', handleDragEnter);
+            fileUploadArea.addEventListener('dragover', handleDragOver);
+            fileUploadArea.addEventListener('dragleave', handleDragLeave);
+            fileUploadArea.addEventListener('drop', handleDrop);
+            
+            // Prevent default drag behavior on the whole document
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+            });
         });
 
         // Alert system functions
@@ -894,42 +913,38 @@
         document.getElementById('videoTitle').addEventListener('input', checkSetupComplete);
         document.getElementById('textContent').addEventListener('input', updateCharCounter);
 
-        // File upload handling
+        // Drag and drop event handlers
         function handleDragEnter(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('Drag enter');
-            event.target.closest('.file-upload-area').classList.add('drag-over');
+            console.log('🎯 Drag enter');
+            document.getElementById('fileUploadArea').classList.add('drag-over');
         }
 
         function handleDragOver(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('Drag over');
-            event.target.closest('.file-upload-area').classList.add('drag-over');
+            console.log('🎯 Drag over');
+            document.getElementById('fileUploadArea').classList.add('drag-over');
         }
 
         function handleDragLeave(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('Drag leave');
-            // Only remove drag-over if we're actually leaving the drop area
-            if (!event.target.closest('.file-upload-area').contains(event.relatedTarget)) {
-                event.target.closest('.file-upload-area').classList.remove('drag-over');
-            }
+            console.log('🎯 Drag leave');
+            document.getElementById('fileUploadArea').classList.remove('drag-over');
         }
 
         function handleDrop(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('File dropped!', event);
+            console.log('🎯 File dropped!', event.dataTransfer.files);
             
-            const uploadArea = event.target.closest('.file-upload-area');
-            uploadArea.classList.remove('drag-over');
+            document.getElementById('fileUploadArea').classList.remove('drag-over');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
-                console.log('Processing dropped file:', files[0]);
+                console.log('🎯 Processing dropped file:', files[0].name);
                 processFile(files[0]);
             }
         }
