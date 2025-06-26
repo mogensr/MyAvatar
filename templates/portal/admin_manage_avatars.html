@@ -28,6 +28,8 @@
                 Avatar fetched from HeyGen successfully!
             {% elif request.query_params.get('success') == 'avatar_deleted' %}
                 Avatar deleted successfully!
+            {% elif request.query_params.get('success') == 'image_deleted' %}
+                Image deleted successfully!
             {% else %}
                 Operation completed successfully!
             {% endif %}
@@ -156,7 +158,7 @@
                                     <small>{{ avatar.created_at or 'Unknown' }}</small>
                                 </td>
                                 <td>
-                                    <form action="/admin/delete-avatar/{{ avatar.id }}" method="post" style="display: inline;">
+                                    <form action="/admin/delete-image/{{ avatar.id }}" method="post" style="display: inline;">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                 onclick="return confirm('Are you sure you want to delete this image?')">
                                             🗑️ Delete
