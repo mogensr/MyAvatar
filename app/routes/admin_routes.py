@@ -831,7 +831,7 @@ async def delete_user_image(request: Request, image_id: str):
                 status_code=303
             )
         
-        user_id = avatar[1]  # Store user_id for redirect
+        user_id = avatar['user_id']  # Store user_id for redirect
         log_info(f"🔍 DEBUG: Found avatar for user_id: {user_id}", "AdminRoutes")
         
         # Get user info for logging
@@ -849,7 +849,7 @@ async def delete_user_image(request: Request, image_id: str):
         delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (numeric_id,))
         log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
         
-        log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar[2]}') for user {user[0] if user else 'Unknown'}", "AdminRoutes")
+        log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar['avatar_name']}') for user {user['username'] if user else 'Unknown'}", "AdminRoutes")
         
         return RedirectResponse(
             url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
