@@ -156,12 +156,43 @@ class Database:
     def get_user_avatars(self, user_id):
         """Get avatars for a user"""
         try:
+            avatars = []
+            
+            # Get avatars from user_avatars table
             result = execute_query(
                 "SELECT * FROM user_avatars WHERE user_id = ? ORDER BY created_at DESC", 
                 (user_id,), 
                 fetch_all=True
             )
-            return [dict(row) if hasattr(row, 'keys') else row for row in result] if result else []
+            if result:
+                avatars.extend([dict(row) if hasattr(row, 'keys') else row for row in result])
+            
+            # Get HeyGen avatar from users table
+            user_result = execute_query(
+                "SELECT id, avatar_img_url, avatar_id, username FROM users WHERE id = ?", 
+                (user_id,), 
+                fetch_one=True
+            )
+            if user_result:
+                user_data = dict(user_result) if hasattr(user_result, 'keys') else user_result
+                avatar_img_url = user_data.get('avatar_img_url')
+                
+                if avatar_img_url:
+                    # Create HeyGen avatar entry
+                    heygen_avatar = {
+                        'id': f"heygen_{user_data.get('id')}",
+                        'user_id': user_id,
+                        'avatar_image_url': avatar_img_url,
+                        'avatar_name': f"{user_data.get('username', 'User')}'s HeyGen Avatar",
+                        'avatar_id': user_data.get('avatar_id'),
+                        'heygen_avatar_id': user_data.get('avatar_id'),
+                        'created_at': None,
+                        'is_default': 1
+                    }
+                    # Add HeyGen avatar at the beginning
+                    avatars.insert(0, heygen_avatar)
+            
+            return avatars
         except Exception as e:
             log_error(f"Error getting avatars for user {user_id}: {str(e)}", "UserManager", e)
             return []
