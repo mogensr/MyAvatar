@@ -640,15 +640,30 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             raise HTTPException(status_code=404, detail="User not found")
         
         # Import HeyGen functions
-        from ..heygen.heygen_api import get_avatar_details
+        from ..api.heygen import get_available_avatars
         
         try:
-            # Fetch avatar details from HeyGen
-            avatar_details = get_avatar_details(os.getenv("HEYGEN_API_KEY"), avatar_id)
+            # Fetch all avatars from HeyGen and find the specific one
+            avatars_result = get_available_avatars(os.getenv("HEYGEN_API_KEY"))
+            
+            if not avatars_result.get("success"):
+                return JSONResponse(
+                    content={"success": False, "error": f"Failed to fetch avatars from HeyGen: {avatars_result.get('error', 'Unknown error')}"},
+                    status_code=400
+                )
+            
+            # Find the specific avatar by ID
+            avatars = avatars_result.get("avatars", [])
+            avatar_details = None
+            
+            for avatar in avatars:
+                if avatar.get("avatar_id") == avatar_id:
+                    avatar_details = avatar
+                    break
             
             if not avatar_details:
                 return JSONResponse(
-                    content={"success": False, "error": "Avatar not found in HeyGen"},
+                    content={"success": False, "error": f"Avatar with ID '{avatar_id}' not found in your HeyGen account"},
                     status_code=404
                 )
             
@@ -671,17 +686,29 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             
             if existing_avatar:
                 # Update existing avatar
-                execute_query(
-                    "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = datetime('now') WHERE user_id = ? AND avatar_id = ?",
-                    (avatar_name, avatar_image_url, user_id, avatar_id)
-                )
+                if USE_POSTGRES:
+                    execute_query(
+                        "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = NOW() WHERE user_id = ? AND avatar_id = ?",
+                        (avatar_name, avatar_image_url, user_id, avatar_id)
+                    )
+                else:
+                    execute_query(
+                        "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = datetime('now') WHERE user_id = ? AND avatar_id = ?",
+                        (avatar_name, avatar_image_url, user_id, avatar_id)
+                    )
                 log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
             else:
                 # Insert new avatar
-                execute_query(
-                    "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, datetime('now'))",
-                    (user_id, avatar_id, avatar_name, avatar_image_url)
-                )
+                if USE_POSTGRES:
+                    execute_query(
+                        "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, NOW())",
+                        (user_id, avatar_id, avatar_name, avatar_image_url)
+                    )
+                else:
+                    execute_query(
+                        "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, datetime('now'))",
+                        (user_id, avatar_id, avatar_name, avatar_image_url)
+                    )
                 log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
             
             return JSONResponse(
