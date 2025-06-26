@@ -134,8 +134,8 @@
                         {% for avatar in avatars %}
                             <tr>
                                 <td>
-                                    {% if avatar.avatar_url %}
-                                        <img src="{{ avatar.avatar_url }}" alt="Image" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="Image" class="rounded" style="width: 48px; height: 48px; object-fit: cover;">
                                     {% else %}
                                         <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                                             <i class="text-muted">📁</i>
