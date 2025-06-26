@@ -797,7 +797,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
         )
 
 @router.post("/delete-image/{image_id}")
-async def delete_user_image(request: Request, image_id: int):
+async def delete_user_image(request: Request, image_id: str):
     """Delete a user avatar (admin only)"""
     user_id = None
     try:
@@ -806,17 +806,25 @@ async def delete_user_image(request: Request, image_id: int):
         # Verify admin access
         admin_user = require_admin(request)
         
+        # Convert image_id to int if it's numeric, otherwise use as string
+        try:
+            numeric_id = int(image_id)
+            log_info(f"🔍 DEBUG: Converted image_id to int: {numeric_id}", "AdminRoutes")
+        except ValueError:
+            log_info(f"🔍 DEBUG: Using image_id as string: {image_id}", "AdminRoutes")
+            numeric_id = image_id
+        
         # Get avatar details before deletion
         avatar = execute_query(
             "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = ?",
-            (image_id,),
+            (numeric_id,),
             fetch_one=True
         )
         
         log_info(f"🔍 DEBUG: Avatar query result: {avatar}", "AdminRoutes")
         
         if not avatar:
-            log_warning(f"🔍 DEBUG: Avatar not found for id: {image_id}", "AdminRoutes")
+            log_warning(f"🔍 DEBUG: Avatar not found for id: {numeric_id}", "AdminRoutes")
             return RedirectResponse(
                 url="/admin/users?error=avatar_not_found",
                 status_code=303
@@ -836,11 +844,11 @@ async def delete_user_image(request: Request, image_id: int):
         # Only delete local uploaded files if needed in the future
         
         # Delete from database
-        log_info(f"🔍 DEBUG: About to delete avatar with id: {image_id}", "AdminRoutes")
-        delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (image_id,))
+        log_info(f"🔍 DEBUG: About to delete avatar with id: {numeric_id}", "AdminRoutes")
+        delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (numeric_id,))
         log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
         
-        log_info(f"Admin {admin_user['username']} deleted avatar {image_id} ('{avatar[2]}') for user {user[0] if user else 'Unknown'}", "AdminRoutes")
+        log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar[2]}') for user {user[0] if user else 'Unknown'}", "AdminRoutes")
         
         return RedirectResponse(
             url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
