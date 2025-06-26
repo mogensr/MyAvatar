@@ -516,26 +516,30 @@
             overflow: hidden;
         }
         
-        .welcome-header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(45deg);
-            animation: shimmer 4s infinite;
+        .welcome-header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+            min-height: 120px;
         }
         
         .welcome-content {
+            z-index: 2;
             position: relative;
-            z-index: 1;
         }
         
         .welcome-title {
             font-size: 2rem;
-            font-weight: 800;
+            font-weight: 700;
             margin-bottom: 0.5rem;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -543,9 +547,119 @@
         .welcome-subtitle {
             font-size: 1.125rem;
             opacity: 0.9;
+            font-weight: 400;
         }
         
-        /* ==================== COMPONENTS ==================== */
+        /* Avatar Carousel Styles */
+        .avatar-carousel-container {
+            position: relative;
+            height: 80px;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .avatar-carousel {
+            display: flex;
+            animation: scroll-avatars 20s linear infinite;
+            height: 100%;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem;
+        }
+        
+        .avatar-carousel:hover {
+            animation-play-state: paused;
+        }
+        
+        .carousel-avatar {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            object-fit: cover;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+        }
+        
+        .carousel-avatar:hover {
+            transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .carousel-avatar-placeholder {
+            flex-shrink: 0;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .carousel-avatar-placeholder:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .avatar-carousel-label {
+            position: absolute;
+            top: 0.5rem;
+            left: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes scroll-avatars {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+        
+        /* No avatars state */
+        .no-avatars-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .welcome-header {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .avatar-carousel-container {
+                height: 60px;
+            }
+            
+            .carousel-avatar,
+            .carousel-avatar-placeholder {
+                width: 45px;
+                height: 45px;
+            }
+        }
         
         /* Stats Cards */
         .stats-grid {
@@ -1248,6 +1362,36 @@
                         <h1 class="welcome-title">Welcome back, {{ username or 'User' }}! 👋</h1>
                         <p class="welcome-subtitle">Ready to create amazing AI videos today?</p>
                     </div>
+                    <div class="avatar-carousel-container">
+                        <div class="avatar-carousel-label">Your Avatars</div>
+                        {% if user_avatars and user_avatars|length > 0 %}
+                            <div class="avatar-carousel" id="avatarCarousel">
+                                {% for avatar in user_avatars %}
+                                    <img src="{{ avatar.image_url }}" 
+                                         alt="{{ avatar.name }}" 
+                                         class="carousel-avatar"
+                                         title="{{ avatar.name }}"
+                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
+                                {% endfor %}
+                                <!-- Duplicate avatars for seamless loop -->
+                                {% for avatar in user_avatars %}
+                                    <img src="{{ avatar.image_url }}" 
+                                         alt="{{ avatar.name }}" 
+                                         class="carousel-avatar"
+                                         title="{{ avatar.name }}"
+                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="no-avatars-message">
+                                <div>
+                                    <i class="fas fa-user-plus" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                                    <br>
+                                    No avatars yet. <a href="/interactive-avatars" style="color: rgba(255,255,255,0.9); text-decoration: underline;">Create your first avatar!</a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
                 
                 <!-- Stats Overview - REAL DATA -->
@@ -1474,6 +1618,9 @@
 
             // Initialize video status monitoring
             initVideoStatusMonitoring();
+            
+            // Initialize avatar carousel
+            initAvatarCarousel();
         });
         
         // ==================== VIDEO STATUS MONITORING ==================== 
@@ -1583,6 +1730,45 @@
         function refreshVideoStatus(videoId) {
             console.log(`🔄 Manually refreshing video ${videoId}...`);
             checkVideoStatus(videoId, true);
+        }
+
+        // Avatar carousel functionality
+        function selectAvatar(avatarId, avatarName) {
+            console.log(`🎭 Selected avatar: ${avatarName} (ID: ${avatarId})`);
+            
+            // Show a nice notification
+            showStatusIndicator('success', `Selected avatar: ${avatarName}`);
+            
+            // You could store the selected avatar in localStorage or session
+            localStorage.setItem('selectedAvatarId', avatarId);
+            localStorage.setItem('selectedAvatarName', avatarName);
+            
+            // Optional: Navigate to text-to-video with pre-selected avatar
+            // window.location.href = `/text-to-video?avatar=${avatarId}`;
+        }
+        
+        // Initialize avatar carousel
+        function initAvatarCarousel() {
+            const carousel = document.getElementById('avatarCarousel');
+            if (!carousel) return;
+            
+            const avatars = carousel.querySelectorAll('.carousel-avatar');
+            if (avatars.length === 0) return;
+            
+            // Adjust animation duration based on number of avatars
+            const duration = Math.max(15, avatars.length * 2);
+            carousel.style.animationDuration = `${duration}s`;
+            
+            // Add hover effects
+            avatars.forEach(avatar => {
+                avatar.addEventListener('mouseenter', () => {
+                    carousel.style.animationPlayState = 'paused';
+                });
+                
+                avatar.addEventListener('mouseleave', () => {
+                    carousel.style.animationPlayState = 'running';
+                });
+            });
         }
 
         function showStatusIndicator(status, message) {

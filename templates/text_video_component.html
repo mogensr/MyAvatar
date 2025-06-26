@@ -981,39 +981,116 @@
             console.log('File extension:', fileExtension);
             
             if (!allowedTypes.includes(fileExtension)) {
-                showAlert('Unsupported file type. Please upload .txt, .docx, or .pdf files.', 'warning');
+                showMessage('Unsupported file type. Please upload .txt, .docx, or .pdf files.', 'error', 8000);
                 return;
             }
             
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                showAlert('File too large. Please upload files smaller than 5MB.', 'warning');
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                showMessage('File too large. Maximum size is 10MB', 'error', 8000);
                 return;
             }
             
             const reader = new FileReader();
+            
             reader.onload = function(e) {
-                let content = e.target.result;
-                
-                // Simple text extraction (you might want to use libraries for docx/pdf)
-                if (fileExtension === '.txt') {
-                    content = e.target.result;
-                } else {
-                    // For docx/pdf, you'd need proper parsing libraries
-                    showAlert('Text extraction from .docx and .pdf files is not yet implemented. Please use .txt files or copy-paste your text.', 'warning');
-                    return;
+                try {
+                    const content = e.target.result;
+                    console.log('File read successfully. Content length:', content.length);
+                    
+                    if (content.trim().length === 0) {
+                        showMessage('File is empty. Please select a file with content.', 'error', 8000);
+                        return;
+                    }
+                    
+                    // Set the content in the textarea
+                    const textArea = document.getElementById('textContent');
+                    if (textArea) {
+                        textArea.value = content;
+                        console.log('Content set in textarea');
+                        showMessage(`File "${file.name}" loaded successfully! (${content.length} characters)`, 'success', 6000);
+                        
+                        // Trigger any validation or update events
+                        textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Update character counter
+                        if (typeof updateCharCounter === 'function') {
+                            updateCharCounter();
+                        }
+                    } else {
+                        showMessage('Could not find text input area', 'error', 8000);
+                    }
+                } catch (error) {
+                    showMessage(`Error processing file: ${error.message}`, 'error', 8000);
                 }
-                
-                // Limit to 1500 characters
-                if (content.length > 1500) {
-                    content = content.substring(0, 1500);
-                    showAlert('Text was truncated to 1500 characters.', 'warning');
-                }
-                
-                document.getElementById('textContent').value = content;
-                updateCharCounter();
+            };
+            
+            reader.onerror = function(error) {
+                showMessage(`Error reading file: ${error.message || 'Unknown error'}`, 'error', 8000);
             };
             
             reader.readAsText(file);
+        }
+
+        // Enhanced message display function
+        function showMessage(message, type = 'info', duration = 4000) {
+            console.log(`🔔 ${type.toUpperCase()}: ${message}`);
+            
+            // Remove any existing messages
+            const existingMessages = document.querySelectorAll('.upload-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            // Create new message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `upload-message upload-message-${type}`;
+            messageDiv.innerHTML = message;
+            
+            // Style the message
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                max-width: 400px;
+                word-wrap: break-word;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideIn 0.3s ease-out;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            `;
+            
+            // Add animation styles
+            if (!document.getElementById('messageStyles')) {
+                const style = document.createElement('style');
+                style.id = 'messageStyles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(messageDiv);
+            
+            // Auto-remove after duration
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (messageDiv.parentNode) {
+                            messageDiv.remove();
+                        }
+                    }, 300);
+                }
+            }, duration);
         }
 
         // Form submission with FormData (FIXED TO MATCH BACKEND)
@@ -1025,26 +1102,26 @@
             
             // Check for missing title specifically
             if (!title) {
-                showAlert('⚠️ Please enter a video title before proceeding!', 'warning');
+                showMessage('Please enter a video title before proceeding!', 'error', 8000);
                 document.getElementById('videoTitle').focus();
                 return;
             }
             
             // Check for missing avatar
             if (!selectedAvatarId) {
-                showAlert('⚠️ Please select an avatar before proceeding!', 'warning');
+                showMessage('Please select an avatar before proceeding!', 'error', 8000);
                 return;
             }
             
             // Check for missing format
             if (!selectedFormat) {
-                showAlert('⚠️ Please select a video format before proceeding!', 'warning');
+                showMessage('Please select a video format before proceeding!', 'error', 8000);
                 return;
             }
             
             // Check for missing text
             if (!textContent) {
-                showAlert('⚠️ Please enter some text or upload a file before creating the video!', 'warning');
+                showMessage('Please enter some text or upload a file before creating the video!', 'error', 8000);
                 document.getElementById('textContent').focus();
                 return;
             }
@@ -1065,7 +1142,7 @@
             }
             
             // Update progress modal
-            updateProgressModal('⏳ Submitting your video request...', 10);
+            updateProgressModal('Submitting your video request...', 10);
             
             // Submit to text-to-video API endpoint with FormData
             fetch('/api/videos/create-from-text', {
@@ -1080,7 +1157,7 @@
             .then(result => {
                 if (result.success && result.video_id) {
                     // Start polling for video status
-                    updateProgressModal('✅ Request submitted! Now processing with HeyGen...', 20);
+                    updateProgressModal('Request submitted! Now processing with HeyGen...', 20);
                     pollVideoStatus(result.video_id);
                 } else {
                     throw new Error(result.detail || result.error || 'Unknown error occurred');
@@ -1089,7 +1166,7 @@
             .catch(error => {
                 console.error('Error creating video:', error);
                 document.getElementById('progressModal').classList.remove('show');
-                showAlert(`❌ Error creating video: ${error.message}`, 'error');
+                showMessage(`Error creating video: ${error.message}`, 'error', 8000);
             });
         }
         
@@ -1121,7 +1198,7 @@
                     
                     if (!result.success) {
                         console.error('Error from video status API:', result.error);
-                        updateProgressModal(`❌ Error: ${result.error || 'Unknown error'}`, 50);
+                        updateProgressModal(`Error: ${result.error || 'Unknown error'}`, 50);
                         return; // Continue polling despite errors
                     }
                     
@@ -1130,38 +1207,38 @@
                     
                     if (result.processing) {
                         const progress = Math.min(30 + (attempts * 2), 90);
-                        updateProgressModal(`🔄 ${result.message || 'Processing your video...'}`, progress);
+                        updateProgressModal(`Processing your video...`, progress);
                         return; // Continue polling
                     }
                     
                     if (videoStatus === 'completed') {
-                        updateProgressModal('✅ Video completed successfully!', 100);
+                        updateProgressModal('Video completed successfully!', 100);
                         clearInterval(pollInterval);
                         
                         setTimeout(() => {
                             document.getElementById('progressModal').classList.remove('show');
-                            alert('🎉 Your AI video is ready! Redirecting to dashboard...');
+                            alert('Your AI video is ready! Redirecting to dashboard...');
                             window.location.href = '/dashboard';
                         }, 2000);
                         
                     } else if (videoStatus === 'failed') {
-                        updateProgressModal('❌ Video creation failed', 0);
+                        updateProgressModal('Video creation failed', 0);
                         clearInterval(pollInterval);
                         
                         setTimeout(() => {
                             document.getElementById('progressModal').classList.remove('show');
-                            alert('❌ Video creation failed. Please try again.');
+                            alert('Video creation failed. Please try again.');
                         }, 2000);
                         
                     } else if (videoStatus === 'processing') {
                         // Gradually increase progress as processing continues
                         const progress = Math.min(30 + (attempts * 2), 90); // Gradual progress that stops at 90%
-                        updateProgressModal('🔄 HeyGen is creating your video...', progress);
+                        updateProgressModal('HeyGen is creating your video...', progress);
                         
                     } else {
                         // For pending or other statuses
                         const progress = Math.min(30 + attempts, 70); // More conservative progress
-                        updateProgressModal('⏳ Processing your request...', progress);
+                        updateProgressModal('Processing your request...', progress);
                     }
                     
                     // Log status for debugging
@@ -1181,7 +1258,7 @@
                 // Fallback: after max attempts, give user option to continue waiting or go to dashboard
                 if (attempts >= maxAttempts) {
                     clearInterval(pollInterval);
-                    updateProgressModal('⏱️ Processing is taking longer than expected', 90);
+                    updateProgressModal('Processing is taking longer than expected', 90);
                     
                     if (confirm('Video processing is taking longer than expected. Would you like to continue to your dashboard? The video will appear there when ready.')) {
                         window.location.href = '/dashboard';
