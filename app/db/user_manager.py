@@ -158,7 +158,7 @@ class Database:
         try:
             # Query the user_avatars table
             result = execute_query(
-                """SELECT id, avatar_name as name, avatar_image_url as image_url, 
+                """SELECT id, avatar_name, avatar_image_url, 
                           avatar_id as heygen_avatar_id, created_at 
                    FROM user_avatars 
                    WHERE user_id = ? 
@@ -173,11 +173,15 @@ class Database:
                     # Convert row to dict if needed
                     avatar_dict = dict(row) if hasattr(row, 'keys') else {
                         'id': row[0] if len(row) > 0 else None,
-                        'name': row[1] if len(row) > 1 else 'Unnamed Avatar',
-                        'image_url': row[2] if len(row) > 2 else '',
+                        'avatar_name': row[1] if len(row) > 1 else 'Unnamed Avatar',
+                        'avatar_image_url': row[2] if len(row) > 2 else '',
                         'heygen_avatar_id': row[3] if len(row) > 3 else '',
                         'created_at': row[4] if len(row) > 4 else None
                     }
+                    
+                    # Add both field names for compatibility
+                    avatar_dict['name'] = avatar_dict.get('avatar_name', 'Unnamed Avatar')
+                    avatar_dict['image_url'] = avatar_dict.get('avatar_image_url', '')
                     
                     log_info(f"Avatar: {avatar_dict['name']} -> {avatar_dict['image_url']}", "UserManager")
                     avatars.append(avatar_dict)
