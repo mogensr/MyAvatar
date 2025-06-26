@@ -167,11 +167,9 @@ class Database:
             if user_avatars_result:
                 for row in user_avatars_result:
                     avatar_data = dict(row) if hasattr(row, 'keys') else row
-                    # Standardize field names for template compatibility
-                    avatar_data['avatar_url'] = avatar_data.get('avatar_image_url')
-                    avatar_data['name'] = avatar_data.get('avatar_name', 'Unnamed Avatar')
-                    avatar_data['type'] = 'Custom' if avatar_data.get('is_custom') else 'Standard'
-                    avatar_data['heygen_avatar_id'] = avatar_data.get('avatar_id')
+                    # Ensure avatar_url is set from avatar_image_url for template compatibility
+                    if not avatar_data.get('avatar_url') and avatar_data.get('avatar_image_url'):
+                        avatar_data['avatar_url'] = avatar_data.get('avatar_image_url')
                     avatars.append(avatar_data)
             
             # Second, get the main avatar from the users table (HeyGen avatar URL)
@@ -184,13 +182,14 @@ class Database:
                 user_data = dict(user_result) if hasattr(user_result, 'keys') else user_result
                 avatar_img_url = user_data.get('avatar_img_url')
                 if avatar_img_url:
-                    # Create avatar entry for the main user avatar
+                    # Create avatar entry for the main user avatar with template-compatible field names
                     main_avatar = {
                         'id': f"user_{user_data.get('id')}",
                         'user_id': user_id,
                         'avatar_url': avatar_img_url,
-                        'name': f"{user_data.get('username', 'User')}'s HeyGen Avatar",
-                        'type': 'HeyGen',
+                        'avatar_image_url': avatar_img_url,  # Keep both for compatibility
+                        'avatar_name': f"{user_data.get('username', 'User')}'s HeyGen Avatar",
+                        'avatar_id': user_data.get('avatar_id'),
                         'heygen_avatar_id': user_data.get('avatar_id'),
                         'created_at': None,
                         'is_default': 1,
