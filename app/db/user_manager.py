@@ -156,12 +156,52 @@ class Database:
     def get_user_avatars(self, user_id):
         """Get avatars for a user"""
         try:
-            result = execute_query(
+            avatars = []
+            
+            # First, get avatars from the user_avatars table
+            user_avatars_result = execute_query(
                 "SELECT * FROM user_avatars WHERE user_id = ? ORDER BY created_at DESC", 
                 (user_id,), 
                 fetch_all=True
             )
-            return [dict(row) if hasattr(row, 'keys') else row for row in result] if result else []
+            if user_avatars_result:
+                for row in user_avatars_result:
+                    avatar_data = dict(row) if hasattr(row, 'keys') else row
+                    # Standardize field names for template compatibility
+                    avatar_data['avatar_url'] = avatar_data.get('avatar_image_url')
+                    avatar_data['name'] = avatar_data.get('avatar_name', 'Unnamed Avatar')
+                    avatar_data['type'] = 'Custom' if avatar_data.get('is_custom') else 'Standard'
+                    avatar_data['heygen_avatar_id'] = avatar_data.get('avatar_id')
+                    avatars.append(avatar_data)
+            
+            # Second, get the main avatar from the users table (HeyGen avatar URL)
+            user_result = execute_query(
+                "SELECT id, avatar_img_url, avatar_id, username FROM users WHERE id = ?", 
+                (user_id,), 
+                fetch_one=True
+            )
+            if user_result:
+                user_data = dict(user_result) if hasattr(user_result, 'keys') else user_result
+                avatar_img_url = user_data.get('avatar_img_url')
+                if avatar_img_url:
+                    # Create avatar entry for the main user avatar
+                    main_avatar = {
+                        'id': f"user_{user_data.get('id')}",
+                        'user_id': user_id,
+                        'avatar_url': avatar_img_url,
+                        'name': f"{user_data.get('username', 'User')}'s HeyGen Avatar",
+                        'type': 'HeyGen',
+                        'heygen_avatar_id': user_data.get('avatar_id'),
+                        'created_at': None,
+                        'is_default': 1,
+                        'is_custom': False
+                    }
+                    # Add to the beginning of the list (most important)
+                    avatars.insert(0, main_avatar)
+            
+            log_info(f"Retrieved {len(avatars)} avatars for user {user_id}", "UserManager")
+            return avatars
+            
         except Exception as e:
             log_error(f"Error getting avatars for user {user_id}: {str(e)}", "UserManager", e)
             return []
