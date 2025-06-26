@@ -156,10 +156,11 @@ class Database:
     def get_user_avatars(self, user_id):
         """Get avatars for a user"""
         try:
-            # Query the avatars table, not user_avatars
+            # Query the user_avatars table (not avatars)
             result = execute_query(
-                """SELECT id, name, image_url, heygen_avatar_id, heygen_data, created_at 
-                   FROM avatars 
+                """SELECT id, avatar_name as name, avatar_image_url as image_url, 
+                          avatar_id as heygen_avatar_id, NULL as heygen_data, created_at 
+                   FROM user_avatars 
                    WHERE user_id = ? 
                    ORDER BY created_at DESC""", 
                 (user_id,), 
