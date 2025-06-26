@@ -772,19 +772,30 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 JavaScript loaded and DOM ready!');
+            
             checkSetupComplete();
             
             // Add click handler to file upload area
             const fileUploadArea = document.getElementById('fileUploadArea');
-            fileUploadArea.addEventListener('click', function() {
-                document.getElementById('fileInput').click();
-            });
-            
-            // Add drag event handlers
-            fileUploadArea.addEventListener('dragenter', handleDragEnter);
-            fileUploadArea.addEventListener('dragover', handleDragOver);
-            fileUploadArea.addEventListener('dragleave', handleDragLeave);
-            fileUploadArea.addEventListener('drop', handleDrop);
+            if (fileUploadArea) {
+                console.log('✅ Found file upload area element');
+                
+                fileUploadArea.addEventListener('click', function() {
+                    console.log('📁 Upload area clicked!');
+                    document.getElementById('fileInput').click();
+                });
+                
+                // Add drag event handlers
+                fileUploadArea.addEventListener('dragenter', handleDragEnter);
+                fileUploadArea.addEventListener('dragover', handleDragOver);
+                fileUploadArea.addEventListener('dragleave', handleDragLeave);
+                fileUploadArea.addEventListener('drop', handleDrop);
+                
+                console.log('✅ All event listeners attached successfully');
+            } else {
+                console.error('❌ Could not find file upload area element!');
+            }
             
             // Prevent default drag behavior on the whole document
             document.addEventListener('dragover', function(e) {
@@ -793,6 +804,8 @@
             document.addEventListener('drop', function(e) {
                 e.preventDefault();
             });
+            
+            console.log('✅ Global drag prevention added');
         });
 
         // Alert system functions
