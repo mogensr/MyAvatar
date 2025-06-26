@@ -641,6 +641,9 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
         
         # Import HeyGen functions
         from ..api.heygen import get_available_avatars
+        import requests
+        import uuid
+        from pathlib import Path
         
         try:
             # Fetch all avatars from HeyGen and find the specific one
@@ -676,6 +679,55 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                     content={"success": False, "error": "No image URL found for this avatar"},
                     status_code=400
                 )
+            
+            # Download the avatar image from HeyGen
+            try:
+                log_info(f"Downloading avatar image from: {avatar_image_url}", "AdminRoutes")
+                image_response = requests.get(avatar_image_url, timeout=30)
+                image_response.raise_for_status()
+                
+                # Generate unique filename
+                file_extension = ".jpg"  # Default to jpg
+                if "png" in avatar_image_url.lower():
+                    file_extension = ".png"
+                elif "jpeg" in avatar_image_url.lower() or "jpg" in avatar_image_url.lower():
+                    file_extension = ".jpg"
+                
+                unique_filename = f"avatar_{avatar_id}_{uuid.uuid4().hex[:8]}{file_extension}"
+                
+                # Ensure uploads directory exists
+                uploads_dir = Path("static/uploads")
+                uploads_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Save image to local storage
+                image_path = uploads_dir / unique_filename
+                with open(image_path, "wb") as f:
+                    f.write(image_response.content)
+                
+                log_info(f"Avatar image saved to: {image_path}", "AdminRoutes")
+                
+                # Save image record to user_images table
+                relative_path = f"static/uploads/{unique_filename}"
+                image_name = f"Avatar {avatar_name}"
+                
+                # Insert image record
+                if USE_POSTGRES:
+                    execute_query(
+                        "INSERT INTO user_images (user_id, filename, original_filename, file_path, file_size, content_type, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
+                        (user_id, unique_filename, f"{avatar_name}{file_extension}", relative_path, len(image_response.content), f"image/{file_extension[1:]}")
+                    )
+                else:
+                    execute_query(
+                        "INSERT INTO user_images (user_id, filename, original_filename, file_path, file_size, content_type, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
+                        (user_id, unique_filename, f"{avatar_name}{file_extension}", relative_path, len(image_response.content), f"image/{file_extension[1:]}")
+                    )
+                
+                log_info(f"Avatar image added to user {user_to_manage['username']}'s gallery", "AdminRoutes")
+                
+            except Exception as img_error:
+                log_error(f"Failed to download/save avatar image: {str(img_error)}", "AdminRoutes")
+                # Continue with avatar data even if image download fails
+                relative_path = avatar_image_url  # Use original URL as fallback
             
             # Check if avatar already exists for this user
             existing_avatar = execute_query(
@@ -714,11 +766,12 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             return JSONResponse(
                 content={
                     "success": True, 
-                    "message": "Avatar fetched and saved successfully",
+                    "message": "Avatar fetched and saved successfully. Image also added to user gallery!",
                     "avatar": {
                         "id": avatar_id,
                         "name": avatar_name,
-                        "image_url": avatar_image_url
+                        "image_url": avatar_image_url,
+                        "local_image_path": relative_path
                     }
                 }
             )
