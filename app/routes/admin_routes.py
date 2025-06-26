@@ -610,7 +610,7 @@ async def clear_user_videos(request: Request, user_id: int):
             status_code=303
         )
 
-@router.post("/admin/fetch-heygen-avatar/{user_id}")
+@router.post("/fetch-heygen-avatar/{user_id}")
 async def fetch_avatar_from_heygen(request: Request, user_id: int):
     """Fetch avatar image from HeyGen API and save to user"""
     try:
