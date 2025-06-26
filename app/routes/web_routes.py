@@ -849,6 +849,38 @@ async def dashboard_page(request: Request):
         # Get user's videos - FIXED VERSION
         videos = db.get_user_videos(user["id"])
         
+        # Get user's avatars for the carousel
+        user_avatars = []
+        try:
+            avatars = db.get_user_avatars(user["id"])
+            if avatars:
+                for avatar in avatars:
+                    if isinstance(avatar, dict):
+                        # Prioritize HeyGen avatar image over old image_url
+                        avatar_image = None
+                        if avatar.get('heygen_avatar_id'):
+                            # Use HeyGen avatar image if available
+                            heygen_data = avatar.get('heygen_data')
+                            if heygen_data and isinstance(heygen_data, dict):
+                                avatar_image = heygen_data.get('preview_image_url') or heygen_data.get('image_url')
+                        
+                        # Fallback to old image_url if no HeyGen image
+                        if not avatar_image:
+                            avatar_image = avatar.get('image_url', '')
+                        
+                        user_avatars.append({
+                            'id': avatar.get('id'),
+                            'name': sanitize_input(avatar.get('name', 'Unnamed Avatar')),
+                            'image_url': avatar_image,
+                            'heygen_avatar_id': avatar.get('heygen_avatar_id', '')
+                        })
+            logger.info(f"🎭 DASHBOARD - Found {len(user_avatars)} avatars for user {user.get('username')}")
+            for avatar in user_avatars:
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50]}..." if avatar['image_url'] else f"   - Avatar: {avatar['name']} | No image")
+        except Exception as avatar_error:
+            logger.error(f"Error fetching user avatars: {avatar_error}")
+            user_avatars = []
+        
         # Debug: Log what we're getting
         print(f"Dashboard - User ID: {user['id']}, Videos found: {len(videos) if videos else 0}")
         if videos:
@@ -931,6 +963,7 @@ async def dashboard_page(request: Request):
             "total_duration": duration_str,
             "total_views": str(total_views),
             "total_shares": str(total_shares),
+            "user_avatars": user_avatars  # Add user avatars to template context
         }
         
         logger.info(f"🔍 DASHBOARD - Passing {len(processed_videos)} videos to template")
