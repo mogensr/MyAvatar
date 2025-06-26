@@ -219,21 +219,17 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
     # Check if this is a public avatar (not starting with custom-)
     is_public_avatar = not avatar_id.startswith("custom-")
     
-    # For public avatars like Abigail_expressive_2024112501, a voice_id is REQUIRED
-    if is_public_avatar and (not voice_id or voice_id.lower() == 'cloned'):
-        log_error(f"Public avatar {avatar_id} requires a specific voice_id", "HeyGen API")
+    # For ALL avatars using text-to-speech, voice_id is REQUIRED per HeyGen documentation
+    if not voice_id or voice_id.lower() == 'cloned':
+        log_error(f"Avatar {avatar_id} requires a specific voice_id for text-to-speech", "HeyGen API")
         return {
             "success": False,
-            "error": f"Public avatars require a specific voice_id. For avatar '{avatar_id}', please provide a voice ID."
+            "error": f"Text-to-speech requires a specific voice_id. For avatar '{avatar_id}', please provide a valid HeyGen voice ID."
         }
     
-    # Add voice_id for all public avatars or when specifically provided for custom avatars
-    if voice_id and voice_id.lower() != 'cloned':
-        data["video_inputs"][0]["voice"]["voice_id"] = voice_id
-        log_info(f"Using specified voice_id: {voice_id}", "HeyGen API")
-    else:
-        # This will only happen for custom avatars that use their own cloned voice
-        log_info(f"Using avatar's cloned voice for custom avatar_id: {avatar_id}", "HeyGen API")
+    # Add voice_id for text-to-speech (required for all avatars)
+    data["video_inputs"][0]["voice"]["voice_id"] = voice_id
+    log_info(f"Using voice_id for text-to-speech: {voice_id}", "HeyGen API")
     
     try:
         log_info(f"Creating TTS video with avatar {avatar_id}, format: {video_format}", "HeyGen API")
@@ -248,7 +244,6 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         
         # Log raw response for debugging
         log_info(f"HeyGen API response status: {response.status_code}", "HeyGen API")
-        log_info(f"HeyGen API response headers: {dict(response.headers)}", "HeyGen API")
         log_info(f"HeyGen API response text: {response.text[:500]}{'...' if len(response.text) > 500 else ''}", "HeyGen API")
         
         # Check if response is actually JSON before parsing

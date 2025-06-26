@@ -165,3 +165,57 @@ class Database:
         except Exception as e:
             log_error(f"Error getting avatars for user {user_id}: {str(e)}", "UserManager", e)
             return []
+
+    def create_user_settings_table(self):
+        """Create user_settings table if it doesn't exist"""
+        try:
+            execute_query("""
+                CREATE TABLE IF NOT EXISTS user_settings (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    setting_name VARCHAR(100) NOT NULL,
+                    setting_value TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE(user_id, setting_name)
+                )
+            """)
+            log_info("user_settings table created/verified", "UserManager")
+            return True
+        except Exception as e:
+            log_error(f"Error creating user_settings table: {str(e)}", "UserManager", e)
+            return False
+
+    def get_user_setting(self, user_id, setting_name, default_value=None):
+        """Get a user setting value"""
+        try:
+            result = execute_query(
+                "SELECT setting_value FROM user_settings WHERE user_id = ? AND setting_name = ?",
+                (user_id, setting_name),
+                fetch_one=True
+            )
+            if result:
+                return result['setting_value'] if hasattr(result, 'keys') else result[0]
+            return default_value
+        except Exception as e:
+            log_error(f"Error getting user setting {setting_name} for user {user_id}: {str(e)}", "UserManager", e)
+            return default_value
+
+    def set_user_setting(self, user_id, setting_name, setting_value):
+        """Set a user setting value"""
+        try:
+            # Use UPSERT (INSERT ... ON CONFLICT) for PostgreSQL
+            execute_query("""
+                INSERT INTO user_settings (user_id, setting_name, setting_value, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id, setting_name)
+                DO UPDATE SET 
+                    setting_value = EXCLUDED.setting_value,
+                    updated_at = CURRENT_TIMESTAMP
+            """, (user_id, setting_name, setting_value))
+            log_info(f"Set user setting {setting_name} = {setting_value} for user {user_id}", "UserManager")
+            return True
+        except Exception as e:
+            log_error(f"Error setting user setting {setting_name} for user {user_id}: {str(e)}", "UserManager", e)
+            return False

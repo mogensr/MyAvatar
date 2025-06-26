@@ -405,10 +405,10 @@ async def create_video_from_text_endpoint(
             voice_id = "0f04c50500bf417396ba2e846d7bd3d7"  # Use the voice ID you provided
             log_info(f"Using hardcoded voice_id for testuser with public avatar: {voice_id}", "API")
         
-        # If still no voice_id for public avatar, use a default
-        if is_public_avatar and not voice_id:
-            voice_id = "en-US-JennyNeural"  # Default Microsoft neural voice
-            log_warning(f"Using fallback voice_id for public avatar: {voice_id}", "API")
+        # If still no voice_id, use a valid HeyGen voice ID as fallback
+        if not voice_id:
+            voice_id = "0f04c50500bf417396ba2e846d7bd3d7"  # Valid HeyGen voice ID
+            log_warning(f"Using fallback HeyGen voice_id: {voice_id}", "API")
                 
         # Create video with HeyGen API
         result = create_video_from_text(api_key, avatar_id, text, format, voice_id)
