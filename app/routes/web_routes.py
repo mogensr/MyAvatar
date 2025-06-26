@@ -1195,7 +1195,9 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
         
         # Get user's avatars
         try:
+            logger.info(f"🔍 ROUTE DEBUG: About to call get_user_avatars for user_id: {user_id}")
             user_avatars = db.get_user_avatars(user_id)
+            logger.info(f"🔍 ROUTE DEBUG: get_user_avatars returned: {user_avatars}")
             if not user_avatars:
                 user_avatars = []
             
