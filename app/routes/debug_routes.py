@@ -151,8 +151,7 @@ async def validate_heygen_avatar(request: Request, avatar_id: str):
         log_error(f"Error validating HeyGen avatar {avatar_id}: {str(e)}", "Debug")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
-        )
+            content={"success": False, "error": str(e)})
 
 @router.post("/test-video-creation")
 async def test_video_creation(
@@ -206,8 +205,7 @@ async def test_video_creation(
         log_error(f"Error in test video creation: {str(e)}", "Debug")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
-        )
+            content={"success": False, "error": str(e)})
 
 @router.get("/heygen-account-info")
 async def heygen_account_info(request: Request):
@@ -274,8 +272,7 @@ async def heygen_account_info(request: Request):
         log_error(f"Error getting HeyGen account info: {str(e)}", "Debug")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
-        )
+            content={"success": False, "error": str(e)})
 
 @router.get("/list-my-avatars")
 async def list_my_avatars(request: Request):
@@ -325,5 +322,4 @@ async def list_my_avatars(request: Request):
         log_error(f"Error listing HeyGen avatars: {str(e)}", "Debug")
         return JSONResponse(
             status_code=500,
-            content={"success": False, "error": str(e)}
-        )
+            content={"success": False, "error": str(e)})

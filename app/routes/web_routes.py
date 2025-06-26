@@ -1686,6 +1686,23 @@ async def backgrounds_page(request: Request):
         logger.error(f"Error loading backgrounds page: {e}")
         return RedirectResponse(url="/dashboard", status_code=302)
 
+@router.get("/backgroundfx")
+async def backgroundfx_page(request: Request):
+    """BackGroundFX main page - premium background replacement feature"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        return templates.TemplateResponse("backgrounds.html", {
+            "request": request,
+            "user": user
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading BackGroundFX page: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
 @router.get("/api/videos")
 async def get_user_videos_api(request: Request):
     """API endpoint to get user videos for BackGroundFX"""

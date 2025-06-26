@@ -688,12 +688,12 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 # Update existing avatar
                 if USE_POSTGRES:
                     execute_query(
-                        "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = NOW() WHERE user_id = ? AND avatar_id = ?",
+                        "UPDATE user_avatars SET avatar_name = ?, avatar_image_url = ?, updated_at = NOW() WHERE user_id = ? AND avatar_id = ?",
                         (avatar_name, avatar_image_url, user_id, avatar_id)
                     )
                 else:
                     execute_query(
-                        "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = datetime('now') WHERE user_id = ? AND avatar_id = ?",
+                        "UPDATE user_avatars SET avatar_name = ?, avatar_image_url = ?, updated_at = datetime('now') WHERE user_id = ? AND avatar_id = ?",
                         (avatar_name, avatar_image_url, user_id, avatar_id)
                     )
                 log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
@@ -701,12 +701,12 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 # Insert new avatar
                 if USE_POSTGRES:
                     execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, NOW())",
+                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default, created_at) VALUES (?, ?, ?, ?, 0, NOW())",
                         (user_id, avatar_id, avatar_name, avatar_image_url)
                     )
                 else:
                     execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, datetime('now'))",
+                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url, is_default, created_at) VALUES (?, ?, ?, ?, 0, datetime('now'))",
                         (user_id, avatar_id, avatar_name, avatar_image_url)
                     )
                 log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
