@@ -377,7 +377,7 @@
             background: rgba(99, 102, 241, 0.05);
         }
         
-        .file-upload-area.dragover {
+        .file-upload-area.drag-over {
             border-color: var(--primary);
             background: rgba(99, 102, 241, 0.1);
             transform: scale(1.02);
@@ -714,11 +714,11 @@
                         <div class="upload-title">Drop file here or click to upload</div>
                         <div class="upload-subtitle">Upload your text content from a file</div>
                         <div class="upload-formats">Supported: .txt, .docx, .pdf (max 1500 chars)</div>
-                        <button type="button" class="upload-btn">
-                            <i class="fas fa-file-upload"></i> Choose File
-                        </button>
                     </div>
                     <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf" onchange="handleFileUpload(event)">
+                    <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-file-upload"></i> Choose File
+                    </button>
                 </div>
             </div>
             
@@ -903,16 +903,20 @@
         // File upload handling
         function handleDragOver(event) {
             event.preventDefault();
-            event.currentTarget.classList.add('dragover');
+            event.stopPropagation();
+            event.currentTarget.classList.add('drag-over');
         }
-
+        
         function handleDragLeave(event) {
-            event.currentTarget.classList.remove('dragover');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
         }
-
+        
         function handleDrop(event) {
             event.preventDefault();
-            event.currentTarget.classList.remove('dragover');
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
@@ -1072,12 +1076,18 @@
                     
                     if (!result.success) {
                         console.error('Error from video status API:', result.error);
-                        updateProgressModal(`⚠️ Status check error: ${result.error || 'Unknown error'}`, 50);
+                        updateProgressModal(`❌ Error: ${result.error || 'Unknown error'}`, 50);
                         return; // Continue polling despite errors
                     }
                     
                     const videoStatus = result.status;
                     console.log('Video status response:', result);
+                    
+                    if (result.processing) {
+                        const progress = Math.min(30 + (attempts * 2), 90);
+                        updateProgressModal(`🔄 ${result.message || 'Processing your video...'}`, progress);
+                        return; // Continue polling
+                    }
                     
                     if (videoStatus === 'completed') {
                         updateProgressModal('✅ Video completed successfully!', 100);
