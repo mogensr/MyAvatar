@@ -859,7 +859,7 @@ async def dashboard_page(request: Request):
             if avatars:
                 for avatar in avatars:
                     if isinstance(avatar, dict):
-                        # get_user_avatars already fetches fresh HeyGen images and updates image_url
+                        # Use the image_url directly from database (already contains HeyGen URLs)
                         avatar_image = avatar.get('image_url', '')
                         avatar_name = avatar.get('name', 'Unnamed Avatar')
                         
