@@ -703,7 +703,7 @@
                 <div class="file-upload-container">
                     <label class="form-label">Or Upload Text File</label>
                     <div class="file-upload-area" onclick="document.getElementById('fileInput').click()" 
-                         ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+                         ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" ondragenter="handleDragEnter(event)">
                         <i class="fas fa-cloud-upload upload-icon"></i>
                         <div class="upload-title">Drop file here or click to upload</div>
                         <div class="upload-subtitle">Upload your text content from a file</div>
@@ -895,25 +895,41 @@
         document.getElementById('textContent').addEventListener('input', updateCharCounter);
 
         // File upload handling
+        function handleDragEnter(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log('Drag enter');
+            event.target.closest('.file-upload-area').classList.add('drag-over');
+        }
+
         function handleDragOver(event) {
             event.preventDefault();
             event.stopPropagation();
-            event.currentTarget.classList.add('drag-over');
+            console.log('Drag over');
+            event.target.closest('.file-upload-area').classList.add('drag-over');
         }
-        
+
         function handleDragLeave(event) {
             event.preventDefault();
             event.stopPropagation();
-            event.currentTarget.classList.remove('drag-over');
+            console.log('Drag leave');
+            // Only remove drag-over if we're actually leaving the drop area
+            if (!event.target.closest('.file-upload-area').contains(event.relatedTarget)) {
+                event.target.closest('.file-upload-area').classList.remove('drag-over');
+            }
         }
-        
+
         function handleDrop(event) {
             event.preventDefault();
             event.stopPropagation();
-            event.currentTarget.classList.remove('drag-over');
+            console.log('File dropped!', event);
+            
+            const uploadArea = event.target.closest('.file-upload-area');
+            uploadArea.classList.remove('drag-over');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
+                console.log('Processing dropped file:', files[0]);
                 processFile(files[0]);
             }
         }
