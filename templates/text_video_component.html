@@ -290,11 +290,6 @@
             font-weight: bold;
         }
         
-        .avatar-name {
-            font-weight: 600;
-            color: var(--gray-900);
-        }
-        
         /* ==================== TEXT INPUT SECTION ==================== */
         .text-input-section {
             background: var(--white);
@@ -670,7 +665,6 @@
                                         <i class="fas fa-user"></i>
                                     {% endif %}
                                 </div>
-                                <div class="avatar-name">{{ avatar.avatar_name or 'Avatar' }}</div>
                             </div>
                             {% endfor %}
                         {% else %}
@@ -716,7 +710,7 @@
                         <div class="upload-formats">Supported: .txt, .docx, .pdf (max 1500 chars)</div>
                     </div>
                     <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf" onchange="handleFileUpload(event)">
-                    <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    <button type="button" class="upload-btn" onclick="console.log('Button clicked!'); document.getElementById('fileInput').click()">
                         <i class="fas fa-file-upload"></i> Choose File
                     </button>
                 </div>
@@ -925,15 +919,19 @@
         }
 
         function handleFileUpload(event) {
+            console.log('File upload triggered!', event);
             const file = event.target.files[0];
+            console.log('Selected file:', file);
             if (file) {
                 processFile(file);
             }
         }
 
         function processFile(file) {
+            console.log('Processing file:', file.name, file.type, file.size);
             const allowedTypes = ['.txt', '.docx', '.pdf'];
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            console.log('File extension:', fileExtension);
             
             if (!allowedTypes.includes(fileExtension)) {
                 showAlert('Unsupported file type. Please upload .txt, .docx, or .pdf files.', 'warning');
