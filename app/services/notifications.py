@@ -1,6 +1,6 @@
 """
 Notifications service for MyAvatar
-Uses the libraryFX notifications system for alerts and client notifications
+Uses legacy notifications system (libraryFX integration disabled)
 """
 import os
 import sys
@@ -8,100 +8,96 @@ import logging
 from pathlib import Path
 import traceback
 
-# Configure logging before anything else
-logger = logging.getLogger("myavatar.services.notifications")
+logger = logging.getLogger(__name__)
 
-# Add libraryFX to Python path for development
-# In production, you'd install the package properly
-LIBRARY_FX_PATH = os.path.join(Path.home(), "Projects", "Python", "libraryFX")
-if os.path.exists(LIBRARY_FX_PATH):
-    logger.info(f"Found libraryFX at {LIBRARY_FX_PATH}")
-    # Add main package path
-    if LIBRARY_FX_PATH not in sys.path:
-        sys.path.insert(0, LIBRARY_FX_PATH)
-    
-    # Add individual module paths for direct importing if needed
-    for module in ["core", "notifications", "billing", "media", "distribution"]:
-        module_path = os.path.join(LIBRARY_FX_PATH, module)
-        if os.path.exists(module_path) and module_path not in sys.path:
-            sys.path.insert(0, module_path)
-            logger.debug(f"Added {module} module to path: {module_path}")
-else:
-    logger.warning(f"libraryFX not found at expected path: {LIBRARY_FX_PATH}")
+# LibraryFX integration disabled - using legacy notifications
+USE_LIBRARY_FX = False
+
+if USE_LIBRARY_FX:
+    # Add libraryFX to Python path for development
+    # In production, you'd install the package properly
+    LIBRARY_FX_PATH = os.path.join(Path.home(), "Projects", "Python", "libraryFX")
+    if os.path.exists(LIBRARY_FX_PATH):
+        logger.info(f"Found libraryFX at {LIBRARY_FX_PATH}")
+        # Add main package path
+        if LIBRARY_FX_PATH not in sys.path:
+            sys.path.insert(0, LIBRARY_FX_PATH)
+        
+        # Add individual module paths for direct importing if needed
+        for module in ["core", "notifications", "billing", "media", "distribution"]:
+            module_path = os.path.join(LIBRARY_FX_PATH, module)
+            if os.path.exists(module_path) and module_path not in sys.path:
+                sys.path.insert(0, module_path)
+                logger.debug(f"Added {module} module to path: {module_path}")
+    else:
+        logger.warning(f"libraryFX not found at expected path: {LIBRARY_FX_PATH}")
+        USE_LIBRARY_FX = False
 
 # Import from libraryFX with detailed error handling
-try:
-    # Try importing from libraryFX
-    from libraryFX.notifications.alerts import initialize_default_alert_manager, send_alert
-    from libraryFX.notifications.client import initialize_default_client_notification_manager, send_client_notification
-    
-    # Initialize alert manager for MyAvatar
+if USE_LIBRARY_FX:
     try:
-        alert_manager = initialize_default_alert_manager("MyAvatar")
-        logger.info("Alert manager initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize alert manager: {e}")
-        raise
-    
-    # Initialize client notification manager
-    try:
-        client_notifier = initialize_default_client_notification_manager("MyAvatar")
-        logger.info("Client notification manager initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize client notification manager: {e}")
-        raise
-    
-    USING_LIBRARY_FX = True
-    logger.info("Successfully configured libraryFX notifications system")
-    
-except ImportError as e:
-    # Detailed import error handling
-    USING_LIBRARY_FX = False
-    logger.warning(f"libraryFX import error: {e}")
-    logger.warning("Using legacy notifications as fallback")
-    
-    if LIBRARY_FX_PATH in sys.path:
-        logger.debug(f"Current sys.path: {sys.path}")
-        # Try to find the specific module causing the import error
+        # Try importing from libraryFX
+        from libraryFX.notifications.alerts import initialize_default_alert_manager, send_alert
+        from libraryFX.notifications.client import initialize_default_client_notification_manager, send_client_notification
+        
+        # Initialize the notification systems
+        try:
+            # Initialize alert manager with default configuration
+            initialize_default_alert_manager()
+            logger.info("Alert manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize alert manager: {e}")
+        
+        try:
+            # Initialize client notification manager
+            initialize_default_client_notification_manager()
+            logger.info("Client notification manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize client notification manager: {e}")
+        
+        # Test the imports
+        logger.info("Successfully imported libraryFX notification modules")
+        logger.info("Successfully configured libraryFX notifications system")
+        
+        LIBRARY_FX_AVAILABLE = True
+        
+    except ImportError as e:
+        logger.warning(f"libraryFX import error: {e}")
+        logger.warning("Using legacy notifications as fallback")
+        LIBRARY_FX_AVAILABLE = False
+        
+        # Additional debugging
         try:
             import libraryFX
             logger.debug(f"libraryFX base package found at {libraryFX.__file__}")
         except ImportError:
             logger.error("Cannot import base libraryFX package")
-    
-    # Simple legacy notification functions for backward compatibility
-    def send_alert(title, message, severity="info"):
-        """Legacy alert function"""
-        logger.warning(f"[ALERT-{severity.upper()}] {title}: {message}")
-    
-    def send_client_notification(client_id, title, message, **kwargs):
-        """Legacy client notification function"""
-        logger.warning(f"[NOTIFICATION] To {client_id}: {title} - {message}")
-except Exception as e:
-    # Catch any other exceptions during import/initialization
-    USING_LIBRARY_FX = False
-    logger.error(f"Unexpected error setting up notifications: {e}")
-    logger.error(traceback.format_exc())
-    
-    # Emergency fallback functions
-    def send_alert(title, message, severity="info"):
-        print(f"[ALERT-{severity.upper()}] {title}: {message}")
-        logger.warning(f"[ALERT-{severity.upper()}] {title}: {message}")
-    
-    def send_client_notification(client_id, title, message, **kwargs):
-        print(f"[NOTIFICATION] To {client_id}: {title} - {message}")
-        logger.warning(f"[NOTIFICATION] To {client_id}: {title} - {message}")
+            
+    except Exception as e:
+        logger.error(f"Unexpected error with libraryFX: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        LIBRARY_FX_AVAILABLE = False
+else:
+    logger.info("LibraryFX integration disabled - using legacy notifications")
+    LIBRARY_FX_AVAILABLE = False
+
+# Simple legacy notification functions for backward compatibility
+def send_alert(title, message, severity="info"):
+    """Legacy alert function"""
+    logger.warning(f"[ALERT-{severity.upper()}] {title}: {message}")
+
+def send_client_notification(client_id, title, message, **kwargs):
+    """Legacy client notification function"""
+    logger.warning(f"[NOTIFICATION] To {client_id}: {title} - {message}")
 
 # Public API - export only stable interface functions
 __all__ = ['send_alert', 'send_client_notification', 'notify_admin', 
-          'notify_user', 'notify_service_status', 'USING_LIBRARY_FX']
-
+          'notify_user', 'notify_service_status', 'LIBRARY_FX_AVAILABLE']
 
 # Helper functions with improved error handling
 def notify_admin(title, message, severity="info"):
     """Send notification to administrators"""
     send_alert(title, message, severity)
-
 
 def notify_user(user_id, title, message, severity="info", **kwargs):
     """Send notification to a user"""
@@ -116,7 +112,6 @@ def notify_user(user_id, title, message, severity="info", **kwargs):
         channels=channels,
         metadata=metadata
     )
-
 
 def notify_service_status(service_name, status, details=None):
     """Send service status notification"""
