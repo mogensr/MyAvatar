@@ -994,20 +994,49 @@
             
             reader.onload = function(e) {
                 try {
-                    const content = e.target.result;
-                    console.log('File read successfully. Content length:', content.length);
+                    let content = e.target.result;
+                    console.log(`✅ File read successfully. Content length: ${content.length} characters`);
+                    
+                    // Check if this is actually a Word document or other binary file
+                    if (content.includes('<?xml') || content.includes('<Content_Types>') || content.includes('PK\x03\x04') || content.includes('\x00')) {
+                        showMessage('❌ This appears to be a Word document or binary file. Please save as plain text (.txt) and try again.', 'error', 10000);
+                        return;
+                    }
+                    
+                    // Remove any BOM (Byte Order Mark) characters
+                    content = content.replace(/^\uFEFF/, '');
+                    
+                    // Clean up common encoding issues and normalize line breaks
+                    content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    
+                    // Remove excessive whitespace but preserve paragraph breaks
+                    content = content.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
                     
                     if (content.trim().length === 0) {
-                        showMessage('File is empty. Please select a file with content.', 'error', 8000);
+                        const errorMsg = '❌ File is empty or contains no readable text. Please check your file.';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
                         return;
+                    }
+                    
+                    // Limit to 1500 characters
+                    let truncated = false;
+                    if (content.length > 1500) {
+                        content = content.substring(0, 1500);
+                        truncated = true;
                     }
                     
                     // Set the content in the textarea
                     const textArea = document.getElementById('textContent');
                     if (textArea) {
                         textArea.value = content;
-                        console.log('Content set in textarea');
-                        showMessage(`File "${file.name}" loaded successfully! (${content.length} characters)`, 'success', 6000);
+                        console.log('✅ Content set in textarea');
+                        
+                        let successMsg = `✅ File "${file.name}" loaded successfully! (${content.length} characters)`;
+                        if (truncated) {
+                            successMsg += ' - Text was truncated to 1500 characters.';
+                        }
+                        showMessage(successMsg, 'success', 8000);
                         
                         // Trigger any validation or update events
                         textArea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1017,15 +1046,21 @@
                             updateCharCounter();
                         }
                     } else {
-                        showMessage('Could not find text input area', 'error', 8000);
+                        const errorMsg = '❌ Could not find text input area';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
                     }
                 } catch (error) {
-                    showMessage(`Error processing file: ${error.message}`, 'error', 8000);
+                    const errorMsg = `❌ Error processing file: ${error.message}`;
+                    console.error(errorMsg, error);
+                    showMessage(errorMsg, 'error', 8000);
                 }
             };
             
             reader.onerror = function(error) {
-                showMessage(`Error reading file: ${error.message || 'Unknown error'}`, 'error', 8000);
+                const errorMsg = `❌ Error reading file: ${error.message || 'Unknown error'}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
             };
             
             reader.readAsText(file);
