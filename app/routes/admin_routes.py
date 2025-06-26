@@ -801,6 +801,8 @@ async def delete_user_image(request: Request, image_id: int):
     """Delete a user avatar (admin only)"""
     user_id = None
     try:
+        log_info(f"🔍 DEBUG: Delete request for image_id: {image_id} (type: {type(image_id)})", "AdminRoutes")
+        
         # Verify admin access
         admin_user = require_admin(request)
         
@@ -811,13 +813,17 @@ async def delete_user_image(request: Request, image_id: int):
             fetch_one=True
         )
         
+        log_info(f"🔍 DEBUG: Avatar query result: {avatar}", "AdminRoutes")
+        
         if not avatar:
+            log_warning(f"🔍 DEBUG: Avatar not found for id: {image_id}", "AdminRoutes")
             return RedirectResponse(
                 url="/admin/users?error=avatar_not_found",
                 status_code=303
             )
         
         user_id = avatar[1]  # Store user_id for redirect
+        log_info(f"🔍 DEBUG: Found avatar for user_id: {user_id}", "AdminRoutes")
         
         # Get user info for logging
         user = execute_query(
@@ -830,7 +836,9 @@ async def delete_user_image(request: Request, image_id: int):
         # Only delete local uploaded files if needed in the future
         
         # Delete from database
-        execute_query("DELETE FROM user_avatars WHERE id = ?", (image_id,))
+        log_info(f"🔍 DEBUG: About to delete avatar with id: {image_id}", "AdminRoutes")
+        delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (image_id,))
+        log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
         
         log_info(f"Admin {admin_user['username']} deleted avatar {image_id} ('{avatar[2]}') for user {user[0] if user else 'Unknown'}", "AdminRoutes")
         
