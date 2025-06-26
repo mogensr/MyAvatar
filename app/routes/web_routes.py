@@ -1668,3 +1668,52 @@ async def test_routes():
             "FIXED Dashboard Video Display"
         ]
     }
+
+@router.get("/backgrounds")
+async def backgrounds_page(request: Request):
+    """BackGroundFX backgrounds management page"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        return templates.TemplateResponse("backgrounds.html", {
+            "request": request,
+            "user": user
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading backgrounds page: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+@router.get("/api/videos")
+async def get_user_videos_api(request: Request):
+    """API endpoint to get user videos for BackGroundFX"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({"error": "Not authenticated"}, status_code=401)
+        
+        # Get user videos
+        videos = db.get_user_videos(user["id"])
+        
+        # Convert datetime objects to strings for JSON serialization
+        serializable_videos = []
+        if videos:
+            for video in videos:
+                if isinstance(video, dict):
+                    serializable_video = {}
+                    for key, value in video.items():
+                        if hasattr(value, 'isoformat'):  # datetime object
+                            serializable_video[key] = value.isoformat()
+                        else:
+                            serializable_video[key] = value
+                    serializable_videos.append(serializable_video)
+                else:
+                    serializable_videos.append(str(video))
+        
+        return JSONResponse(serializable_videos)
+        
+    except Exception as e:
+        logger.error(f"Error fetching videos API: {e}")
+        return JSONResponse({"error": "Failed to fetch videos"}, status_code=500)
