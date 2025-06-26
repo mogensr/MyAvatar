@@ -98,11 +98,8 @@ except ImportError:
         logger.error("execute_query not available - database import failed")
         return None
 
-# Import document parser
+# Import utility functions
 from ..utils.document_parser import parse_document, clean_and_truncate_text
-
-# Import security functions
-from ..utils.security import sanitize_input, validate_email
 
 # STEP 6: Define utility functions
 def validate_email(email: str) -> bool:
