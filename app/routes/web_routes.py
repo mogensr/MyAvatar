@@ -1365,8 +1365,17 @@ async def admin_reset_password_api(request: Request):
         # Hash the new password
         hashed_password = hash_password(new_password)
         
-        # Here you would update the user's password in the database
-        # For now, we'll simulate success
+        # Update the user's password in the database
+        try:
+            execute_query(
+                "UPDATE users SET hashed_password = ? WHERE id = ?",
+                (hashed_password, user_id)
+            )
+            logger.info(f"🔍 ADMIN RESET PASSWORD - Database updated for user ID: {user_id}")
+        except Exception as db_error:
+            logger.error(f"🔍 ADMIN RESET PASSWORD - Database update failed: {db_error}")
+            return JSONResponse({"success": False, "error": "Failed to update password in database"})
+        
         logger.info(f"🔍 ADMIN RESET PASSWORD - Password reset successful for user ID: {user_id}")
         
         return JSONResponse({

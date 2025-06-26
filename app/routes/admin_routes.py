@@ -143,7 +143,7 @@ async def reset_password(request: Request):
         
         # Update the password in the database
         execute_query(
-            "UPDATE users SET password = ? WHERE id = ?",
+            "UPDATE users SET hashed_password = ? WHERE id = ?",
             (hashed_password, user_id)
         )
         
