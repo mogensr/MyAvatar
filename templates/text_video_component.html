@@ -295,12 +295,6 @@
             color: var(--gray-900);
         }
         
-        .avatar-id {
-            font-size: 0.875rem;
-            color: var(--gray-500);
-            margin-top: 0.25rem;
-        }
-        
         /* ==================== TEXT INPUT SECTION ==================== */
         .text-input-section {
             background: var(--white);
@@ -674,7 +668,6 @@
                                     {% endif %}
                                 </div>
                                 <div class="avatar-name">{{ avatar.avatar_name or 'Avatar' }}</div>
-                                <div class="avatar-id">ID: {{ avatar.avatar_id }}</div>
                             </div>
                             {% endfor %}
                         {% else %}
