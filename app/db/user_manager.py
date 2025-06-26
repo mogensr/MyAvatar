@@ -154,12 +154,12 @@ class Database:
             return []
     
     def get_user_avatars(self, user_id):
-        """Get avatars for a user"""
+        """Get avatars for a user with fresh HeyGen images"""
         try:
-            # Query the user_avatars table (not avatars)
+            # Query the user_avatars table
             result = execute_query(
                 """SELECT id, avatar_name as name, avatar_image_url as image_url, 
-                          avatar_id as heygen_avatar_id, NULL as heygen_data, created_at 
+                          avatar_id as heygen_avatar_id, created_at 
                    FROM user_avatars 
                    WHERE user_id = ? 
                    ORDER BY created_at DESC""", 
@@ -176,9 +176,24 @@ class Database:
                         'name': row[1] if len(row) > 1 else 'Unnamed Avatar',
                         'image_url': row[2] if len(row) > 2 else '',
                         'heygen_avatar_id': row[3] if len(row) > 3 else '',
-                        'heygen_data': row[4] if len(row) > 4 else None,
-                        'created_at': row[5] if len(row) > 5 else None
+                        'created_at': row[4] if len(row) > 4 else None
                     }
+                    
+                    # Try to get fresh HeyGen image if we have a heygen_avatar_id
+                    if avatar_dict.get('heygen_avatar_id'):
+                        try:
+                            from ..utils.heygen_image_utils import ensure_avatar_has_heygen_image
+                            fresh_image = ensure_avatar_has_heygen_image(
+                                avatar_dict['heygen_avatar_id'], 
+                                avatar_dict.get('image_url')
+                            )
+                            
+                            if fresh_image:
+                                avatar_dict['image_url'] = fresh_image
+                                log_info(f"Updated avatar {avatar_dict['name']} with fresh HeyGen image", "UserManager")
+                        except Exception as heygen_error:
+                            log_warning(f"Could not fetch fresh HeyGen image for avatar {avatar_dict['name']}: {heygen_error}", "UserManager")
+                    
                     avatars.append(avatar_dict)
                     
             log_info(f"Found {len(avatars)} avatars for user {user_id}", "UserManager")
