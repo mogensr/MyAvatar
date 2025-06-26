@@ -342,7 +342,8 @@ async def create_video_from_text_endpoint(
     format: str = Form("16:9"),
     avatar_id: str = Form(None),
     voice_id: str = Form(None),  # Changed to None default to allow system to find the right voice ID
-    title: str = Form(None)
+    title: str = Form(None),
+    description: str = Form(None)
 ):
     """
     Create a video from text
@@ -428,10 +429,10 @@ async def create_video_from_text_endpoint(
         
         execute_query(
             """
-            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, audio_path)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO videos (user_id, avatar_id, heygen_video_id, status, format, title, audio_path, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), None)
+            (user_id, str(avatar_id), str(heygen_video_id), "processing", str(format), str(title), "", str(description) if description else "")
         )
         
         log_info(f"Text-to-video created: {heygen_video_id}", "API")
