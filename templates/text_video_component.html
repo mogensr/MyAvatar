@@ -954,24 +954,168 @@
         function handleDrop(event) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('🎯 File dropped!', event.dataTransfer.files);
             
-            document.getElementById('fileUploadArea').classList.remove('drag-over');
+            const uploadArea = document.getElementById('fileUploadArea');
+            uploadArea.classList.remove('drag-over');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
-                console.log('🎯 Processing dropped file:', files[0].name);
-                processFile(files[0]);
+                const file = files[0];
+                console.log('📁 File dropped:', file.name, 'Size:', file.size, 'Type:', file.type);
+                
+                // Validate file type
+                const allowedExtensions = ['.txt', '.docx', '.pdf'];
+                const fileExtension = '.' + file.name.toLowerCase().split('.').pop();
+                
+                if (!allowedExtensions.includes(fileExtension)) {
+                    const errorMsg = `❌ Unsupported file type. Please use: ${allowedExtensions.join(', ')}`;
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                    return;
+                }
+                
+                // Validate file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                    return;
+                }
+                
+                // Show loading message
+                showMessage('📄 Processing document...', 'info', 3000);
+                
+                // Create FormData and send to API
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fetch('/api/document-parser', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include' // Include cookies for authentication
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Set the content in the textarea
+                        const textArea = document.getElementById('textContent');
+                        if (textArea) {
+                            textArea.value = data.text;
+                            console.log('✅ Content set in textarea');
+                            
+                            let successMsg = `✅ File "${data.filename}" loaded successfully! (${data.final_length} characters)`;
+                            if (data.truncated) {
+                                successMsg += ` - Text was truncated from ${data.original_length} characters.`;
+                            }
+                            showMessage(successMsg, 'success', 8000);
+                            
+                            // Trigger any validation or update events
+                            textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                            
+                            // Update character counter
+                            if (typeof updateCharCounter === 'function') {
+                                updateCharCounter();
+                            }
+                        } else {
+                            const errorMsg = '❌ Could not find text input area';
+                            console.error(errorMsg);
+                            showMessage(errorMsg, 'error', 8000);
+                        }
+                    } else {
+                        const errorMsg = `❌ ${data.error || 'Failed to process document'}`;
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                    }
+                })
+                .catch(error => {
+                    const errorMsg = `❌ Error uploading file: ${error.message}`;
+                    console.error(errorMsg, error);
+                    showMessage(errorMsg, 'error', 8000);
+                });
             }
         }
 
         function handleFileUpload(event) {
-            console.log('File upload triggered!', event);
             const file = event.target.files[0];
-            console.log('Selected file:', file);
-            if (file) {
-                processFile(file);
+            if (!file) return;
+            
+            console.log('📁 File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+            
+            // Validate file type
+            const allowedExtensions = ['.txt', '.docx', '.pdf'];
+            const fileExtension = '.' + file.name.toLowerCase().split('.').pop();
+            
+            if (!allowedExtensions.includes(fileExtension)) {
+                const errorMsg = `❌ Unsupported file type. Please use: ${allowedExtensions.join(', ')}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                event.target.value = ''; // Clear the input
+                return;
             }
+            
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                event.target.value = ''; // Clear the input
+                return;
+            }
+            
+            // Show loading message
+            showMessage('📄 Processing document...', 'info', 3000);
+            
+            // Create FormData and send to API
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/document-parser', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include' // Include cookies for authentication
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Set the content in the textarea
+                    const textArea = document.getElementById('textContent');
+                    if (textArea) {
+                        textArea.value = data.text;
+                        console.log('✅ Content set in textarea');
+                        
+                        let successMsg = `✅ File "${data.filename}" loaded successfully! (${data.final_length} characters)`;
+                        if (data.truncated) {
+                            successMsg += ` - Text was truncated from ${data.original_length} characters.`;
+                        }
+                        showMessage(successMsg, 'success', 8000);
+                        
+                        // Trigger any validation or update events
+                        textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Update character counter
+                        if (typeof updateCharCounter === 'function') {
+                            updateCharCounter();
+                        }
+                    } else {
+                        const errorMsg = '❌ Could not find text input area';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                    }
+                } else {
+                    const errorMsg = `❌ ${data.error || 'Failed to process document'}`;
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                }
+            })
+            .catch(error => {
+                const errorMsg = `❌ Error uploading file: ${error.message}`;
+                console.error(errorMsg, error);
+                showMessage(errorMsg, 'error', 8000);
+            })
+            .finally(() => {
+                // Clear the file input so the same file can be selected again
+                event.target.value = '';
+            });
         }
 
         function processFile(file) {
@@ -981,12 +1125,16 @@
             console.log('File extension:', fileExtension);
             
             if (!allowedTypes.includes(fileExtension)) {
-                showMessage('Unsupported file type. Please upload .txt, .docx, or .pdf files.', 'error', 8000);
+                const errorMsg = `❌ Unsupported file type. Please use: ${allowedTypes.join(', ')}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
                 return;
             }
             
             if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                showMessage('File too large. Maximum size is 10MB', 'error', 8000);
+                const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
                 return;
             }
             
@@ -1066,7 +1214,6 @@
             reader.readAsText(file);
         }
 
-        // Enhanced message display function
         function showMessage(message, type = 'info', duration = 4000) {
             console.log(`🔔 ${type.toUpperCase()}: ${message}`);
             

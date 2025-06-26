@@ -156,12 +156,33 @@ class Database:
     def get_user_avatars(self, user_id):
         """Get avatars for a user"""
         try:
+            # Query the avatars table, not user_avatars
             result = execute_query(
-                "SELECT * FROM user_avatars WHERE user_id = ? ORDER BY created_at DESC", 
+                """SELECT id, name, image_url, heygen_avatar_id, heygen_data, created_at 
+                   FROM avatars 
+                   WHERE user_id = ? 
+                   ORDER BY created_at DESC""", 
                 (user_id,), 
                 fetch_all=True
             )
-            return [dict(row) if hasattr(row, 'keys') else row for row in result] if result else []
+            
+            avatars = []
+            if result:
+                for row in result:
+                    # Convert row to dict if needed
+                    avatar_dict = dict(row) if hasattr(row, 'keys') else {
+                        'id': row[0] if len(row) > 0 else None,
+                        'name': row[1] if len(row) > 1 else 'Unnamed Avatar',
+                        'image_url': row[2] if len(row) > 2 else '',
+                        'heygen_avatar_id': row[3] if len(row) > 3 else '',
+                        'heygen_data': row[4] if len(row) > 4 else None,
+                        'created_at': row[5] if len(row) > 5 else None
+                    }
+                    avatars.append(avatar_dict)
+                    
+            log_info(f"Found {len(avatars)} avatars for user {user_id}", "UserManager")
+            return avatars
+            
         except Exception as e:
             log_error(f"Error getting avatars for user {user_id}: {str(e)}", "UserManager", e)
             return []
