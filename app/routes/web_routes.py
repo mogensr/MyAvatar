@@ -859,38 +859,11 @@ async def dashboard_page(request: Request):
             if avatars:
                 for avatar in avatars:
                     if isinstance(avatar, dict):
-                        # Prioritize HeyGen avatar image over old image_url
-                        avatar_image = None
+                        # get_user_avatars already fetches fresh HeyGen images and updates image_url
+                        avatar_image = avatar.get('image_url', '')
                         avatar_name = avatar.get('name', 'Unnamed Avatar')
                         
-                        # Try to get HeyGen image first
-                        if avatar.get('heygen_avatar_id'):
-                            heygen_data = avatar.get('heygen_data')
-                            
-                            # Handle different formats of heygen_data
-                            if heygen_data:
-                                if isinstance(heygen_data, str):
-                                    try:
-                                        import json
-                                        heygen_data = json.loads(heygen_data)
-                                    except:
-                                        logger.warning(f"Could not parse heygen_data as JSON: {heygen_data}")
-                                        heygen_data = None
-                                
-                                if isinstance(heygen_data, dict):
-                                    # Try different possible image URL keys
-                                    avatar_image = (
-                                        heygen_data.get('preview_image_url') or 
-                                        heygen_data.get('image_url') or
-                                        heygen_data.get('avatar_image_url') or
-                                        heygen_data.get('thumbnail_url')
-                                    )
-                                    logger.info(f"🖼️ HeyGen image for {avatar_name}: {avatar_image}")
-                        
-                        # Fallback to old image_url if no HeyGen image
-                        if not avatar_image:
-                            avatar_image = avatar.get('image_url', '')
-                            logger.info(f"🖼️ Fallback image for {avatar_name}: {avatar_image}")
+                        logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
                         
                         user_avatars.append({
                             'id': avatar.get('id'),
