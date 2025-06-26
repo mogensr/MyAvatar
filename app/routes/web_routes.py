@@ -1193,37 +1193,15 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
             logger.error(f"Error fetching user for avatar management: {e}")
             return RedirectResponse(url="/admin/users", status_code=302)
         
-        # Get user's avatars and images
+        # Get user's avatars
         try:
             user_avatars = db.get_user_avatars(user_id)
             if not user_avatars:
                 user_avatars = []
-                
-            # Also get user images from user_images table
-            logger.info(f"🔍 DEBUG: Querying user_images for user_id: {user_id}")
-            user_images = execute_query(
-                "SELECT id, filename, file_path, created_at, 'Uploaded' as type FROM user_images WHERE user_id = ? ORDER BY created_at DESC",
-                (user_id,),
-                fetch_all=True
-            )
-            logger.info(f"🔍 DEBUG: Found {len(user_images) if user_images else 0} user_images")
-            if not user_images:
-                user_images = []
             
-            # Convert user_images to dict format and combine with avatars
-            user_images_dict = []
-            for img in user_images:
-                logger.info(f"🔍 DEBUG: Processing image - ID: {img[0]}, File: {img[1]}")
-                user_images_dict.append({
-                    'id': img[0],
-                    'filename': img[1], 
-                    'file_path': img[2],
-                    'created_at': img[3],
-                    'type': img[4]
-                })
+            logger.info(f"🔍 DEBUG: Found {len(user_avatars)} avatars from get_user_avatars for user_id: {user_id}")
             
-            # Combine avatars and images
-            all_avatars = user_avatars + user_images_dict
+            all_avatars = user_avatars
             logger.info(f"🔍 DEBUG: Total avatars to display: {len(all_avatars)}")
             
         except Exception as e:
@@ -1474,34 +1452,16 @@ async def admin_user_avatars(request: Request, user_id: int):
             logger.error(f"Error fetching user for avatars: {e}")
             return RedirectResponse(url="/admin/users", status_code=302)
         
-        # Get user's avatars and images
+        # Get user's avatars
         try:
             user_avatars = db.get_user_avatars(user_id)
             if not user_avatars:
                 user_avatars = []
                 
-            # Also get user images from user_images table
-            user_images = execute_query(
-                "SELECT id, filename, file_path, created_at, 'Uploaded' as type FROM user_images WHERE user_id = ? ORDER BY created_at DESC",
-                (user_id,),
-                fetch_all=True
-            )
-            if not user_images:
-                user_images = []
+            logger.info(f"🔍 DEBUG: Found {len(user_avatars)} avatars from get_user_avatars for user_id: {user_id}")
             
-            # Convert user_images to dict format and combine with avatars
-            user_images_dict = []
-            for img in user_images:
-                user_images_dict.append({
-                    'id': img[0],
-                    'filename': img[1], 
-                    'file_path': img[2],
-                    'created_at': img[3],
-                    'type': img[4]
-                })
-            
-            # Combine avatars and images
-            all_avatars = user_avatars + user_images_dict
+            all_avatars = user_avatars
+            logger.info(f"🔍 DEBUG: Total avatars to display: {len(all_avatars)}")
             
         except Exception as e:
             logger.error(f"Error fetching user avatars: {e}")
