@@ -609,3 +609,109 @@ async def clear_user_videos(request: Request, user_id: int):
             url=f"/admin/manage-videos/{user_id}?error=clear_failed",
             status_code=303
         )
+
+@router.post("/admin/fetch-heygen-avatar/{user_id}")
+async def fetch_avatar_from_heygen(request: Request, user_id: int):
+    """Fetch avatar image from HeyGen API and save to user"""
+    try:
+        # Check admin authentication
+        admin_user = get_current_user(request)
+        if not admin_user or not admin_user.get("is_admin", 0) == 1:
+            raise HTTPException(status_code=401, detail="Admin access required")
+        
+        # Get form data
+        form = await request.form()
+        avatar_id = form.get("heygen_avatar_id", "").strip()
+        
+        if not avatar_id:
+            return JSONResponse(
+                content={"success": False, "error": "Avatar ID is required"},
+                status_code=400
+            )
+        
+        # Get user to manage
+        user_to_manage = execute_query(
+            "SELECT id, username FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Import HeyGen functions
+        from ..heygen.heygen_api import get_avatar_details
+        
+        try:
+            # Fetch avatar details from HeyGen
+            avatar_details = get_avatar_details(os.getenv("HEYGEN_API_KEY"), avatar_id)
+            
+            if not avatar_details:
+                return JSONResponse(
+                    content={"success": False, "error": "Avatar not found in HeyGen"},
+                    status_code=404
+                )
+            
+            # Extract avatar information
+            avatar_name = avatar_details.get("name", f"Avatar {avatar_id}")
+            avatar_image_url = avatar_details.get("preview_image_url") or avatar_details.get("image_url")
+            
+            if not avatar_image_url:
+                return JSONResponse(
+                    content={"success": False, "error": "No image URL found for this avatar"},
+                    status_code=400
+                )
+            
+            # Check if avatar already exists for this user
+            existing_avatar = execute_query(
+                "SELECT id FROM user_avatars WHERE user_id = ? AND avatar_id = ?",
+                (user_id, avatar_id),
+                fetch_one=True
+            )
+            
+            if existing_avatar:
+                # Update existing avatar
+                execute_query(
+                    "UPDATE user_avatars SET name = ?, image_path = ?, updated_at = datetime('now') WHERE user_id = ? AND avatar_id = ?",
+                    (avatar_name, avatar_image_url, user_id, avatar_id)
+                )
+                log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
+            else:
+                # Insert new avatar
+                execute_query(
+                    "INSERT INTO user_avatars (user_id, avatar_id, name, image_path, is_default, created_at) VALUES (?, ?, ?, ?, 0, datetime('now'))",
+                    (user_id, avatar_id, avatar_name, avatar_image_url)
+                )
+                log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
+            
+            return JSONResponse(
+                content={
+                    "success": True, 
+                    "message": "Avatar fetched and saved successfully",
+                    "avatar": {
+                        "id": avatar_id,
+                        "name": avatar_name,
+                        "image_url": avatar_image_url
+                    }
+                }
+            )
+            
+        except Exception as heygen_error:
+            log_error(f"Error fetching avatar from HeyGen: {str(heygen_error)}", "AdminRoutes", heygen_error)
+            return JSONResponse(
+                content={"success": False, "error": f"Failed to fetch from HeyGen: {str(heygen_error)}"},
+                status_code=500
+            )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(content={"success": False, "error": "Admin access required"}, status_code=401)
+        elif e.status_code == 403:
+            return JSONResponse(content={"success": False, "error": "Access denied"}, status_code=403)
+        raise
+    except Exception as e:
+        log_error("Error in fetch avatar from HeyGen endpoint", "AdminRoutes", e)
+        return JSONResponse(
+            content={"success": False, "error": f"Server error: {str(e)}"},
+            status_code=500
+        )
