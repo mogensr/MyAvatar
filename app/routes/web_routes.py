@@ -859,8 +859,8 @@ async def dashboard_page(request: Request):
             if avatars:
                 for avatar in avatars:
                     if isinstance(avatar, dict):
-                        # Use the image_url directly from database (already contains HeyGen URLs)
-                        avatar_image = avatar.get('image_url', '')
+                        # Use the avatar_image_url directly from database (already contains HeyGen URLs)
+                        avatar_image = avatar.get('avatar_image_url', '')
                         avatar_name = avatar.get('name', 'Unnamed Avatar')
                         
                         logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
@@ -868,13 +868,14 @@ async def dashboard_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_url': avatar_image,
-                            'heygen_avatar_id': avatar.get('heygen_avatar_id', '')
+                            'image_path': avatar_image,  # Changed from image_url to image_path
+                            'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
+                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
                         
             logger.info(f"🎭 DASHBOARD - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50] if avatar['image_url'] else 'No image'}...")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
                 
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
@@ -1876,8 +1877,8 @@ async def create_voice_page(request: Request):
             if avatars:
                 for avatar in avatars:
                     if isinstance(avatar, dict):
-                        # Use the image_url directly from database (already contains HeyGen URLs)
-                        avatar_image = avatar.get('image_url', '')
+                        # Use the avatar_image_url directly from database (already contains HeyGen URLs)
+                        avatar_image = avatar.get('avatar_image_url', '')
                         avatar_name = avatar.get('name', 'Unnamed Avatar')
                         
                         logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
@@ -1885,14 +1886,14 @@ async def create_voice_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_url': avatar_image,
+                            'image_path': avatar_image,  # Changed from image_url to image_path
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
                             'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
                         
             logger.info(f"🎭 VOICE RECORDING - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50] if avatar['image_url'] else 'No image'}...")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
                 
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
