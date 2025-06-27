@@ -872,10 +872,9 @@ async def dashboard_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'avatar_image_url': avatar_image,  # Use correct field name for template
+                            'avatar_image_url': avatar_image,
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
-                            'avatar_id': avatar.get('heygen_avatar_id', ''),  # For template compatibility
-                            'avatar_name': sanitize_input(avatar_name)  # Add this for template
+                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
                         
             logger.info(f"🎭 DASHBOARD - Processed {len(user_avatars)} avatars for user {user.get('username')}")
@@ -1651,14 +1650,14 @@ async def text_to_video_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_path': avatar_image,
+                            'avatar_image_url': avatar_image,
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
                             'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
                         
             logger.info(f"🎭 TEXT-TO-VIDEO - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['avatar_image_url'][:50] if avatar['avatar_image_url'] else 'No image'}...")
                 
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
@@ -1908,10 +1907,9 @@ async def create_voice_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'avatar_image_url': avatar_image,  # Use correct field name for template
+                            'avatar_image_url': avatar_image,
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
-                            'avatar_id': avatar.get('heygen_avatar_id', ''),  # For template compatibility
-                            'avatar_name': sanitize_input(avatar_name)  # Add this for template
+                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
                         
             logger.info(f"🎭 VOICE RECORDING - Processed {len(user_avatars)} avatars for user {user.get('username')}")
