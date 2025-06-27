@@ -1630,38 +1630,55 @@ async def text_to_video_page(request: Request):
         user_avatars = []
         try:
             # Get real avatars from database
-            user_avatars = db.get_user_avatars(user["id"])
+            avatars = db.get_user_avatars(user["id"])
             
-            # If no avatars found, create a fallback
-            if not user_avatars:
-                if user.get("avatar_id"):
-                    user_avatars = [
-                        {
-                            'id': user.get("avatar_id"),
-                            'avatar_id': user.get("avatar_id"),
-                            'name': 'Your Avatar',
-                            'image_path': None
-                        }
-                    ]
-                else:
-                    user_avatars = [
-                        {
-                            'id': 'default_avatar',
-                            'avatar_id': 'default_avatar',
-                            'name': 'Default Avatar',
-                            'image_path': None
-                        }
-                    ]
-        except Exception as e:
-            logger.error(f"Error loading avatars: {e}")
-            user_avatars = [
-                {
-                    'id': 'default_avatar',
-                    'avatar_id': 'default_avatar',
-                    'name': 'Default Avatar',
-                    'image_path': None
-                }
-            ]
+            logger.info(f"🎭 TEXT-TO-VIDEO - Raw avatars from DB: {avatars}")
+            
+            if avatars:
+                for avatar in avatars:
+                    if isinstance(avatar, dict):
+                        # Use the avatar_image_url directly from database (already contains HeyGen URLs)
+                        avatar_image = avatar.get('avatar_image_url', '')
+                        avatar_name = avatar.get('avatar_name', 'Unnamed Avatar')
+                        
+                        logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
+                        
+                        user_avatars.append({
+                            'id': avatar.get('id'),
+                            'name': sanitize_input(avatar_name),
+                            'image_path': avatar_image,
+                            'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
+                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
+                        })
+                        
+            logger.info(f"🎭 TEXT-TO-VIDEO - Processed {len(user_avatars)} avatars for user {user.get('username')}")
+            for avatar in user_avatars:
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
+                
+        except Exception as avatar_error:
+            logger.error(f"Error fetching user avatars: {avatar_error}")
+            user_avatars = []
+            
+        # If no avatars found, create a fallback
+        if not user_avatars:
+            if user.get("avatar_id"):
+                user_avatars = [
+                    {
+                        'id': user.get("avatar_id"),
+                        'avatar_id': user.get("avatar_id"),
+                        'name': 'Your Avatar',
+                        'image_path': None
+                    }
+                ]
+            else:
+                user_avatars = [
+                    {
+                        'id': 'default_avatar',
+                        'avatar_id': 'default_avatar',
+                        'name': 'Default Avatar',
+                        'image_path': None
+                    }
+                ]
         
         return templates.TemplateResponse("text_video_component.html", {
             "request": request,
@@ -1909,4 +1926,27 @@ async def create_voice_page(request: Request):
         
     except Exception as e:
         logger.error(f"Error loading voice recording page: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+@router.get("/video/{video_id}")
+async def video_player(request: Request, video_id: str):
+    """Video player page for full-screen video viewing"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        # Get video details from database
+        video = db.get_video_by_id(video_id, user["id"])
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        return templates.TemplateResponse("video_player.html", {
+            "request": request,
+            "user": user,
+            "video": video
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading video player: {e}")
         return RedirectResponse(url="/dashboard", status_code=302)
