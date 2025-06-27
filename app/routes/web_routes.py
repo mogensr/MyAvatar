@@ -1858,3 +1858,54 @@ async def document_parser_api(request: Request, file: UploadFile = File(...)):
         return JSONResponse({
             "error": f"Failed to parse document: {str(e)}"
         }, status_code=500)
+
+@router.get("/create-voice")
+async def create_voice_page(request: Request):
+    """Voice recording page with avatar selection"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        # Get user's avatars for the voice recording page - copied from dashboard
+        user_avatars = []
+        try:
+            avatars = db.get_user_avatars(user["id"])
+            logger.info(f"🎭 VOICE RECORDING - Raw avatars from DB: {avatars}")
+            
+            if avatars:
+                for avatar in avatars:
+                    if isinstance(avatar, dict):
+                        # Use the image_url directly from database (already contains HeyGen URLs)
+                        avatar_image = avatar.get('image_url', '')
+                        avatar_name = avatar.get('name', 'Unnamed Avatar')
+                        
+                        logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
+                        
+                        user_avatars.append({
+                            'id': avatar.get('id'),
+                            'name': sanitize_input(avatar_name),
+                            'image_url': avatar_image,
+                            'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
+                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
+                        })
+                        
+            logger.info(f"🎭 VOICE RECORDING - Processed {len(user_avatars)} avatars for user {user.get('username')}")
+            for avatar in user_avatars:
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_url'][:50] if avatar['image_url'] else 'No image'}...")
+                
+        except Exception as avatar_error:
+            logger.error(f"Error fetching user avatars: {avatar_error}")
+            import traceback
+            logger.error(f"Avatar error traceback: {traceback.format_exc()}")
+            user_avatars = []
+        
+        return templates.TemplateResponse("voice_recording.html", {
+            "request": request,
+            "user": user,
+            "avatars": user_avatars
+        })
+        
+    except Exception as e:
+        logger.error(f"Error loading voice recording page: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
