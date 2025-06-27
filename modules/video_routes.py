@@ -81,8 +81,8 @@ async def generate_video(
                     "avatar_style": "normal"
                 },
                 "voice": {
-                    "type": "audio",
-                    "audio_url": audio_url
+                    "type": "text",
+                    "voice_id": voice_id or HEYGEN_VOICE_ID
                 }
             }],
             "test": False,
