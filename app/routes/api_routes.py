@@ -189,10 +189,18 @@ async def download_video(request: Request, video_id: str):
                 }
             )
         
-        log_info(f"User {user['username']} downloading video {video_id}", "API")
+        log_info(f"User {user['username']} checking video status {video_id}", "API")
         
-        # Redirect to the video URL for download
-        return RedirectResponse(url=video_url, status_code=302)
+        # Return status information as JSON instead of redirecting
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "status": "completed",
+                "video_url": video_url,
+                "message": "Video is ready for download"
+            }
+        )
         
     except Exception as e:
         log_error(f"Error downloading video {video_id}", "API", e)
@@ -803,10 +811,18 @@ async def get_video_status(request: Request, video_id: str):
                 }
             )
         
-        log_info(f"User {user['username']} downloading video {video_id}", "API")
+        log_info(f"User {user['username']} checking video status {video_id}", "API")
         
-        # Redirect to the video URL for download
-        return RedirectResponse(url=video_url, status_code=302)
+        # Return status information as JSON instead of redirecting
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "status": "completed",
+                "video_url": video_url,
+                "message": "Video is ready for download"
+            }
+        )
         
     except Exception as e:
         log_error(f"Error downloading video {video_id}", "API", e)
