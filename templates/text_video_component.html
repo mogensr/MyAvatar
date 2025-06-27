@@ -290,6 +290,17 @@
             font-weight: bold;
         }
         
+        .avatar-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .avatar-id {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
         /* ==================== TEXT INPUT SECTION ==================== */
         .text-input-section {
             background: var(--white);
@@ -660,11 +671,13 @@
                             <div class="avatar-option" data-avatar-id="{{ avatar.heygen_avatar_id }}" onclick="selectAvatar(this)">
                                 <div class="avatar-image">
                                     {% if avatar.avatar_image_url %}
-                                        <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.avatar_name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                        <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                                     {% else %}
                                         <i class="fas fa-user"></i>
                                     {% endif %}
                                 </div>
+                                <div class="avatar-name">{{ avatar.name or 'Avatar' }}</div>
+                                <div class="avatar-id">ID: {{ avatar.heygen_avatar_id }}</div>
                             </div>
                             {% endfor %}
                         {% else %}
@@ -1039,7 +1052,7 @@
             const file = event.target.files[0];
             if (!file) return;
             
-            console.log('📁 File selected:', file.name, 'Size:', file.size, 'Type:', file.type);
+            console.log('📁 File selected:', file.name, file.type, file.size);
             
             // Validate file type
             const allowedExtensions = ['.txt', '.docx', '.pdf'];
@@ -1053,7 +1066,6 @@
                 return;
             }
             
-            // Validate file size (10MB)
             if (file.size > 10 * 1024 * 1024) { // 10MB limit
                 const errorMsg = '❌ File too large. Maximum size is 10MB.';
                 console.error(errorMsg);
