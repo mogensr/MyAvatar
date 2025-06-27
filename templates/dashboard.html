@@ -785,6 +785,8 @@
             right: 0;
             height: 3.6px; /* 60% of original 6px */
             background: var(--gradient-primary);
+            opacity: 0.05;
+            border-radius: 50%;
             transform: scaleX(0);
             transition: transform var(--transition-base);
         }
@@ -1501,10 +1503,10 @@
                         </a>
                     </div>
                     <div class="nav-item">
-                        <a href="#backgrounds" class="nav-link">
+                        <a href="/backgrounds" class="nav-link">
                             <i class="fas fa-image"></i>
                             <span>Backgrounds</span>
-                            <span class="soon-badge">Soon</span>
+                            <span class="premium-badge">Premium</span>
                         </a>
                     </div>
                     <div class="nav-item">
@@ -1776,6 +1778,20 @@
                         </div>
                     </div>
                     
+                    <div class="feature-card premium" onclick="window.location.href='/backgrounds'">
+                        <div class="feature-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Backgrounds
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Choose from professional backgrounds and environments for your avatar videos.</p>
+                        <div class="feature-tags">
+                            <span class="tag available">Available</span>
+                        </div>
+                    </div>
+                    
                     <div class="feature-card premium" onclick="showPremiumModal()">
                         <div class="feature-icon">
                             <i class="fas fa-magic"></i>
@@ -1785,20 +1801,6 @@
                             <span class="premium-badge">Premium</span>
                         </h3>
                         <p class="feature-description">Use pre-made templates for common scenarios like sales pitches, tutorials, and presentations.</p>
-                        <div class="feature-tags">
-                            <span class="tag coming-soon">Coming Soon</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card premium" onclick="showPremiumModal()">
-                        <div class="feature-icon">
-                            <i class="fas fa-image"></i>
-                        </div>
-                        <h3 class="feature-title">
-                            Backgrounds
-                            <span class="premium-badge">Premium</span>
-                        </h3>
-                        <p class="feature-description">Choose from professional backgrounds and environments for your avatar videos.</p>
                         <div class="feature-tags">
                             <span class="tag coming-soon">Coming Soon</span>
                         </div>
@@ -2035,6 +2037,7 @@
                     alert('Error checking video status. Please try again.');
                 }
             }
+            
         }
 
         function refreshVideoStatus(videoId) {
