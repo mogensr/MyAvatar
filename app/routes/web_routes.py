@@ -861,14 +861,14 @@ async def dashboard_page(request: Request):
                     if isinstance(avatar, dict):
                         # Use the avatar_image_url directly from database (already contains HeyGen URLs)
                         avatar_image = avatar.get('avatar_image_url', '')
-                        avatar_name = avatar.get('name', 'Unnamed Avatar')
+                        avatar_name = avatar.get('avatar_name', 'Unnamed Avatar')
                         
                         logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
                         
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_path': avatar_image,  # Changed from image_url to image_path
+                            'image_path': avatar_image,  
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
                             'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
@@ -1879,14 +1879,14 @@ async def create_voice_page(request: Request):
                     if isinstance(avatar, dict):
                         # Use the avatar_image_url directly from database (already contains HeyGen URLs)
                         avatar_image = avatar.get('avatar_image_url', '')
-                        avatar_name = avatar.get('name', 'Unnamed Avatar')
+                        avatar_name = avatar.get('avatar_name', 'Unnamed Avatar')
                         
                         logger.info(f"🖼️ Avatar {avatar_name} image: {avatar_image}")
                         
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_path': avatar_image,  # Changed from image_url to image_path
+                            'image_path': avatar_image,  
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
                             'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
                         })
