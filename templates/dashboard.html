@@ -2202,10 +2202,7 @@
         }
         
         function playVideo(videoId) {
-            const video = document.querySelector(`[data-video-id="${videoId}"] .video-thumbnail video`);
-            if (video) {
-                video.play();
-            }
+            window.open(`/video/${videoId}`, '_blank');
         }
         
         // Load saved theme
