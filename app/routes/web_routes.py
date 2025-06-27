@@ -1940,8 +1940,22 @@ async def video_player(request: Request, video_id: str):
         if not user:
             return RedirectResponse(url="/login", status_code=302)
         
-        # Get video details from database
-        video = db.get_video_by_id(video_id, user["id"])
+        # Get video details from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            # Numeric ID - check both id and heygen_video_id fields
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
+        
         if not video:
             raise HTTPException(status_code=404, detail="Video not found")
         
