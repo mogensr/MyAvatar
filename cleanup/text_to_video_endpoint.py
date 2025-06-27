@@ -19,7 +19,7 @@ async def generate_video_from_text(
     text: str = Form(...),
     title: str = Form(...),
     video_format: str = Form("16:9"),
-    voice_id: str = Form("en-US-JennyNeural")
+    voice_id: str = Form(os.getenv("HEYGEN_VOICE_ID", "en-US-JennyNeural"))
 ):
     """
     Generate a HeyGen AI avatar video from text input with voice selection.
