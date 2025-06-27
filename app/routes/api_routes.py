@@ -394,19 +394,13 @@ async def create_video_from_text_endpoint(
         
         # Always try to find user's preferred voice ID
         if not voice_id:
-            # Try to get voice ID from user_settings
+            # Try to get voice ID from users table heygen_voice_id column
             try:
-                user_voice = execute_query(
-                    "SELECT setting_value FROM user_settings WHERE user_id = %s AND setting_name = 'voice_id'",
-                    (int(user["id"]),),
-                    fetch_one=True
-                )
-                
-                if user_voice and user_voice["setting_value"]:
-                    voice_id = user_voice["setting_value"]
-                    log_info(f"Using user's preferred voice_id from settings: {voice_id}", "API")
+                if user.get("heygen_voice_id"):
+                    voice_id = user["heygen_voice_id"]
+                    log_info(f"Using user's heygen_voice_id: {voice_id}", "API")
             except Exception as e:
-                log_warning(f"Error retrieving user voice setting: {str(e)}", "API")
+                log_warning(f"Error retrieving user heygen_voice_id: {str(e)}", "API")
         
         # If still no voice_id, use a valid HeyGen voice ID as fallback
         if not voice_id:
@@ -504,17 +498,11 @@ async def create_video_from_audio_endpoint(
         # Always try to find user's preferred voice ID
         voice_id = None
         try:
-            user_voice = execute_query(
-                "SELECT setting_value FROM user_settings WHERE user_id = %s AND setting_name = 'voice_id'",
-                (int(user["id"]),),
-                fetch_one=True
-            )
-            
-            if user_voice and user_voice["setting_value"]:
-                voice_id = user_voice["setting_value"]
-                log_info(f"Using user's preferred voice_id from settings: {voice_id}", "API")
+            if user.get("heygen_voice_id"):
+                voice_id = user["heygen_voice_id"]
+                log_info(f"Using user's heygen_voice_id: {voice_id}", "API")
         except Exception as e:
-            log_warning(f"Error retrieving user voice setting: {str(e)}", "API")
+            log_warning(f"Error retrieving user heygen_voice_id: {str(e)}", "API")
         
         # If still no voice_id, use a valid HeyGen voice ID as fallback
         if not voice_id:
