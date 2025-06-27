@@ -657,7 +657,7 @@
                     <div class="avatar-grid" id="avatarGrid">
                         {% if avatars %}
                             {% for avatar in avatars %}
-                            <div class="avatar-option" data-avatar-id="{{ avatar.avatar_id }}" onclick="selectAvatar(this)">
+                            <div class="avatar-option" data-avatar-id="{{ avatar.heygen_avatar_id }}" onclick="selectAvatar(this)">
                                 <div class="avatar-image">
                                     {% if avatar.avatar_image_url %}
                                         <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.avatar_name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
@@ -1182,7 +1182,7 @@
                         
                         let successMsg = `✅ File "${file.name}" loaded successfully! (${content.length} characters)`;
                         if (truncated) {
-                            successMsg += ' - Text was truncated to 1500 characters.';
+                            successMsg += ` - Text was truncated to 1500 characters.`;
                         }
                         showMessage(successMsg, 'success', 8000);
                         
