@@ -153,6 +153,10 @@ class Config:
         self.TRUSTED_HOSTS = os.getenv("TRUSTED_HOSTS", "localhost,127.0.0.1").split(",")
         self.CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else []
         
+        # AI Services
+        self.OPENAI_API_KEY = self._get_env_with_fallback("OPENAI_API_KEY", "your-openai-api-key")
+        self.HEYGEN_API_KEY = self._get_env_with_fallback("HEYGEN_API_KEY", "your-heygen-api-key")
+        
         # Safe validation
         self._validate_config()
     
@@ -868,14 +872,15 @@ async def dashboard_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_path': avatar_image,  
+                            'avatar_image_url': avatar_image,  # Use correct field name for template
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
-                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
+                            'avatar_id': avatar.get('heygen_avatar_id', ''),  # For template compatibility
+                            'avatar_name': sanitize_input(avatar_name)  # Add this for template
                         })
                         
             logger.info(f"🎭 DASHBOARD - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['avatar_image_url'][:50] if avatar['avatar_image_url'] else 'No image'}...")
                 
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
@@ -1903,14 +1908,15 @@ async def create_voice_page(request: Request):
                         user_avatars.append({
                             'id': avatar.get('id'),
                             'name': sanitize_input(avatar_name),
-                            'image_path': avatar_image,  
+                            'avatar_image_url': avatar_image,  # Use correct field name for template
                             'heygen_avatar_id': avatar.get('heygen_avatar_id', ''),
-                            'avatar_id': avatar.get('heygen_avatar_id', '')  # For template compatibility
+                            'avatar_id': avatar.get('heygen_avatar_id', ''),  # For template compatibility
+                            'avatar_name': sanitize_input(avatar_name)  # Add this for template
                         })
                         
             logger.info(f"🎭 VOICE RECORDING - Processed {len(user_avatars)} avatars for user {user.get('username')}")
             for avatar in user_avatars:
-                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['image_path'][:50] if avatar['image_path'] else 'No image'}...")
+                logger.info(f"   - Avatar: {avatar['name']} | Image: {avatar['avatar_image_url'][:50] if avatar['avatar_image_url'] else 'No image'}...")
                 
         except Exception as avatar_error:
             logger.error(f"Error fetching user avatars: {avatar_error}")
@@ -1950,3 +1956,177 @@ async def video_player(request: Request, video_id: str):
     except Exception as e:
         logger.error(f"Error loading video player: {e}")
         return RedirectResponse(url="/dashboard", status_code=302)
+
+@router.post("/api/backgrounds/add-from-url")
+async def add_background_from_url(request: Request):
+    """Add a background image from URL to user's collection"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        data = await request.json()
+        image_url = data.get('image_url')
+        name = data.get('name', 'Background Image')
+        source = data.get('source', 'unknown')
+        source_id = data.get('source_id', '')
+        
+        if not image_url:
+            raise HTTPException(status_code=400, detail="Image URL is required")
+        
+        # Download and save the image
+        import requests
+        from PIL import Image
+        import io
+        
+        # Create backgrounds directory if it doesn't exist
+        backgrounds_dir = Path("static/backgrounds")
+        backgrounds_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Download the image
+        response = requests.get(image_url, timeout=30)
+        response.raise_for_status()
+        
+        # Validate it's an image
+        try:
+            img = Image.open(io.BytesIO(response.content))
+            img.verify()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+        
+        # Generate unique filename
+        file_extension = image_url.split('.')[-1].lower()
+        if file_extension not in ['jpg', 'jpeg', 'png', 'webp']:
+            file_extension = 'jpg'
+        
+        filename = f"bg_{user['id']}_{int(time.time())}_{uuid.uuid4().hex[:8]}.{file_extension}"
+        file_path = backgrounds_dir / filename
+        
+        # Save the image
+        with open(file_path, 'wb') as f:
+            f.write(response.content)
+        
+        # Save to database (assuming we have a backgrounds table)
+        try:
+            # For now, we'll use a simple approach - you might want to create a proper backgrounds table
+            background_data = {
+                'user_id': user['id'],
+                'name': sanitize_input(name),
+                'file_path': str(file_path),
+                'url': f"/static/backgrounds/{filename}",
+                'source': source,
+                'source_id': source_id,
+                'created_at': datetime.now().isoformat()
+            }
+            
+            # This would ideally go to a backgrounds table
+            # For now, we'll just return success
+            logger.info(f"Background added for user {user['id']}: {name}")
+            
+        except Exception as db_error:
+            logger.error(f"Database error saving background: {db_error}")
+            # Don't fail the request if DB save fails
+        
+        return JSONResponse({
+            "success": True,
+            "message": "Background added successfully",
+            "background": {
+                "name": name,
+                "url": f"/static/backgrounds/{filename}"
+            }
+        })
+        
+    except requests.RequestException as e:
+        logger.error(f"Error downloading image: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": "Failed to download image"
+        }, status_code=400)
+    except Exception as e:
+        logger.error(f"Error adding background from URL: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+@router.post("/api/backgrounds/generate-ai-image")
+async def generate_ai_image(request: Request):
+    """Generate AI image using OpenAI DALL-E"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        data = await request.json()
+        prompt = data.get('prompt', '').strip()
+        size = data.get('size', '1024x1024')
+        quality = data.get('quality', 'standard')
+        
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required")
+        
+        # Check if OpenAI API key is configured
+        openai_api_key = config.OPENAI_API_KEY
+        if not openai_api_key or openai_api_key == "your-openai-api-key":
+            return JSONResponse({
+                "success": False,
+                "error": "OpenAI API key not configured. Please add your OPENAI_API_KEY to environment variables."
+            }, status_code=400)
+        
+        # Import OpenAI
+        try:
+            import openai
+        except ImportError:
+            return JSONResponse({
+                "success": False,
+                "error": "OpenAI library not installed. Run: pip install openai"
+            }, status_code=500)
+        
+        # Initialize OpenAI client
+        client = openai.OpenAI(api_key=openai_api_key)
+        
+        # Generate image with DALL-E
+        try:
+            response = client.images.generate(
+                model="dall-e-3",
+                prompt=f"High-quality background image: {prompt}. Professional, clean, suitable for video backgrounds.",
+                size=size,
+                quality=quality,
+                n=1,
+            )
+            
+            image_url = response.data[0].url
+            
+            # Optionally download and save the image locally
+            # For now, we'll return the OpenAI URL directly
+            
+            return JSONResponse({
+                "success": True,
+                "image_url": image_url,
+                "prompt": prompt,
+                "message": "AI image generated successfully"
+            })
+            
+        except openai.RateLimitError:
+            return JSONResponse({
+                "success": False,
+                "error": "OpenAI rate limit exceeded. Please try again later."
+            }, status_code=429)
+        except openai.AuthenticationError:
+            return JSONResponse({
+                "success": False,
+                "error": "Invalid OpenAI API key. Please check your configuration."
+            }, status_code=401)
+        except Exception as openai_error:
+            logger.error(f"OpenAI API error: {openai_error}")
+            return JSONResponse({
+                "success": False,
+                "error": f"Failed to generate image: {str(openai_error)}"
+            }, status_code=500)
+        
+    except Exception as e:
+        logger.error(f"Error generating AI image: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
