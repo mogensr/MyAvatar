@@ -6,6 +6,10 @@ import os
 import sys
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add the app directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
@@ -26,6 +30,7 @@ except ImportError:
 
 def get_heygen_avatars():
     """Fetch available avatars from HeyGen API"""
+    print("🔍 Starting HeyGen API call...")
     api_key = os.getenv("HEYGEN_API_KEY")
     if not api_key:
         print("❌ HEYGEN_API_KEY not found in environment variables")
@@ -37,11 +42,13 @@ def get_heygen_avatars():
             "Content-Type": "application/json"
         }
         
+        print("🌐 Making API request to HeyGen...")
         response = requests.get(
             "https://api.heygen.com/v2/avatars",
             headers=headers,
             timeout=30
         )
+        print(f"📊 API response status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
@@ -72,12 +79,15 @@ def rebuild_avatars_for_user_id(user_id: int, db: Database):
         
         # Get HeyGen API key
         api_key = os.getenv("HEYGEN_API_KEY")
+        print(f"🔑 API key found: {'Yes' if api_key else 'No'}")
         if not api_key:
             print("❌ HEYGEN_API_KEY not found in environment variables")
             return False
         
         # Get HeyGen avatars
+        print("🔍 Fetching avatars from HeyGen API...")
         heygen_avatars = get_heygen_avatars()
+        print(f"🎭 Found {len(heygen_avatars) if heygen_avatars else 0} avatars from HeyGen")
         if not heygen_avatars:
             print("❌ No avatars available from HeyGen API")
             return False
