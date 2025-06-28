@@ -645,6 +645,67 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
             "error": error_msg
         }
 
+def get_avatar_details(api_key: str, avatar_id: str):
+    """
+    Get detailed information about an avatar by ID
+    
+    Args:
+        api_key: HeyGen API key
+        avatar_id: ID of the avatar to get details for
+        
+    Returns:
+        Dictionary with avatar details or error information
+    """
+    headers = {
+        "X-Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        log_info(f"Fetching details for avatar {avatar_id}", "HeyGen API")
+        
+        response = requests.get(
+            f"https://api.heygen.com/v1/avatar.get?avatar_id={avatar_id}",
+            headers=headers
+        )
+        
+        log_info(f"Avatar details response status: {response.status_code}", "HeyGen API")
+        
+        if response.headers.get('content-type', '').startswith('application/json'):
+            response_data = response.json()
+        else:
+            return {
+                "success": False,
+                "error": f"Non-JSON response: {response.text}"
+            }
+        
+        if response.status_code == 200:
+            if "error" in response_data and response_data["error"] is None:
+                return {
+                    "success": True, 
+                    "details": response_data["data"]
+                }
+            elif "data" in response_data:
+                return {
+                    "success": True, 
+                    "details": response_data["data"]
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unexpected response format: {response_data}"
+                }
+        else:
+            return {
+                "success": False,
+                "error": f"HTTP {response.status_code}: {response_data.get('message', 'Unknown error')}"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Exception: {str(e)}"
+        }
+
 def get_video_details(api_key: str, video_id: str):
     """
     Get detailed information about a video - FIXED V2 VERSION
