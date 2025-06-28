@@ -109,38 +109,43 @@ def rebuild_avatars_for_user_id(user_id: int, db: Database):
             try:
                 avatar_id = avatar.get("avatar_id")
                 # Try multiple possible name fields from HeyGen API
-                avatar_name = (
+                raw_name = (
                     avatar.get("name") or 
                     avatar.get("display_name") or 
                     avatar.get("title") or 
                     avatar.get("avatar_name")
                 )
                 
-                # If no proper name found, try to get detailed info
-                if not avatar_name or avatar_name.startswith('Avatar '):
-                    print(f"  🔍 Getting detailed info for avatar {avatar_id}...")
+                # Check if the name is just a technical ID (long hex string)
+                if not raw_name or len(raw_name) > 20 or all(c in '0123456789abcdef-' for c in raw_name.lower()):
+                    print(f"  🔍 Technical ID detected, getting detailed info for avatar {avatar_id}...")
+                    
+                    # Try to get detailed info first
                     details_result = get_avatar_details(api_key, avatar_id)
                     if details_result.get('success'):
                         details = details_result.get('details', {})
-                        avatar_name = (
-                            details.get("name") or 
-                            details.get("display_name") or 
-                            details.get("title") or
-                            details.get("avatar_name")
-                        )
-                        print(f"    ✅ Found name: {avatar_name}")
+                        
+                        # Generate better name based on avatar characteristics
+                        avatar_type = details.get("type", "")
+                        gender = details.get("gender", "")
+                        
+                        if avatar_type and gender:
+                            avatar_name = f"{gender.title()} {avatar_type.title()} Avatar"
+                        elif gender:
+                            avatar_name = f"{gender.title()} Avatar"
+                        elif avatar_type:
+                            avatar_name = f"{avatar_type.title()} Avatar"
+                        else:
+                            # Use a more descriptive fallback
+                            avatar_name = f"Professional Avatar {avatar_id[:8]}"
+                        
+                        print(f"    ✅ Generated name: {avatar_name}")
                     else:
                         print(f"    ❌ Could not get details: {details_result.get('error')}")
-                
-                # Final fallback to a readable name
-                if not avatar_name or avatar_name.startswith('Avatar '):
-                    if avatar_id:
-                        # Create a more readable name from avatar_id
-                        clean_id = avatar_id.replace('_', ' ').replace('-', ' ')
-                        clean_id = ' '.join(word.capitalize() for word in clean_id.split())
-                        avatar_name = f"Avatar {clean_id[:20]}"  # Limit length
-                    else:
-                        avatar_name = "Unknown Avatar"
+                        avatar_name = f"Professional Avatar {avatar_id[:8]}"
+                else:
+                    avatar_name = raw_name
+                    print(f"  ✅ Using existing name: {avatar_name}")
                 preview_url = avatar.get("preview_image_url") or avatar.get("preview_video_url")
                 
                 if not avatar_id:

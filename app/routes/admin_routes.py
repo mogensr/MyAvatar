@@ -670,8 +670,27 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                     status_code=404
                 )
             
-            # Extract avatar information
-            avatar_name = avatar_details.get("name", f"Avatar {avatar_id}")
+            # Extract avatar information with improved naming
+            raw_name = avatar_details.get("name", "")
+            
+            # Check if the name is just a technical ID (long hex string)
+            if not raw_name or len(raw_name) > 20 or all(c in '0123456789abcdef-' for c in raw_name.lower()):
+                # Generate a better name based on avatar characteristics
+                avatar_type = avatar_details.get("type", "")
+                gender = avatar_details.get("gender", "")
+                
+                if avatar_type and gender:
+                    avatar_name = f"{gender.title()} {avatar_type.title()} Avatar"
+                elif gender:
+                    avatar_name = f"{gender.title()} Avatar"
+                elif avatar_type:
+                    avatar_name = f"{avatar_type.title()} Avatar"
+                else:
+                    # Use a more descriptive fallback
+                    avatar_name = f"Professional Avatar {avatar_id[:8]}"
+            else:
+                avatar_name = raw_name
+                
             avatar_image_url = avatar_details.get("preview_image_url") or avatar_details.get("image_url")
             
             if not avatar_image_url:
