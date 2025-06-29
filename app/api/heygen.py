@@ -360,9 +360,28 @@ def get_available_avatars(api_key: str):
                 avatars = []
                 
             log_info(f"Retrieved {len(avatars)} avatars", "HeyGen API")
+            
+            # Debug: Check for talking photos in the response
+            talking_photos = response_data.get("data", {}).get("talking_photos", [])
+            log_info(f"Retrieved {len(talking_photos)} talking photos", "HeyGen API")
+            
+            # Debug: Log sample avatar and talking photo IDs
+            if avatars:
+                sample_avatar_ids = [avatar.get('avatar_id') for avatar in avatars[:5]]
+                log_info(f"Sample avatar IDs: {sample_avatar_ids}", "HeyGen API")
+            
+            if talking_photos:
+                sample_talking_photo_ids = [photo.get('id') or photo.get('avatar_id') for photo in talking_photos[:5]]
+                log_info(f"Sample talking photo IDs: {sample_talking_photo_ids}", "HeyGen API")
+                
+                # Debug: Log structure of first talking photo
+                if talking_photos:
+                    log_info(f"First talking photo structure: {list(talking_photos[0].keys())}", "HeyGen API")
+            
             return {
                 "success": True, 
-                "avatars": avatars
+                "avatars": avatars,
+                "talking_photos": talking_photos
             }
         else:
             error_msg = f"Failed to fetch avatars: {response_data.get('message', 'Unknown error')}"
@@ -902,15 +921,31 @@ def get_all_available_avatars(api_key: str):
         
         all_avatars = []
         
-        # Get regular avatars
+        # Get regular avatars AND talking photos from /v2/avatars endpoint
         regular_result = get_available_avatars(api_key)
-        if regular_result["success"]:
-            regular_avatars = regular_result["avatars"]
-            # Mark as regular avatars
-            for avatar in regular_avatars:
-                avatar["avatar_type"] = "regular"
+        if regular_result and regular_result.get('success', False):
+            regular_avatars = regular_result.get('avatars', [])
             all_avatars.extend(regular_avatars)
             log_info(f"Added {len(regular_avatars)} regular avatars", "HeyGen API")
+            
+            # Also get talking photos from the same endpoint
+            talking_photos = regular_result.get('talking_photos', [])
+            if talking_photos:
+                # Convert talking photos to avatar format
+                for photo in talking_photos:
+                    converted_photo = {
+                        "avatar_id": photo.get("id") or photo.get("avatar_id"),
+                        "avatar_name": photo.get("name", "Talking Photo"),
+                        "gender": "unknown",
+                        "preview_image_url": photo.get("preview_image_url") or photo.get("image_url"),
+                        "preview_video_url": photo.get("preview_video_url") or photo.get("motion_preview_url"),
+                        "premium": False,
+                        "type": "talking_photo",
+                        "avatar_type": "talking_photo",
+                        "status": photo.get("status")
+                    }
+                    all_avatars.append(converted_photo)
+                log_info(f"Added {len(talking_photos)} talking photos from /v2/avatars", "HeyGen API")
         
         # Get photo avatar groups
         groups_result = get_photo_avatar_groups(api_key)
