@@ -746,7 +746,7 @@ async def register_page(request: Request):
 @router.post("/register")
 @limiter.limit(config.RATE_LIMIT_REGISTER)
 async def register_user(request: Request):
-    """Handle user registration with enhanced validation - FIXED PASSWORD FIELD + DEFAULT AVATARS"""
+    """DEBUGGING VERSION - Shows exact error details"""
     try:
         form = await request.form()
         username = sanitize_input(str(form.get("username", "")))
@@ -754,41 +754,51 @@ async def register_user(request: Request):
         password = str(form.get("password", ""))
         confirm_password = str(form.get("confirm_password", ""))
         
-        logger.info(f"🔍 REGISTRATION ATTEMPT - Username: '{username}', Email: '{email}'")
+        print(f"🔍 DEBUG REGISTRATION - Username: '{username}', Email: '{email}', Password length: {len(password)}")
+        logger.info(f"🔍 DEBUG REGISTRATION - Username: '{username}', Email: '{email}', Password length: {len(password)}")
         
         # Enhanced validation
         if not username or not email or not password:
+            error_msg = "All fields are required"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "All fields are required"
+                "error": error_msg
             }, status_code=400)
         
         if len(username) < 3 or len(username) > 50:
+            error_msg = "Username must be between 3 and 50 characters"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Username must be between 3 and 50 characters"
+                "error": error_msg
             }, status_code=400)
         
         # Check username for invalid characters
         if not username.replace('_', '').replace('-', '').isalnum():
+            error_msg = "Username can only contain letters, numbers, hyphens, and underscores"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Username can only contain letters, numbers, hyphens, and underscores"
+                "error": error_msg
             }, status_code=400)
         
         if not validate_email(email):
+            error_msg = "Please enter a valid email address"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Please enter a valid email address"
+                "error": error_msg
             }, status_code=400)
         
-        # Enhanced password validation - min 8 chars, 2 digits
+        # Enhanced password validation
         is_strong, password_msg = validate_password_strength(password)
         if not is_strong:
+            print(f"🔍 DEBUG REGISTRATION ERROR: {password_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
@@ -796,69 +806,91 @@ async def register_user(request: Request):
             }, status_code=400)
         
         if password != confirm_password:
+            error_msg = "Passwords do not match"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Passwords do not match"
+                "error": error_msg
             }, status_code=400)
         
+        print(f"🔍 DEBUG - Validation passed, checking if user exists...")
+        
         # Check if user already exists
-        if db.get_user_by_username(username):
+        existing_user_by_username = db.get_user_by_username(username)
+        if existing_user_by_username:
+            error_msg = "Username already exists"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Username already exists"
+                "error": error_msg
             }, status_code=409)
         
-        if db.get_user_by_email(email):
+        existing_user_by_email = db.get_user_by_email(email)
+        if existing_user_by_email:
+            error_msg = "Email already registered"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
-                "error": "Email already registered"
+                "error": error_msg
             }, status_code=409)
         
-        # Create user with enhanced security - FIXED: Use correct database field name
+        print(f"🔍 DEBUG - User doesn't exist, creating user...")
+        
+        # Create user with enhanced security
         hashed_password = hash_password(password)
         api_key = generate_api_key()
         
         user_data = {
             "username": username,
             "email": email,
-            "password": hashed_password,  # FIXED: Changed from "hashed_password" to "password"
+            "password": hashed_password,
             "api_key": api_key,
             "is_admin": 0,
             "is_locked": 0,
             "avatar_id": "",
             "created_at": datetime.now().isoformat(),
-            "email_verified": 0,  # For future email verification
-            "credits_remaining": 3  # Start with 3 credits
+            "email_verified": 0,
+            "credits_remaining": 3
         }
         
-        logger.info(f"🔍 REGISTRATION - Creating user with data: {list(user_data.keys())}")
+        print(f"🔍 DEBUG - User data prepared: {list(user_data.keys())}")
+        print(f"🔍 DEBUG - Calling db.create_user()...")
         
         user_id = db.create_user(user_data)
+        
+        print(f"🔍 DEBUG - db.create_user() returned: {user_id}")
+        logger.error(f"🔍 DEBUG - db.create_user() returned: {user_id}")
+        
         if not user_id:
-            logger.error(f"🔍 REGISTRATION FAILED - Could not create user {username}")
+            error_msg = f"Registration failed - database error. User ID returned: {user_id}"
+            print(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
+            logger.error(f"🔍 DEBUG REGISTRATION ERROR: {error_msg}")
             return templates.TemplateResponse("portal/register.html", {
                 "request": request,
                 "user": None,
                 "error": "Registration failed. Please try again."
             }, status_code=500)
         
-        logger.info(f"🔍 REGISTRATION SUCCESS - User {username} created with ID: {user_id}")
+        print(f"🔍 DEBUG - User created successfully with ID: {user_id}")
+        logger.info(f"🔍 DEBUG - User created successfully with ID: {user_id}")
         
         # Set up default avatars for the new user
         try:
+            print(f"🔍 DEBUG - Setting up default avatars...")
             setup_default_avatars_for_user(user_id)
-            logger.info(f"🎭 REGISTRATION - Default avatars set up for user {username}")
+            print(f"🔍 DEBUG - Default avatars set up successfully")
         except Exception as avatar_error:
-            logger.error(f"🎭 REGISTRATION - Failed to set up default avatars for user {username}: {avatar_error}")
+            print(f"🔍 DEBUG - Avatar setup failed: {avatar_error}")
+            logger.error(f"🔍 DEBUG - Avatar setup failed: {avatar_error}")
             # Don't fail registration if avatar setup fails
         
-        # Auto-login after registration using JWT cookie
+        # Auto-login after registration
+        print(f"🔍 DEBUG - Creating session...")
         token = session_manager.create_session(user_id, request)
-        
-        logger.info(f"New user registered: {username}")
+        print(f"🔍 DEBUG - Session created, redirecting to dashboard")
         
         # Create redirect response and set JWT cookie
         response = RedirectResponse(url="/dashboard", status_code=302)
@@ -866,21 +898,29 @@ async def register_user(request: Request):
             key="access_token",
             value=token,
             httponly=True,
-            secure=True,  # Use HTTPS in production
+            secure=True,
             samesite="lax",
-            max_age=86400  # 24 hours
+            max_age=86400
         )
         
+        print(f"🔍 DEBUG - Registration completed successfully for user: {username}")
+        logger.info(f"🔍 DEBUG - Registration completed successfully for user: {username}")
         return response
         
     except Exception as e:
-        logger.error(f"Error during registration: {e}")
+        error_details = f"Registration error: {type(e).__name__}: {str(e)}"
+        print(f"🔍 DEBUG REGISTRATION EXCEPTION: {error_details}")
+        logger.error(f"🔍 DEBUG REGISTRATION EXCEPTION: {error_details}")
+        
         import traceback
-        logger.error(f"Registration error traceback: {traceback.format_exc()}")
+        full_traceback = traceback.format_exc()
+        print(f"🔍 DEBUG FULL TRACEBACK:\n{full_traceback}")
+        logger.error(f"🔍 DEBUG FULL TRACEBACK:\n{full_traceback}")
+        
         return templates.TemplateResponse("portal/register.html", {
             "request": request,
             "user": None,
-            "error": "Registration failed. Please try again."
+            "error": f"Registration failed: {error_details}"
         }, status_code=500)
 
 @router.get("/logout")
@@ -1144,41 +1184,18 @@ async def check_username_availability(request: Request):
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
     return {
-        "message": "Production web routes with REAL HeyGen Avatar IDs + Username API are working!", 
+        "message": "Production web routes with DEBUG REGISTRATION are working!", 
         "routes_loaded": True,
-        "default_avatars": [
-            {
-                "id": "Tyler-insuit-20220721",
-                "name": "Professional Male",
-                "status": "Confirmed Working"
-            },
-            {
-                "id": "Kristin_public_2_20240108", 
-                "name": "Professional Female",
-                "status": "Confirmed Working"
-            }
-        ],
-        "new_features": [
-            "✅ Real-time Username Validation API",
-            "✅ Enhanced Registration Form",
-            "✅ Username Availability Checking",
-            "✅ Professional UI Design"
-        ],
+        "debug_enabled": True,
         "features": [
             "Authentication",
             "JWT Cookie Session Management", 
-            "Password Security - FIXED FIELD NAMES",
-            "Enhanced Password Rules (8 chars, 2 digits)",
+            "Password Security",
             "Rate Limiting",
             "Input Sanitization",
             "File Upload Security",
-            "Admin Password Fix",
             "User Dashboard Access",
-            "Complete Admin Panel Routes",
-            "Video Debug Route",
-            "FIXED Dashboard Video Display",
-            "FIXED Video Player Route",
-            "REAL Default Avatars for New Users (Tyler & Kristin)",
-            "REAL-TIME USERNAME CHECKING API"
+            "Real-time Username Validation API",
+            "DEBUG REGISTRATION - Shows exact error details"
         ]
     }
