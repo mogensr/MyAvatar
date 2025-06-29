@@ -1079,12 +1079,72 @@ async def dashboard_page(request: Request):
             "status": "error"
         }, status_code=500)
 
+# ⭐ NEW API ENDPOINT FOR USERNAME CHECKING ⭐
+@router.post("/api/check-username")
+async def check_username_availability(request: Request):
+    """API endpoint to check if username is available - Real-time validation for registration form"""
+    try:
+        data = await request.json()
+        username = sanitize_input(data.get("username", "").strip())
+        
+        logger.info(f"🔍 USERNAME CHECK - Checking availability for: '{username}'")
+        
+        if not username:
+            return JSONResponse({
+                "available": False,
+                "error": "Username is required"
+            }, status_code=400)
+        
+        # Validate username format
+        if len(username) < 3 or len(username) > 50:
+            return JSONResponse({
+                "available": False,
+                "error": "Username must be between 3 and 50 characters"
+            }, status_code=400)
+        
+        # Check characters (only letters, numbers, hyphens, underscores)
+        if not username.replace('_', '').replace('-', '').isalnum():
+            return JSONResponse({
+                "available": False,
+                "error": "Username can only contain letters, numbers, hyphens, and underscores"
+            }, status_code=400)
+        
+        # Check doesn't start or end with hyphen or underscore
+        if username.startswith(('-', '_')) or username.endswith(('-', '_')):
+            return JSONResponse({
+                "available": False,
+                "error": "Username cannot start or end with hyphen or underscore"
+            }, status_code=400)
+        
+        # Check if username exists in database
+        existing_user = db.get_user_by_username(username)
+        
+        if existing_user:
+            logger.info(f"🔍 USERNAME CHECK - '{username}' is already taken")
+            return JSONResponse({
+                "available": False,
+                "message": "Username is already taken"
+            })
+        else:
+            logger.info(f"🔍 USERNAME CHECK - '{username}' is available")
+            return JSONResponse({
+                "available": True,
+                "message": "Username is available"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error checking username availability: {e}")
+        return JSONResponse({
+            "available": False,
+            "error": "Unable to check username availability"
+        }, status_code=500)
+
 # Additional routes would continue here...
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
     return {
-        "message": "Production web routes with REAL HeyGen Avatar IDs are working!", 
+        "message": "Production web routes with REAL HeyGen Avatar IDs + Username API are working!", 
         "routes_loaded": True,
         "default_avatars": [
             {
@@ -1097,6 +1157,12 @@ async def test_routes():
                 "name": "Professional Female",
                 "status": "Confirmed Working"
             }
+        ],
+        "new_features": [
+            "✅ Real-time Username Validation API",
+            "✅ Enhanced Registration Form",
+            "✅ Username Availability Checking",
+            "✅ Professional UI Design"
         ],
         "features": [
             "Authentication",
@@ -1112,9 +1178,7 @@ async def test_routes():
             "Video Debug Route",
             "FIXED Dashboard Video Display",
             "FIXED Video Player Route",
-            "REAL Default Avatars for New Users (Tyler & Kristin)"
+            "REAL Default Avatars for New Users (Tyler & Kristin)",
+            "REAL-TIME USERNAME CHECKING API"
         ]
     }
-
-
-
