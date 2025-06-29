@@ -790,6 +790,172 @@ def get_video_details(api_key: str, video_id: str):
             "error": error_msg
         }
 
+def get_photo_avatar_groups(api_key: str):
+    """
+    Get photo avatar groups from HeyGen API
+    
+    Args:
+        api_key: HeyGen API key
+        
+    Returns:
+        Dictionary with avatar groups list or error information
+    """
+    headers = {
+        "X-Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        log_info("Fetching photo avatar groups", "HeyGen API")
+        
+        response = requests.get(
+            "https://api.heygen.com/v2/avatar_group.list",
+            headers=headers
+        )
+        
+        log_info(f"HeyGen API response status: {response.status_code}", "HeyGen API")
+        response_data = response.json()
+        
+        if response.status_code == 200 and response_data.get("error") is None:
+            groups = response_data.get("data", {}).get("avatar_group_list", [])
+            log_info(f"Retrieved {len(groups)} avatar groups", "HeyGen API")
+            return {
+                "success": True, 
+                "groups": groups
+            }
+        else:
+            error_msg = f"Failed to fetch avatar groups: {response_data.get('error', 'Unknown error')}"
+            log_error(error_msg, "HeyGen API")
+            return {
+                "success": False,
+                "error": error_msg
+            }
+    except Exception as e:
+        error_msg = f"Exception in avatar groups fetch: {str(e)}"
+        log_error(error_msg, "HeyGen API", e)
+        return {
+            "success": False,
+            "error": error_msg
+        }
+
+def get_photo_avatars_in_group(api_key: str, group_id: str):
+    """
+    Get photo avatars within a specific group
+    
+    Args:
+        api_key: HeyGen API key
+        group_id: ID of the avatar group
+        
+    Returns:
+        Dictionary with avatars list or error information
+    """
+    headers = {
+        "X-Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        log_info(f"Fetching photo avatars in group {group_id}", "HeyGen API")
+        
+        response = requests.get(
+            f"https://api.heygen.com/v2/avatar_group/{group_id}/avatars",
+            headers=headers
+        )
+        
+        log_info(f"HeyGen API response status: {response.status_code}", "HeyGen API")
+        response_data = response.json()
+        
+        if response.status_code == 200 and response_data.get("error") is None:
+            avatars = response_data.get("data", {}).get("avatar_list", [])
+            log_info(f"Retrieved {len(avatars)} photo avatars in group {group_id}", "HeyGen API")
+            return {
+                "success": True, 
+                "avatars": avatars
+            }
+        else:
+            error_msg = f"Failed to fetch photo avatars in group: {response_data.get('error', 'Unknown error')}"
+            log_error(error_msg, "HeyGen API")
+            return {
+                "success": False,
+                "error": error_msg
+            }
+    except Exception as e:
+        error_msg = f"Exception in photo avatars fetch: {str(e)}"
+        log_error(error_msg, "HeyGen API", e)
+        return {
+            "success": False,
+            "error": error_msg
+        }
+
+def get_all_available_avatars(api_key: str):
+    """
+    Get ALL available avatars including regular avatars and photo avatars
+    
+    Args:
+        api_key: HeyGen API key
+        
+    Returns:
+        Dictionary with combined avatars list or error information
+    """
+    try:
+        log_info("Fetching all available avatars (regular + photo)", "HeyGen API")
+        
+        all_avatars = []
+        
+        # Get regular avatars
+        regular_result = get_available_avatars(api_key)
+        if regular_result["success"]:
+            regular_avatars = regular_result["avatars"]
+            # Mark as regular avatars
+            for avatar in regular_avatars:
+                avatar["avatar_type"] = "regular"
+            all_avatars.extend(regular_avatars)
+            log_info(f"Added {len(regular_avatars)} regular avatars", "HeyGen API")
+        
+        # Get photo avatar groups
+        groups_result = get_photo_avatar_groups(api_key)
+        if groups_result["success"]:
+            groups = groups_result["groups"]
+            
+            # Get avatars from each group
+            for group in groups:
+                group_id = group.get("id")
+                if group_id:
+                    avatars_result = get_photo_avatars_in_group(api_key, group_id)
+                    if avatars_result["success"]:
+                        photo_avatars = avatars_result["avatars"]
+                        # Convert photo avatar format to match regular avatars
+                        for avatar in photo_avatars:
+                            converted_avatar = {
+                                "avatar_id": avatar.get("id"),
+                                "avatar_name": avatar.get("name", f"Photo Avatar from {group.get('name', 'Unknown Group')}"),
+                                "gender": "unknown",
+                                "preview_image_url": avatar.get("image_url"),
+                                "preview_video_url": avatar.get("motion_preview_url"),
+                                "premium": False,
+                                "type": "photo",
+                                "avatar_type": "photo",
+                                "group_id": group_id,
+                                "group_name": group.get("name"),
+                                "status": avatar.get("status")
+                            }
+                            all_avatars.append(converted_avatar)
+                        log_info(f"Added {len(photo_avatars)} photo avatars from group {group.get('name')}", "HeyGen API")
+        
+        log_info(f"Total avatars retrieved: {len(all_avatars)}", "HeyGen API")
+        return {
+            "success": True,
+            "avatars": all_avatars
+        }
+        
+    except Exception as e:
+        error_msg = f"Exception in get_all_available_avatars: {str(e)}"
+        log_error(error_msg, "HeyGen API", e)
+        return {
+            "success": False,
+            "error": error_msg
+        }
+
 def test_heygen_connection(api_key: str):
     """
     Test connection to HeyGen API

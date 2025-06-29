@@ -156,15 +156,15 @@ def fetch_and_update_avatars_with_naming():
     Use this to replace your existing avatar fetching code.
     """
     try:
-        from ..api.heygen import get_available_avatars
+        from ..api.heygen import get_all_available_avatars
         
         api_key = os.getenv("HEYGEN_API_KEY")
         if not api_key:
             log_error("HEYGEN_API_KEY not found", "AdminRoutes")
             return {"success": False, "error": "API key not configured"}
         
-        # Fetch avatars from HeyGen
-        result = get_available_avatars(api_key)
+        # Fetch ALL avatars from HeyGen (regular + photo)
+        result = get_all_available_avatars(api_key)
         
         if not result or not result.get('success', False):
             log_error("Failed to fetch avatars from HeyGen", "AdminRoutes")
@@ -860,14 +860,14 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             raise HTTPException(status_code=404, detail="User not found")
         
         # Import HeyGen functions
-        from ..api.heygen import get_available_avatars
+        from ..api.heygen import get_all_available_avatars
         import requests
         import uuid
         from pathlib import Path
         
         try:
-            # Fetch all avatars from HeyGen and find the specific one
-            avatars_result = get_available_avatars(os.getenv("HEYGEN_API_KEY"))
+            # Fetch ALL avatars from HeyGen (regular + photo) and find the specific one
+            avatars_result = get_all_available_avatars(os.getenv("HEYGEN_API_KEY"))
             
             if not avatars_result.get("success"):
                 return JSONResponse(
