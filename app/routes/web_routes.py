@@ -1755,7 +1755,8 @@ async def test_routes():
             "User Dashboard Access",
             "Complete Admin Panel Routes",
             "Video Debug Route",
-            "FIXED Dashboard Video Display"
+            "FIXED Dashboard Video Display",
+            "FIXED Video Player Route"
         ]
     }
 
@@ -1930,43 +1931,6 @@ async def create_voice_page(request: Request):
         
     except Exception as e:
         logger.error(f"Error loading voice recording page: {e}")
-        return RedirectResponse(url="/dashboard", status_code=302)
-
-@router.get("/video/{video_id}")
-async def video_player(request: Request, video_id: str):
-    """Video player page for full-screen video viewing"""
-    try:
-        user = get_current_user(request)
-        if not user:
-            return RedirectResponse(url="/login", status_code=302)
-        
-        # Get video details from database - handle both numeric IDs and HeyGen video IDs
-        if video_id.isdigit():
-            # Numeric ID - check both id and heygen_video_id fields
-            video = execute_query(
-                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
-                (int(video_id), video_id),
-                fetch_one=True
-            )
-        else:
-            # Non-numeric ID (HeyGen video ID) - only check heygen_video_id field
-            video = execute_query(
-                "SELECT * FROM videos WHERE heygen_video_id = %s",
-                (video_id,),
-                fetch_one=True
-            )
-        
-        if not video:
-            raise HTTPException(status_code=404, detail="Video not found")
-        
-        return templates.TemplateResponse("video_player.html", {
-            "request": request,
-            "user": user,
-            "video": video
-        })
-        
-    except Exception as e:
-        logger.error(f"Error loading video player: {e}")
         return RedirectResponse(url="/dashboard", status_code=302)
 
 @router.post("/api/backgrounds/add-from-url")
