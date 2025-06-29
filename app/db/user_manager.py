@@ -1,8 +1,8 @@
 """
 User management database class for MyAvatar
-Provides a Database class interface for user operations
+FIXED VERSION - PostgreSQL INSERT with RETURNING id
 """
-from .database import execute_query
+from .database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_password_hash, verify_password
 from ..logger.log_handler import log_info, log_error, log_warning
 from datetime import datetime
@@ -68,40 +68,70 @@ class Database:
             return None
     
     def create_user(self, user_data):
-        """Create a new user"""
+        """Create a new user - FIXED FOR POSTGRESQL"""
         try:
             log_info(f"Creating user: {user_data.get('username')}", "UserManager")
             
             # Hash the password
             password_hash = get_password_hash(user_data['password'])
             
-            # Insert user
-            result = execute_query(
-                """
-                INSERT INTO users (username, email, password, is_admin, created_at) 
-                VALUES (?, ?, ?, ?, ?)
-                """, 
-                (
-                    user_data['username'],
-                    user_data['email'], 
-                    password_hash,
-                    user_data.get('is_admin', 0),
-                    datetime.now()
+            # FIXED: Use RETURNING id for PostgreSQL, different approach for SQLite
+            if USE_POSTGRES:
+                # PostgreSQL - use RETURNING to get the ID directly
+                result = execute_query(
+                    """
+                    INSERT INTO users (username, email, password, is_admin, created_at) 
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                    """, 
+                    (
+                        user_data['username'],
+                        user_data['email'], 
+                        password_hash,
+                        user_data.get('is_admin', 0),
+                        datetime.now()
+                    ),
+                    fetch_one=True
                 )
-            )
-            
-            # Get the user ID
-            user = self.get_user_by_username(user_data['username'])
-            if user:
-                user_id = user.get('id')
-                log_info(f"User created successfully with ID: {user_id}", "UserManager")
-                return user_id
+                
+                if result:
+                    user_id = result['id'] if isinstance(result, dict) else result[0]
+                    log_info(f"PostgreSQL: User created successfully with ID: {user_id}", "UserManager")
+                    return user_id
+                else:
+                    log_error("PostgreSQL: Failed to get user ID from INSERT", "UserManager")
+                    return None
+                    
             else:
-                log_error("Failed to retrieve created user", "UserManager")
-                return None
+                # SQLite - insert then get the ID
+                execute_query(
+                    """
+                    INSERT INTO users (username, email, password, is_admin, created_at) 
+                    VALUES (?, ?, ?, ?, ?)
+                    """, 
+                    (
+                        user_data['username'],
+                        user_data['email'], 
+                        password_hash,
+                        user_data.get('is_admin', 0),
+                        datetime.now()
+                    )
+                )
+                
+                # Get the user ID by looking up the created user
+                user = self.get_user_by_username(user_data['username'])
+                if user:
+                    user_id = user.get('id')
+                    log_info(f"SQLite: User created successfully with ID: {user_id}", "UserManager")
+                    return user_id
+                else:
+                    log_error("SQLite: Failed to retrieve created user", "UserManager")
+                    return None
                 
         except Exception as e:
             log_error(f"Error creating user {user_data.get('username')}: {str(e)}", "UserManager", e)
+            import traceback
+            log_error(f"Create user traceback: {traceback.format_exc()}", "UserManager")
             return None
     
     def update_user_login(self, user_id):

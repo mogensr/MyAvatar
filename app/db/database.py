@@ -1,9 +1,6 @@
 """
 Database functions for MyAvatar
-Supports both SQLite and PostgreSQL
-FIXED VERSION - PostgreSQL now returns dictionary-like objects
-FIXED: is_default column changed from BOOLEAN to INTEGER to match queries
-ENHANCED: Added comprehensive error logging and debugging
+FIXED VERSION - Proper PostgreSQL placeholder handling
 """
 import os
 import sqlite3
@@ -34,11 +31,11 @@ USE_POSTGRES = DATABASE_URL is not None and POSTGRESQL_AVAILABLE
 log_info(f"Database configuration - USE_POSTGRES: {USE_POSTGRES}, POSTGRESQL_AVAILABLE: {POSTGRESQL_AVAILABLE}", "Database")
 
 # ============================================================================
-# DATABASE CONNECTION FUNCTIONS - ENHANCED WITH ERROR LOGGING
+# DATABASE CONNECTION FUNCTIONS
 # ============================================================================
 
 def get_db_connection():
-    """Get a database connection based on configuration with enhanced error logging"""
+    """Get a database connection based on configuration"""
     try:
         if USE_POSTGRES and POSTGRESQL_AVAILABLE:
             log_info("Attempting PostgreSQL database connection", "Database")
@@ -54,42 +51,44 @@ def get_db_connection():
             return conn
     except psycopg2.Error as e:
         log_error(f"PostgreSQL connection failed: {e.pgcode} - {e.pgerror}", "Database", e)
-        log_error(f"Database URL (masked): {DATABASE_URL[:20]}...", "Database")
         raise
     except sqlite3.Error as e:
         log_error(f"SQLite connection failed: {str(e)}", "Database", e)
         raise
     except Exception as e:
         log_error(f"Unexpected database connection error: {type(e).__name__}", "Database", e)
-        log_error(f"Error details: {str(e)}", "Database")
         raise
 
 def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
-    """Execute SQL query with comprehensive error handling and logging"""
+    """Execute SQL query with proper PostgreSQL/SQLite handling"""
     connection = None
     cursor = None
     original_query = query
+    original_params = params
     
     try:
         log_info(f"Executing query: {query[:100]}{'...' if len(query) > 100 else ''}", "Database")
         log_info(f"Query parameters: {params}", "Database")
         
-        # Convert SQLite placeholders to PostgreSQL placeholders
-        if USE_POSTGRES and "?" in query:
-            query = query.replace("?", "%s")
-            log_info(f"Converted query placeholders for PostgreSQL", "Database")
-            
         connection = get_db_connection()
         
-        # Use RealDictCursor for PostgreSQL to return dictionary-like objects
         if USE_POSTGRES:
+            # Use RealDictCursor for PostgreSQL to return dictionary-like objects
             cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            log_info("Using PostgreSQL RealDictCursor", "Database")
+            
+            # For PostgreSQL, we need to convert ? to %s
+            if "?" in query:
+                # Count the number of ? placeholders
+                placeholder_count = query.count("?")
+                # Convert ? to %s
+                postgres_query = query.replace("?", "%s")
+                log_info(f"Converted {placeholder_count} placeholders for PostgreSQL", "Database")
+                query = postgres_query
+                
         else:
             cursor = connection.cursor()
-            log_info("Using SQLite cursor", "Database")
             
-        # Execute query with detailed logging
+        # Execute query
         start_time = datetime.now()
         cursor.execute(query, params)
         execution_time = (datetime.now() - start_time).total_seconds()
@@ -105,6 +104,7 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
             log_info(f"Fetched {len(result) if result else 0} records", "Database")
             return result
         else:
+            # For INSERT/UPDATE/DELETE without fetch
             if not USE_POSTGRES:  # PostgreSQL has autocommit=True
                 connection.commit()
             log_info("Query committed successfully", "Database")
@@ -114,24 +114,21 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
         log_error(f"PostgreSQL query error - Code: {e.pgcode}", "Database", e)
         log_error(f"PostgreSQL error details: {e.pgerror}", "Database")
         log_error(f"Failed query: {original_query}", "Database")
-        log_error(f"Query parameters: {params}", "Database")
+        log_error(f"Query parameters: {original_params}", "Database")
         if connection and not USE_POSTGRES:
             connection.rollback()
-            log_info("Transaction rolled back", "Database")
         raise
     except sqlite3.Error as e:
         log_error(f"SQLite query error: {str(e)}", "Database", e)
         log_error(f"Failed query: {original_query}", "Database")
-        log_error(f"Query parameters: {params}", "Database")
+        log_error(f"Query parameters: {original_params}", "Database")
         if connection:
             connection.rollback()
-            log_info("Transaction rolled back", "Database")
         raise
     except Exception as e:
         log_error(f"Unexpected query error: {type(e).__name__}", "Database", e)
         log_error(f"Error details: {str(e)}", "Database")
         log_error(f"Failed query: {original_query}", "Database")
-        log_error(f"Query parameters: {params}", "Database")
         log_error(f"Stack trace: {traceback.format_exc()}", "Database")
         if connection and not USE_POSTGRES:
             connection.rollback()
@@ -144,15 +141,15 @@ def execute_query(query: str, params: tuple = (), fetch_one: bool = False, fetch
             log_info("Database connection closed", "Database")
 
 # ============================================================================
-# DATABASE INITIALIZATION - FIXED is_default COLUMN
+# DATABASE INITIALIZATION
 # ============================================================================
 
 def init_database():
-    """Initialize database tables if they don't exist - FIXED VERSION"""
+    """Initialize database tables if they don't exist"""
     try:
         log_info("Starting database initialization", "Database")
         
-        # Create users table with all required columns
+        # Create users table
         users_table = '''
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -180,7 +177,7 @@ def init_database():
         )
         '''
         
-        # Create videos table with foreign key constraint
+        # Create videos table
         videos_table = '''
         CREATE TABLE IF NOT EXISTS videos (
             id SERIAL PRIMARY KEY,
@@ -206,7 +203,7 @@ def init_database():
         )
         '''
         
-        # FIXED: Create user_avatars table - Changed is_default from BOOLEAN to INTEGER
+        # Create user_avatars table
         avatars_table = '''
         CREATE TABLE IF NOT EXISTS user_avatars (
             id SERIAL PRIMARY KEY,
@@ -222,64 +219,10 @@ def init_database():
         )
         '''
         
-        # Create system settings table
-        settings_table = '''
-        CREATE TABLE IF NOT EXISTS settings (
-            id SERIAL PRIMARY KEY,
-            setting_key TEXT UNIQUE NOT NULL,
-            setting_value TEXT,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        '''
-        
-        # Create API logs table
-        logs_table = '''
-        CREATE TABLE IF NOT EXISTS api_logs (
-            id SERIAL PRIMARY KEY,
-            endpoint TEXT NOT NULL,
-            request_data TEXT,
-            response_data TEXT,
-            status_code INTEGER,
-            user_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-        )
-        '''
-        
-        # Create templates table
-        templates_table = '''
-        CREATE TABLE IF NOT EXISTS templates (
-            id SERIAL PRIMARY KEY,
-            template_id TEXT UNIQUE NOT NULL,
-            template_name TEXT NOT NULL,
-            description TEXT,
-            thumbnail_url TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        '''
-        
-        # Create backgrounds table (since it's referenced in your error search)
-        backgrounds_table = '''
-        CREATE TABLE IF NOT EXISTS backgrounds (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            description TEXT,
-            category TEXT,
-            file_path TEXT,
-            thumbnail_path TEXT,
-            is_default INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        '''
-        
         tables_to_create = [
             ("users", users_table),
             ("videos", videos_table),
-            ("user_avatars", avatars_table),
-            ("settings", settings_table),
-            ("api_logs", logs_table),
-            ("templates", templates_table),
-            ("backgrounds", backgrounds_table)
+            ("user_avatars", avatars_table)
         ]
         
         if USE_POSTGRES and POSTGRESQL_AVAILABLE:
@@ -306,8 +249,6 @@ def init_database():
             modified_tables = []
             for table_name, table_sql in tables_to_create:
                 table_sql = table_sql.replace('SERIAL PRIMARY KEY', 'INTEGER PRIMARY KEY AUTOINCREMENT')
-                table_sql = table_sql.replace('REAL', 'REAL')
-                table_sql = table_sql.replace('TIMESTAMP', 'TIMESTAMP')
                 modified_tables.append((table_name, table_sql))
             
             conn = get_db_connection()
@@ -329,129 +270,7 @@ def init_database():
             
         log_info("Database initialization completed successfully", "Database")
         
-        # Verify tables were created
-        verify_database_schema()
-        
     except Exception as e:
         log_error("Failed to initialize database", "Database", e)
-        log_error(f"Initialization error details: {str(e)}", "Database")
         log_error(f"Stack trace: {traceback.format_exc()}", "Database")
         raise
-
-def verify_database_schema():
-    """Verify database schema is correct"""
-    try:
-        log_info("Verifying database schema", "Database")
-        
-        if USE_POSTGRES:
-            # Check PostgreSQL schema
-            schema_query = """
-            SELECT table_name, column_name, data_type, is_nullable, column_default
-            FROM information_schema.columns 
-            WHERE table_name = 'user_avatars' 
-            ORDER BY ordinal_position
-            """
-        else:
-            # Check SQLite schema
-            schema_query = "PRAGMA table_info(user_avatars)"
-            
-        result = execute_query(schema_query, fetch_all=True)
-        
-        if result:
-            log_info("user_avatars table schema:", "Database")
-            for row in result:
-                log_info(f"  {dict(row)}", "Database")
-                
-            # Check specifically for is_default column
-            is_default_found = False
-            for row in result:
-                row_dict = dict(row)
-                if USE_POSTGRES:
-                    if row_dict.get('column_name') == 'is_default':
-                        is_default_found = True
-                        log_info(f"is_default column type: {row_dict.get('data_type')}", "Database")
-                else:
-                    if row_dict.get('name') == 'is_default':
-                        is_default_found = True
-                        log_info(f"is_default column type: {row_dict.get('type')}", "Database")
-            
-            if not is_default_found:
-                log_warning("is_default column not found in user_avatars table!", "Database")
-            else:
-                log_info("is_default column verified in user_avatars table", "Database")
-        else:
-            log_warning("user_avatars table not found or empty schema", "Database")
-            
-    except Exception as e:
-        log_error("Failed to verify database schema", "Database", e)
-        # Don't raise here, just log the warning
-
-def update_database_schema():
-    """Update database schema for premium features"""
-    try:
-        log_info("Checking database schema updates", "Database")
-        
-        # Check if we need to migrate is_default from BOOLEAN to INTEGER
-        try:
-            # Test query to see if we have the boolean/integer mismatch
-            test_query = "SELECT is_default FROM user_avatars WHERE is_default = 1 LIMIT 1"
-            execute_query(test_query, fetch_one=True)
-            log_info("is_default column accepts integer values - schema is correct", "Database")
-        except Exception as e:
-            if "operator does not exist: boolean = integer" in str(e):
-                log_warning("Detected boolean/integer mismatch in is_default column", "Database")
-                log_info("This should be fixed by recreating the database with the new schema", "Database")
-            else:
-                log_info("Schema test completed", "Database")
-        
-        log_info("Database schema check complete", "Database")
-        
-    except Exception as e:
-        log_error("Failed to update database schema", "Database", e)
-        # Don't raise here unless it's critical
-
-# ============================================================================
-# HELPER FUNCTIONS - ENHANCED
-# ============================================================================
-
-def get_placeholder():
-    """Get the correct placeholder for the database type"""
-    placeholder = "%s" if USE_POSTGRES else "?"
-    log_info(f"Using database placeholder: {placeholder}", "Database")
-    return placeholder
-
-def format_query(query: str):
-    """Format query for current database type"""
-    original_query = query
-    if USE_POSTGRES and "?" in query:
-        query = query.replace("?", "%s")
-        log_info(f"Query formatted for PostgreSQL: {original_query} -> {query}", "Database")
-    return query
-
-def log_database_stats():
-    """Log current database statistics for debugging"""
-    try:
-        log_info("=== DATABASE STATISTICS ===", "Database")
-        log_info(f"Database Type: {'PostgreSQL' if USE_POSTGRES else 'SQLite'}", "Database")
-        log_info(f"PostgreSQL Available: {POSTGRESQL_AVAILABLE}", "Database")
-        
-        # Count records in main tables
-        tables_to_check = ['users', 'videos', 'user_avatars', 'backgrounds']
-        
-        for table in tables_to_check:
-            try:
-                count_query = f"SELECT COUNT(*) as count FROM {table}"
-                result = execute_query(count_query, fetch_one=True)
-                count = result['count'] if result else 0
-                log_info(f"{table} table: {count} records", "Database")
-            except Exception as e:
-                log_warning(f"Could not count records in {table}: {str(e)}", "Database")
-        
-        log_info("=== END DATABASE STATISTICS ===", "Database")
-        
-    except Exception as e:
-        log_error("Failed to generate database statistics", "Database", e)
-
-# ============================================================================
-# END OF FILE
-# ============================================================================
