@@ -926,8 +926,10 @@ def get_all_available_avatars(api_key: str):
                         photo_avatars = avatars_result["avatars"]
                         # Convert photo avatar format to match regular avatars
                         for avatar in photo_avatars:
+                            avatar_id = avatar.get("id")
+                            log_info(f"Processing photo avatar: ID={avatar_id}, Name={avatar.get('name')}", "HeyGen API")
                             converted_avatar = {
-                                "avatar_id": avatar.get("id"),
+                                "avatar_id": avatar_id,
                                 "avatar_name": avatar.get("name", f"Photo Avatar from {group.get('name', 'Unknown Group')}"),
                                 "gender": "unknown",
                                 "preview_image_url": avatar.get("image_url"),
