@@ -325,10 +325,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        currentVoiceInput.value = newVoiceId;
                         alert('Voice ID updated successfully!');
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('voiceModal'));
-                        modal.hide();
+                        // Refresh the page to show the updated voice ID
+                        window.location.reload();
                     } else {
                         alert('Error: ' + (data.error || 'Failed to update voice ID'));
                     }
