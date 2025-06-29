@@ -129,6 +129,12 @@
             border: 1px solid #fecaca;
         }
         
+        .username-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        
         .password-rules {
             background: #f1f5f9;
             border: 1px solid #cbd5e1;
@@ -235,6 +241,11 @@
         
         .crossmark {
             color: #dc2626;
+            font-weight: bold;
+        }
+        
+        .warning-icon {
+            color: #92400e;
             font-weight: bold;
         }
     </style>
@@ -369,6 +380,7 @@
         let checkTimeout;
         let isUsernameValid = false;
         let isUsernameAvailable = false;
+        let apiCheckFailed = false;
         
         // Real-time username validation
         usernameInput.addEventListener('input', function() {
@@ -380,6 +392,7 @@
             // Reset states
             isUsernameValid = false;
             isUsernameAvailable = false;
+            apiCheckFailed = false;
             
             // Hide check message if empty
             if (!username) {
@@ -432,6 +445,8 @@
         
         async function checkUsernameAvailability(username) {
             try {
+                console.log('Checking username availability for:', username);
+                
                 const response = await fetch('/api/check-username', {
                     method: 'POST',
                     headers: {
@@ -440,19 +455,38 @@
                     body: JSON.stringify({ username: username })
                 });
                 
+                console.log('API Response status:', response.status);
+                
+                // Handle HTTP errors
+                if (!response.ok) {
+                    console.error('API Error:', response.status, response.statusText);
+                    
+                    // If API fails, allow registration but show warning
+                    apiCheckFailed = true;
+                    showUsernameMessage('⚠️ Cannot verify availability - proceeding anyway', 'warning');
+                    isUsernameAvailable = true; // Allow submission
+                    updateSubmitButton();
+                    return;
+                }
+                
                 const data = await response.json();
+                console.log('API Response data:', data);
                 
                 if (data.available) {
-                    showUsernameMessage('Username is available!', 'available');
+                    showUsernameMessage('✓ Username is available!', 'available');
                     isUsernameAvailable = true;
                 } else {
-                    showUsernameMessage('Username is already taken', 'taken');
+                    showUsernameMessage('✗ Username is already taken', 'taken');
                     isUsernameAvailable = false;
                 }
+                
             } catch (error) {
-                console.error('Error checking username:', error);
-                showUsernameMessage('Unable to check availability. Please try again.', 'invalid');
-                isUsernameAvailable = false;
+                console.error('Network error checking username:', error);
+                
+                // If network fails, allow registration but show warning
+                apiCheckFailed = true;
+                showUsernameMessage('⚠️ Cannot verify availability - proceeding anyway', 'warning');
+                isUsernameAvailable = true; // Allow submission
             }
             
             updateSubmitButton();
@@ -461,7 +495,7 @@
         function showUsernameMessage(message, type) {
             usernameCheckMessage.textContent = message;
             
-            // Set icon based on type
+            // Set icon and styling based on type
             if (type === 'available') {
                 usernameIcon.innerHTML = '<span class="checkmark">✓</span>';
                 usernameCheck.className = 'username-check username-available';
@@ -474,6 +508,9 @@
             } else if (type === 'invalid') {
                 usernameIcon.innerHTML = '<span class="crossmark">✗</span>';
                 usernameCheck.className = 'username-check username-invalid';
+            } else if (type === 'warning') {
+                usernameIcon.innerHTML = '<span class="warning-icon">⚠️</span>';
+                usernameCheck.className = 'username-check username-warning';
             }
             
             usernameCheck.classList.remove('hidden');
@@ -485,7 +522,11 @@
             
             if (hasValidUsername) {
                 submitBtn.disabled = false;
-                submitText.textContent = 'Create Account';
+                if (apiCheckFailed) {
+                    submitText.textContent = 'Create Account (Unverified)';
+                } else {
+                    submitText.textContent = 'Create Account';
+                }
             } else {
                 submitBtn.disabled = true;
                 if (username && isUsernameValid && !isUsernameAvailable) {
@@ -498,7 +539,7 @@
             }
         }
         
-        // Form submission validation
+        // Form submission validation - RELAXED for API failures
         document.getElementById('registrationForm').addEventListener('submit', function(e) {
             const username = usernameInput.value.trim();
             const password = document.getElementById('password').value;
@@ -512,7 +553,8 @@
                 return;
             }
             
-            if (!isUsernameAvailable) {
+            // Only block if we successfully checked and username is taken
+            if (!apiCheckFailed && !isUsernameAvailable) {
                 e.preventDefault();
                 alert('Please choose an available username.');
                 return;
@@ -554,6 +596,17 @@
             // Show loading state
             submitBtn.disabled = true;
             submitText.textContent = 'Creating Account...';
+            
+            // If API failed, show confirmation
+            if (apiCheckFailed) {
+                const proceed = confirm('Username availability could not be verified. Continue with registration?');
+                if (!proceed) {
+                    e.preventDefault();
+                    submitBtn.disabled = false;
+                    submitText.textContent = 'Create Account (Unverified)';
+                    return;
+                }
+            }
         });
         
         // Initialize submit button state
