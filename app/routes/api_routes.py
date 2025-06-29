@@ -502,7 +502,7 @@ async def create_video_from_audio_endpoint(
             log_warning(f"Using fallback HeyGen voice_id: {voice_id}", "API")
         
         # Create video with HeyGen API
-        result = create_video_from_audio_file(api_key, avatar_id, audio_url, format, voice_id)
+        result = create_video_from_audio_file(api_key, avatar_id, audio_url, format)
         
         if not result["success"]:
             return JSONResponse(
