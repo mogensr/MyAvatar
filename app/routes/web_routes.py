@@ -1,53 +1,4 @@
-@router.get("/video/{video_id}")
-async def video_player(request: Request, video_id: str):
-    """Video player page for full-screen video viewing - FIXED VERSION"""
-    try:
-        user = get_current_user(request)
-        if not user:
-            return RedirectResponse(url="/login", status_code=302)
-        
-        logger.info(f"🎬 VIDEO PLAYER - User {user.get('username')} accessing video ID: {video_id}")
-        
-        # Get video details from database - handle both numeric IDs and HeyGen video IDs
-        if video_id.isdigit():
-            logger.info(f"🎬 VIDEO PLAYER - Numeric ID detected: {video_id}")
-            video = execute_query(
-                "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
-                (int(video_id), video_id),
-                fetch_one=True
-            )
-        else:
-            logger.info(f"🎬 VIDEO PLAYER - HeyGen ID detected: {video_id}")
-            video = execute_query(
-                "SELECT * FROM videos WHERE heygen_video_id = ?",
-                (video_id,),
-                fetch_one=True
-            )
-        
-        logger.info(f"🎬 VIDEO PLAYER - Database query result: {video}")
-        
-        if not video:
-            logger.warning(f"🎬 VIDEO PLAYER - Video not found: {video_id}")
-            raise HTTPException(status_code=404, detail="Video not found")
-        
-        # Check if user has access to this video
-        if not user.get("is_admin") and video["user_id"] != int(user["id"]):
-            logger.warning(f"🎬 VIDEO PLAYER - Access denied for user {user.get('id')} to video owned by {video['user_id']}")
-            raise HTTPException(status_code=403, detail="Access denied")
-        
-        # NEW: Check if video is completed and has URL
-        video_status = video.get('status', 'unknown')
-        video_url = video.get('video_path') or video.get('video_url')
-        
-        logger.info(f"🎬 VIDEO PLAYER - Video status: {video_status}, URL: {video_url[:50] if video_url else 'None'}...")
-        
-        if video_status == 'completed' and video_url:
-            # Redirect to video URL for direct playback
-            logger.info(f"🎬 VIDEO PLAYER - Redirecting to video URL: {video_url}")
-            return RedirectResponse(url=video_url, status_code=302)
-        elif video_status in ['processing', 'pending']:
-            # Show processing page
-            logger.info(f"import os
+import os
 import uuid
 import shutil
 import logging
@@ -1302,8 +1253,8 @@ async def admin_manage_avatars_for_user(request: Request, user_id: int):
             return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
                 "user": user,
-                "user_to_manage": target_user,  # Changed from target_user to user_to_manage
-                "avatars": all_avatars  # Changed from user_avatars to all_avatars
+                "user_to_manage": target_user,
+                "avatars": all_avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN MANAGE AVATARS - Template error: {template_error}")
@@ -1491,7 +1442,7 @@ async def admin_edit_user(request: Request, user_id: int):
             return templates.TemplateResponse("portal/admin_edit_user.html", {
                 "request": request,
                 "user": user,
-                "user_to_edit": edit_user  # Changed from edit_user to user_to_edit
+                "user_to_edit": edit_user
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN EDIT USER - Template error: {template_error}")
@@ -1570,8 +1521,8 @@ async def admin_user_avatars(request: Request, user_id: int):
             return templates.TemplateResponse("portal/admin_manage_avatars.html", {
                 "request": request,
                 "user": user,
-                "user_to_manage": target_user,  # Changed from target_user to user_to_manage
-                "avatars": all_avatars  # Changed from user_avatars to all_avatars
+                "user_to_manage": target_user,
+                "avatars": all_avatars
             })
         except Exception as template_error:
             logger.warning(f"🔍 ADMIN USER AVATARS - Template error: {template_error}")
@@ -1980,6 +1931,92 @@ async def create_voice_page(request: Request):
         
     except Exception as e:
         logger.error(f"Error loading voice recording page: {e}")
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+@router.get("/video/{video_id}")
+async def video_player(request: Request, video_id: str):
+    """Video player page for full-screen video viewing - FIXED VERSION"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🎬 VIDEO PLAYER - User {user.get('username')} accessing video ID: {video_id}")
+        
+        # Get video details from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            logger.info(f"🎬 VIDEO PLAYER - Numeric ID detected: {video_id}")
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            logger.info(f"🎬 VIDEO PLAYER - HeyGen ID detected: {video_id}")
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = %s",
+                (video_id,),
+                fetch_one=True
+            )
+        
+        logger.info(f"🎬 VIDEO PLAYER - Database query result: {video is not None}")
+        
+        if not video:
+            logger.warning(f"🎬 VIDEO PLAYER - Video not found in database: {video_id}")
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        # Check if user has access to this video
+        if not user.get("is_admin") and video["user_id"] != int(user["id"]):
+            logger.warning(f"🎬 VIDEO PLAYER - Access denied for user {user.get('id')} to video owned by {video['user_id']}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # NEW: Check if video is completed and has URL
+        video_status = video.get('status', 'unknown')
+        video_url = video.get('video_path') or video.get('video_url')
+        
+        logger.info(f"🎬 VIDEO PLAYER - Video status: {video_status}, URL exists: {bool(video_url)}")
+        
+        if video_status == 'completed' and video_url:
+            # Redirect to video URL for direct playback
+            logger.info(f"🎬 VIDEO PLAYER - Redirecting to video URL for direct playback")
+            return RedirectResponse(url=video_url, status_code=302)
+        elif video_status in ['processing', 'pending']:
+            # Show processing page
+            logger.info(f"🎬 VIDEO PLAYER - Showing processing page")
+            try:
+                return templates.TemplateResponse("video_processing.html", {
+                    "request": request,
+                    "user": user,
+                    "video": video,
+                    "message": "Video is still processing. Please wait..."
+                })
+            except Exception:
+                return JSONResponse({
+                    "status": "processing",
+                    "message": "Video is still processing. Please wait...",
+                    "video_id": video_id
+                })
+        else:
+            # Show error
+            logger.info(f"🎬 VIDEO PLAYER - Showing error page")
+            try:
+                return templates.TemplateResponse("video_error.html", {
+                    "request": request,
+                    "user": user,
+                    "video": video,
+                    "error": "Video failed to generate or is not available"
+                })
+            except Exception:
+                return JSONResponse({
+                    "status": "error",
+                    "error": "Video failed to generate or is not available",
+                    "video_id": video_id
+                }, status_code=400)
+        
+    except Exception as e:
+        logger.error(f"🎬 VIDEO PLAYER ERROR: {e}")
+        import traceback
+        logger.error(f"🎬 VIDEO PLAYER TRACEBACK: {traceback.format_exc()}")
         return RedirectResponse(url="/dashboard", status_code=302)
 
 @router.post("/api/backgrounds/add-from-url")
