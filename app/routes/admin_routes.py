@@ -879,6 +879,17 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             avatars = avatars_result.get("avatars", [])
             avatar_details = None
             
+            # Debug: Log the search details
+            log_info(f"Searching for avatar ID: {avatar_id}", "AdminRoutes")
+            log_info(f"Total avatars available: {len(avatars)}", "AdminRoutes")
+            
+            # Log some sample avatar IDs for debugging
+            photo_avatars = [a for a in avatars if a.get('avatar_type') == 'photo']
+            log_info(f"Photo avatars found: {len(photo_avatars)}", "AdminRoutes")
+            
+            if photo_avatars:
+                log_info(f"Sample photo avatar IDs: {[a.get('avatar_id') for a in photo_avatars[:5]]}", "AdminRoutes")
+            
             for avatar in avatars:
                 if avatar.get("avatar_id") == avatar_id:
                     avatar_details = avatar
