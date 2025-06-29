@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
+import re
 
 from ..db.database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_current_user, require_admin, get_password_hash, validate_password_strength
@@ -20,6 +21,225 @@ templates = Jinja2Templates(directory=str(templates_path))
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# =============================================================================
+# ENHANCED AVATAR NAMING LOGIC
+# =============================================================================
+
+def generate_user_friendly_name(avatar_data):
+    """
+    Generate user-friendly names from HeyGen avatar data.
+    Falls back gracefully when ideal fields aren't available.
+    """
+    
+    # Priority 1: Use explicit display/user-friendly fields if available
+    display_fields = ['display_name', 'title', 'name', 'friendly_name', 'label']
+    for field in display_fields:
+        if field in avatar_data and avatar_data[field]:
+            name = str(avatar_data[field]).strip()
+            if name and not is_technical_id(name):
+                return name
+    
+    # Priority 2: Build name from metadata fields
+    name_parts = []
+    
+    # Gender/type information
+    if 'gender' in avatar_data:
+        gender = avatar_data['gender'].lower()
+        if gender in ['male', 'man', 'm']:
+            name_parts.append('Man')
+        elif gender in ['female', 'woman', 'f']:
+            name_parts.append('Woman')
+    
+    # Style/type information
+    style_keywords = {
+        'professional': 'Professional',
+        'business': 'Business',
+        'casual': 'Casual',
+        'formal': 'Formal',
+        'corporate': 'Corporate',
+        'suit': 'Business',
+        'dress': 'Professional',
+        'shirt': 'Casual'
+    }
+    
+    # Check various fields for style indicators
+    style_fields = ['style', 'type', 'category', 'description', 'outfit', 'clothing']
+    found_style = False
+    
+    for field in style_fields:
+        if field in avatar_data and avatar_data[field]:
+            field_value = str(avatar_data[field]).lower()
+            for keyword, style_name in style_keywords.items():
+                if keyword in field_value:
+                    name_parts.insert(0, style_name)  # Put style first
+                    found_style = True
+                    break
+            if found_style:
+                break
+    
+    # Priority 3: Use original avatar_id but clean it up
+    if not name_parts:
+        avatar_id = avatar_data.get('avatar_id', '')
+        cleaned_name = clean_technical_id(avatar_id)
+        if cleaned_name:
+            return cleaned_name
+    
+    # Combine parts or use fallback
+    if name_parts:
+        final_name = ' '.join(name_parts)
+        if len(name_parts) == 1:  # Only gender, add "Avatar"
+            final_name += ' Avatar'
+        return final_name
+    
+    # Ultimate fallback
+    return 'Avatar'
+
+def is_technical_id(name):
+    """Check if a name looks like a technical ID rather than user-friendly name."""
+    name_lower = name.lower()
+    
+    # Technical ID indicators
+    technical_patterns = [
+        '_', '-', 'camera', 'costume', 'lite', 'v1', 'v2', 'test',
+        '20220', '20230', '20240', '20250',  # Years
+        'dev', 'prod', 'staging'
+    ]
+    
+    # Check for technical patterns
+    for pattern in technical_patterns:
+        if pattern in name_lower:
+            return True
+    
+    # Check for mostly lowercase with numbers/underscores
+    if any(c in name for c in '_-') and name.islower():
+        return True
+        
+    # Check for camelCase or snake_case patterns
+    if '_' in name or (any(c.isupper() for c in name[1:]) and any(c.islower() for c in name)):
+        return True
+    
+    return False
+
+def clean_technical_id(avatar_id):
+    """Convert technical ID to more readable format as last resort."""
+    if not avatar_id:
+        return None
+    
+    # Remove common technical suffixes/prefixes
+    cleaned = avatar_id
+    
+    # Remove technical suffixes
+    suffixes_to_remove = ['_cameraA', '_cameraB', '_camera1', '_camera2', 
+                         '_costume1', '_costume2', '_lite', '_lite2', '_v1', '_v2']
+    for suffix in suffixes_to_remove:
+        if cleaned.endswith(suffix):
+            cleaned = cleaned[:-len(suffix)]
+            break
+    
+    # Remove date patterns (e.g., _20220721)
+    cleaned = re.sub(r'_\d{8}', '', cleaned)
+    cleaned = re.sub(r'_\d{6}', '', cleaned)
+    
+    # Capitalize first letter and replace underscores
+    if cleaned:
+        cleaned = cleaned.replace('_', ' ').title()
+        # Don't return single letters or very short names
+        if len(cleaned) > 2:
+            return cleaned
+    
+    return None
+
+def fetch_and_update_avatars_with_naming():
+    """
+    Updated function to fetch avatars from HeyGen with enhanced naming logic.
+    Use this to replace your existing avatar fetching code.
+    """
+    try:
+        from ..api.heygen import get_available_avatars
+        
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            log_error("HEYGEN_API_KEY not found", "AdminRoutes")
+            return {"success": False, "error": "API key not configured"}
+        
+        # Fetch avatars from HeyGen
+        result = get_available_avatars(api_key)
+        
+        if not result or not result.get('success', False):
+            log_error("Failed to fetch avatars from HeyGen", "AdminRoutes")
+            return {"success": False, "error": "Failed to fetch from HeyGen"}
+        
+        avatars_data = result.get('avatars', [])
+        log_info(f"Fetched {len(avatars_data)} avatars from HeyGen", "AdminRoutes")
+        
+        updated_count = 0
+        
+        # Process each avatar with enhanced naming
+        for avatar in avatars_data:
+            avatar_id = avatar.get('avatar_id')
+            if not avatar_id:
+                continue
+            
+            # Use enhanced naming logic
+            user_friendly_name = generate_user_friendly_name(avatar)
+            
+            # Get other avatar data
+            preview_url = avatar.get('preview_url', '') or avatar.get('preview_image_url', '')
+            preview_url_mp4 = avatar.get('preview_url_mp4', '')
+            
+            # Check if avatar already exists
+            existing_avatar = execute_query(
+                "SELECT id, name FROM user_avatars WHERE avatar_id = ?",
+                (avatar_id,),
+                fetch_one=True
+            )
+            
+            if existing_avatar:
+                # Update existing avatar if name has improved
+                current_name = existing_avatar['name']
+                if is_technical_id(current_name) and not is_technical_id(user_friendly_name):
+                    if USE_POSTGRES:
+                        execute_query(
+                            "UPDATE user_avatars SET name = %s, preview_url = %s, preview_url_mp4 = %s WHERE avatar_id = %s",
+                            (user_friendly_name, preview_url, preview_url_mp4, avatar_id)
+                        )
+                    else:
+                        execute_query(
+                            "UPDATE user_avatars SET name = ?, preview_url = ?, preview_url_mp4 = ? WHERE avatar_id = ?",
+                            (user_friendly_name, preview_url, preview_url_mp4, avatar_id)
+                        )
+                    log_info(f"Updated avatar {avatar_id}: '{current_name}' → '{user_friendly_name}'", "AdminRoutes")
+                    updated_count += 1
+            else:
+                # Insert new avatar with user-friendly name
+                if USE_POSTGRES:
+                    execute_query(
+                        "INSERT INTO user_avatars (avatar_id, name, preview_url, preview_url_mp4) VALUES (%s, %s, %s, %s)",
+                        (avatar_id, user_friendly_name, preview_url, preview_url_mp4)
+                    )
+                else:
+                    execute_query(
+                        "INSERT INTO user_avatars (avatar_id, name, preview_url, preview_url_mp4) VALUES (?, ?, ?, ?)",
+                        (avatar_id, user_friendly_name, preview_url, preview_url_mp4)
+                    )
+                log_info(f"Added new avatar {avatar_id}: '{user_friendly_name}'", "AdminRoutes")
+                updated_count += 1
+        
+        return {
+            "success": True,
+            "total_avatars": len(avatars_data),
+            "updated_count": updated_count,
+            "message": f"Successfully processed {len(avatars_data)} avatars, updated {updated_count} names"
+        }
+        
+    except Exception as e:
+        log_error(f"Error in fetch_and_update_avatars_with_naming: {str(e)}", "AdminRoutes", e)
+        return {"success": False, "error": str(e)}
+
+# =============================================================================
+# EXISTING ADMIN ROUTES (UNCHANGED)
+# =============================================================================
 
 @router.get("/dashboard")
 async def admin_dashboard(request: Request):
@@ -612,7 +832,7 @@ async def clear_user_videos(request: Request, user_id: int):
 
 @router.post("/fetch-heygen-avatar/{user_id}")
 async def fetch_avatar_from_heygen(request: Request, user_id: int):
-    """Fetch avatar image from HeyGen API and save to user"""
+    """Fetch avatar image from HeyGen API and save to user - UPDATED WITH ENHANCED NAMING"""
     try:
         # Check admin authentication
         admin_user = get_current_user(request)
@@ -670,27 +890,9 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                     status_code=404
                 )
             
-            # Extract avatar information with improved naming
-            raw_name = avatar_details.get("name", "")
+            # USE ENHANCED NAMING LOGIC
+            avatar_name = generate_user_friendly_name(avatar_details)
             
-            # Check if the name is just a technical ID (long hex string)
-            if not raw_name or len(raw_name) > 20 or all(c in '0123456789abcdef-' for c in raw_name.lower()):
-                # Generate a better name based on avatar characteristics
-                avatar_type = avatar_details.get("type", "")
-                gender = avatar_details.get("gender", "")
-                
-                if avatar_type and gender:
-                    avatar_name = f"{gender.title()} {avatar_type.title()} Avatar"
-                elif gender:
-                    avatar_name = f"{gender.title()} Avatar"
-                elif avatar_type:
-                    avatar_name = f"{avatar_type.title()} Avatar"
-                else:
-                    # Use a more descriptive fallback
-                    avatar_name = f"Professional Avatar {avatar_id[:8]}"
-            else:
-                avatar_name = raw_name
-                
             avatar_image_url = avatar_details.get("preview_image_url") or avatar_details.get("image_url")
             
             if not avatar_image_url:
@@ -727,7 +929,6 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 
                 # Save image record to user_images table
                 relative_path = f"static/uploads/{unique_filename}"
-                image_name = f"Avatar {avatar_name}"
                 
                 # Insert image record
                 if USE_POSTGRES:
@@ -756,7 +957,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             )
             
             if existing_avatar:
-                # Update existing avatar
+                # Update existing avatar with enhanced name
                 if USE_POSTGRES:
                     execute_query(
                         "UPDATE user_avatars SET avatar_name = %s, avatar_image_url = %s WHERE user_id = %s AND avatar_id = %s",
@@ -767,9 +968,9 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                         "UPDATE user_avatars SET avatar_name = ?, avatar_image_url = ? WHERE user_id = ? AND avatar_id = ?",
                         (avatar_name, avatar_image_url, user_id, avatar_id)
                     )
-                log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
+                log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']} with enhanced name: '{avatar_name}'", "AdminRoutes")
             else:
-                # Insert new avatar
+                # Insert new avatar with enhanced name
                 if USE_POSTGRES:
                     execute_query(
                         "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (%s, %s, %s, %s)",
@@ -780,12 +981,12 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                         "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (?, ?, ?, ?)",
                         (user_id, avatar_id, avatar_name, avatar_image_url)
                     )
-                log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']}", "AdminRoutes")
+                log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']} with enhanced name: '{avatar_name}'", "AdminRoutes")
             
             return JSONResponse(
                 content={
                     "success": True, 
-                    "message": "Avatar fetched and saved successfully. Image also added to user gallery!",
+                    "message": "Avatar fetched and saved successfully with enhanced naming! Image also added to user gallery!",
                     "avatar": {
                         "id": avatar_id,
                         "name": avatar_name,
@@ -893,3 +1094,105 @@ async def delete_user_image(request: Request, image_id: str):
                 url="/admin/users?error=delete_failed",
                 status_code=303
             )
+
+# =============================================================================
+# NEW ENHANCED AVATAR MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@router.post("/update-avatar-name")
+async def update_avatar_name(request: Request):
+    """Update a specific avatar's name"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get form data
+        form = await request.form()
+        avatar_id = form.get("avatar_id", "").strip()
+        new_name = form.get("new_name", "").strip()
+        
+        if not avatar_id or not new_name:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "Avatar ID and new name are required"}
+            )
+        
+        # Update avatar name in database
+        if USE_POSTGRES:
+            result = execute_query(
+                "UPDATE user_avatars SET avatar_name = %s WHERE id = %s",
+                (new_name, avatar_id)
+            )
+        else:
+            result = execute_query(
+                "UPDATE user_avatars SET avatar_name = ? WHERE id = ?",
+                (new_name, avatar_id)
+            )
+        
+        # Get avatar info for logging
+        avatar = execute_query(
+            "SELECT user_id, avatar_name FROM user_avatars WHERE id = ?",
+            (avatar_id,),
+            fetch_one=True
+        )
+        
+        if avatar:
+            log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} name to '{new_name}'", "AdminRoutes")
+            return JSONResponse(content={"success": True, "message": "Avatar name updated successfully"})
+        else:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "Avatar not found"}
+            )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error("Error updating avatar name", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/update-avatar-names")
+async def update_avatar_names_endpoint(request: Request):
+    """Admin endpoint to trigger avatar name updates"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Run the enhanced avatar fetching and naming
+        result = fetch_and_update_avatars_with_naming()
+        
+        log_info(f"Admin {admin_user['username']} triggered avatar name update", "AdminRoutes")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error("Error updating avatar names", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
