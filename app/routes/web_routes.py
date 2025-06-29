@@ -1,4 +1,53 @@
-import os
+@router.get("/video/{video_id}")
+async def video_player(request: Request, video_id: str):
+    """Video player page for full-screen video viewing - FIXED VERSION"""
+    try:
+        user = get_current_user(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        logger.info(f"🎬 VIDEO PLAYER - User {user.get('username')} accessing video ID: {video_id}")
+        
+        # Get video details from database - handle both numeric IDs and HeyGen video IDs
+        if video_id.isdigit():
+            logger.info(f"🎬 VIDEO PLAYER - Numeric ID detected: {video_id}")
+            video = execute_query(
+                "SELECT * FROM videos WHERE id = ? OR heygen_video_id = ?",
+                (int(video_id), video_id),
+                fetch_one=True
+            )
+        else:
+            logger.info(f"🎬 VIDEO PLAYER - HeyGen ID detected: {video_id}")
+            video = execute_query(
+                "SELECT * FROM videos WHERE heygen_video_id = ?",
+                (video_id,),
+                fetch_one=True
+            )
+        
+        logger.info(f"🎬 VIDEO PLAYER - Database query result: {video}")
+        
+        if not video:
+            logger.warning(f"🎬 VIDEO PLAYER - Video not found: {video_id}")
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        # Check if user has access to this video
+        if not user.get("is_admin") and video["user_id"] != int(user["id"]):
+            logger.warning(f"🎬 VIDEO PLAYER - Access denied for user {user.get('id')} to video owned by {video['user_id']}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # NEW: Check if video is completed and has URL
+        video_status = video.get('status', 'unknown')
+        video_url = video.get('video_path') or video.get('video_url')
+        
+        logger.info(f"🎬 VIDEO PLAYER - Video status: {video_status}, URL: {video_url[:50] if video_url else 'None'}...")
+        
+        if video_status == 'completed' and video_url:
+            # Redirect to video URL for direct playback
+            logger.info(f"🎬 VIDEO PLAYER - Redirecting to video URL: {video_url}")
+            return RedirectResponse(url=video_url, status_code=302)
+        elif video_status in ['processing', 'pending']:
+            # Show processing page
+            logger.info(f"import os
 import uuid
 import shutil
 import logging
