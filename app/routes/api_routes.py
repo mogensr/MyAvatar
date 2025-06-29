@@ -24,6 +24,43 @@ router = APIRouter(prefix="/api", tags=["api"])
 # TEST MODE - Set to True to bypass HeyGen API for testing
 TEST_MODE = os.getenv("TEST_MODE", "false").lower() == "true"
 
+@router.get("/debug/check-videos")
+async def debug_check_videos(request: Request):
+    """
+    Debug endpoint to check specific video statuses
+    """
+    try:
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Not authenticated"}
+            )
+        
+        videos = execute_query(
+            """
+            SELECT id, heygen_video_id, status, video_path, title, created_at
+            FROM videos 
+            WHERE heygen_video_id IN (%s, %s)
+            ORDER BY created_at DESC
+            """,
+            ('dfb8d77e53664300ab0d7106cf395e4d', '125e966b2c44461eb9b8e985bc064472'),
+            fetch_all=True
+        )
+        
+        # Convert datetime objects to strings for JSON serialization
+        video_list = []
+        for video in videos:
+            video_dict = dict(video)
+            for key, value in video_dict.items():
+                if hasattr(value, 'isoformat'):  # datetime object
+                    video_dict[key] = value.isoformat()
+            video_list.append(video_dict)
+        
+        return JSONResponse(content={"success": True, "videos": video_list})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+
 @router.get("/videos")
 async def get_videos(request: Request):
     """
