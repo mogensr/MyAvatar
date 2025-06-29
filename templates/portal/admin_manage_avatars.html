@@ -143,7 +143,27 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <strong>{{ avatar.avatar_name or 'Unnamed' }}</strong>
+                                    <div id="name-display-{{ avatar.id }}">
+                                        <strong>{{ avatar.avatar_name or 'Unnamed' }}</strong>
+                                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" 
+                                                onclick="editAvatarName({{ avatar.id }}, '{{ avatar.avatar_name or 'Unnamed' }}')">
+                                            ✏️ Edit
+                                        </button>
+                                    </div>
+                                    <div id="name-edit-{{ avatar.id }}" style="display: none;">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="name-input-{{ avatar.id }}" 
+                                                   value="{{ avatar.avatar_name or 'Unnamed' }}" maxlength="100">
+                                            <button type="button" class="btn btn-success" 
+                                                    onclick="saveAvatarName({{ avatar.id }})">
+                                                ✅ Save
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" 
+                                                    onclick="cancelEditName({{ avatar.id }})">
+                                                ❌ Cancel
+                                            </button>
+                                        </div>
+                                    </div>
                                     <br><small class="text-muted">ID: {{ avatar.id }}</small>
                                 </td>
                                 <td>
@@ -319,6 +339,65 @@
                 });
             });
         });
+        
+        // Avatar name editing functions
+        function editAvatarName(avatarId, currentName) {
+            // Hide display, show edit form
+            document.getElementById('name-display-' + avatarId).style.display = 'none';
+            document.getElementById('name-edit-' + avatarId).style.display = 'block';
+            
+            // Focus on input field
+            const input = document.getElementById('name-input-' + avatarId);
+            input.focus();
+            input.select();
+        }
+        
+        function cancelEditName(avatarId) {
+            // Show display, hide edit form
+            document.getElementById('name-display-' + avatarId).style.display = 'block';
+            document.getElementById('name-edit-' + avatarId).style.display = 'none';
+        }
+        
+        function saveAvatarName(avatarId) {
+            const newName = document.getElementById('name-input-' + avatarId).value.trim();
+            
+            if (!newName) {
+                alert('Please enter a name');
+                return;
+            }
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('avatar_id', avatarId);
+            formData.append('new_name', newName);
+            
+            // Call API to update name
+            fetch('/admin/update-avatar-name', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update display with new name
+                    const displayDiv = document.getElementById('name-display-' + avatarId);
+                    const strongTag = displayDiv.querySelector('strong');
+                    strongTag.textContent = newName;
+                    
+                    // Hide edit form, show display
+                    cancelEditName(avatarId);
+                    
+                    // Show success message
+                    alert('Avatar name updated successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to update avatar name'));
+                }
+            })
+            .catch(error => {
+                alert('Error updating avatar name. Please try again.');
+                console.error('Error:', error);
+            });
+        }
     </script>
 </body>
 </html>

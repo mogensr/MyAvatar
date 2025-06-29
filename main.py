@@ -61,6 +61,14 @@ except ImportError as e:
     def update_database_schema(): pass
     def create_admin_user(): pass
 
+# Import HeyGen API for debug endpoints
+try:
+    from app.api.heygen import get_available_avatars
+except ImportError as e:
+    logger.warning(f"HeyGen API module not available: {e}")
+    def get_available_avatars(*args, **kwargs): 
+        return {"error": "HeyGen API not available"}
+
 # FASTAPI APP INITIALIZATION
 app = FastAPI(title="MyAvatar", description="AI Avatar Video Generation Platform - Premium Edition")
 
@@ -207,6 +215,238 @@ async def test_route():
         "routers_loaded": routers_loaded,
         "timestamp": datetime.now().isoformat()
     }
+
+# =============================================================================
+# HEYGEN AVATAR DEBUG ENDPOINTS
+# =============================================================================
+
+@app.get("/debug-avatars")
+async def debug_avatars():
+    """
+    Temporary debug endpoint to inspect HeyGen API response structure.
+    Access this at: https://app.myavatar.dk/debug-avatars
+    """
+    try:
+        log_info("Debug avatars endpoint accessed", "Debug")
+        
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            logger.error("HEYGEN_API_KEY not found in environment")
+            raise HTTPException(status_code=500, detail="HEYGEN_API_KEY not configured")
+        
+        logger.info("Fetching avatars from HeyGen API...")
+        result = get_available_avatars(api_key)
+        
+        if not result:
+            raise HTTPException(status_code=500, detail="No response from HeyGen API")
+        
+        # Analyze the response structure for better debugging
+        if isinstance(result, dict) and 'data' in result:
+            avatars = result['data']
+            logger.info(f"Successfully fetched {len(avatars)} avatars from HeyGen")
+            
+            # Create analysis for easier debugging
+            analysis = {
+                "success": True,
+                "total_avatars": len(avatars),
+                "api_response_keys": list(result.keys()),
+                "sample_avatar_keys": list(avatars[0].keys()) if avatars else [],
+                "sample_avatars": avatars[:3] if len(avatars) > 3 else avatars,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Extract all unique fields across all avatars
+            all_fields = set()
+            field_samples = {}
+            
+            for avatar in avatars:
+                for key, value in avatar.items():
+                    all_fields.add(key)
+                    if key not in field_samples and value:
+                        field_samples[key] = str(value)[:100]  # First 100 chars as sample
+            
+            analysis["all_available_fields"] = sorted(list(all_fields))
+            analysis["field_samples"] = field_samples
+            
+            # Look for potential naming fields
+            naming_fields = []
+            for field in all_fields:
+                field_lower = field.lower()
+                if any(keyword in field_lower for keyword in ['name', 'title', 'display', 'label', 'desc']):
+                    naming_fields.append(field)
+            
+            analysis["potential_naming_fields"] = naming_fields
+            
+            log_info(f"Avatar debug analysis completed: {len(avatars)} avatars, {len(all_fields)} unique fields", "Debug")
+            return analysis
+        else:
+            logger.warning(f"Unexpected HeyGen API response structure: {type(result)}")
+            return {
+                "success": False,
+                "raw_response": result,
+                "message": "Unexpected response structure from HeyGen API"
+            }
+        
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions
+    except Exception as e:
+        log_error(f"Error in debug-avatars endpoint: {str(e)}", "Debug", e)
+        logger.error(f"Debug avatars error traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Debug endpoint error: {str(e)}")
+
+@app.get("/debug-avatars/download")
+async def debug_avatars_download():
+    """
+    Download avatar data as JSON file for offline analysis.
+    Access this at: https://app.myavatar.dk/debug-avatars/download
+    """
+    try:
+        log_info("Debug avatars download endpoint accessed", "Debug")
+        
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="HEYGEN_API_KEY not configured")
+        
+        result = get_available_avatars(api_key)
+        
+        if not result:
+            raise HTTPException(status_code=500, detail="No response from HeyGen API")
+        
+        # Add metadata to the download
+        download_data = {
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "total_avatars": len(result.get('data', [])) if isinstance(result, dict) else 0,
+                "myavatar_version": "debug_export"
+            },
+            "heygen_response": result
+        }
+        
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            content=download_data,
+            headers={
+                "Content-Disposition": f"attachment; filename=heygen_avatars_debug_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(f"Error in debug-avatars download: {str(e)}", "Debug", e)
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+@app.get("/debug-env")
+async def debug_environment():
+    """
+    Debug endpoint to check environment variables (safely).
+    Shows which keys exist without exposing values.
+    """
+    try:
+        env_status = {
+            "HEYGEN_API_KEY": "✓ Set" if os.getenv("HEYGEN_API_KEY") else "✗ Missing",
+            "DATABASE_URL": "✓ Set" if os.getenv("DATABASE_URL") else "✗ Missing",
+            "RAILWAY_ENVIRONMENT": os.getenv("RAILWAY_ENVIRONMENT", "not_railway"),
+            "PORT": os.getenv("PORT", "not_set"),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Check if we can import HeyGen module
+        try:
+            from app.api.heygen import get_available_avatars
+            env_status["heygen_module"] = "✓ Available"
+        except ImportError as e:
+            env_status["heygen_module"] = f"✗ Import Error: {str(e)}"
+        
+        return env_status
+        
+    except Exception as e:
+        return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+@app.get("/debug-avatar-names")
+async def debug_current_avatar_names():
+    """
+    Debug endpoint to see current avatar names in database vs HeyGen API.
+    Helps identify which names need improvement.
+    """
+    try:
+        log_info("Debug avatar names endpoint accessed", "Debug")
+        
+        # Get HeyGen data
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="HEYGEN_API_KEY not configured")
+        
+        heygen_result = get_available_avatars(api_key)
+        if not heygen_result or 'data' not in heygen_result:
+            raise HTTPException(status_code=500, detail="Could not fetch HeyGen data")
+        
+        # Get database data
+        try:
+            from app.db.database import get_db_connection
+            conn = get_db_connection()
+            db_avatars = conn.execute("SELECT avatar_id, name FROM user_avatars LIMIT 20").fetchall()
+            conn.close()
+        except Exception as db_error:
+            logger.warning(f"Could not fetch database avatars: {db_error}")
+            db_avatars = []
+        
+        # Create lookup for HeyGen data
+        heygen_lookup = {avatar['avatar_id']: avatar for avatar in heygen_result['data']}
+        
+        # Analyze naming patterns
+        analysis = {
+            "timestamp": datetime.now().isoformat(),
+            "database_avatars_count": len(db_avatars),
+            "heygen_avatars_count": len(heygen_result['data']),
+            "naming_analysis": []
+        }
+        
+        technical_count = 0
+        for db_avatar in db_avatars:
+            avatar_id = db_avatar[0]  # avatar_id
+            current_name = db_avatar[1]  # name
+            
+            # Check if name looks technical
+            is_technical = any(indicator in current_name.lower() 
+                             for indicator in ['_', 'camera', 'costume', 'lite', '2022', '2023', '2024'])
+            
+            if is_technical:
+                technical_count += 1
+            
+            heygen_data = heygen_lookup.get(avatar_id, {})
+            
+            avatar_analysis = {
+                "avatar_id": avatar_id,
+                "current_name": current_name,
+                "is_technical": is_technical,
+                "heygen_available": bool(heygen_data),
+                "heygen_sample_fields": {}
+            }
+            
+            # Show relevant HeyGen fields for this avatar
+            if heygen_data:
+                relevant_fields = ['avatar_id', 'gender', 'style', 'type', 'category', 'description']
+                for field in relevant_fields:
+                    if field in heygen_data:
+                        avatar_analysis["heygen_sample_fields"][field] = heygen_data[field]
+            
+            analysis["naming_analysis"].append(avatar_analysis)
+        
+        analysis["technical_names_count"] = technical_count
+        analysis["technical_names_percentage"] = round((technical_count / len(db_avatars)) * 100, 1) if db_avatars else 0
+        
+        return analysis
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(f"Error in debug-avatar-names: {str(e)}", "Debug", e)
+        raise HTTPException(status_code=500, detail=f"Debug naming error: {str(e)}")
+
+# =============================================================================
+# END DEBUG ENDPOINTS
+# =============================================================================
 
 # Startup event with safe initialization
 @app.on_event("startup")
