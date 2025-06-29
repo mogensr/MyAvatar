@@ -1240,15 +1240,67 @@ async def fix_database_schema():
             "suggestion": "You may need to manually add the password column to your PostgreSQL database"
         }
 
+# 🗄️ DATABASE DEBUG ROUTE
+@router.get("/debug-database")
+async def debug_database():
+    """Check all database tables and their structures"""
+    try:
+        # Get all tables
+        tables_query = """
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            ORDER BY table_name
+        """
+        tables_result = execute_query(tables_query, fetch_all=True)
+        tables = [dict(row)['table_name'] for row in tables_result] if tables_result else []
+        
+        # Get structure for each table
+        table_structures = {}
+        for table in tables:
+            columns_query = f"""
+                SELECT column_name, data_type, is_nullable, column_default
+                FROM information_schema.columns 
+                WHERE table_name = '{table}'
+                ORDER BY ordinal_position
+            """
+            columns_result = execute_query(columns_query, fetch_all=True)
+            table_structures[table] = [dict(row) for row in columns_result] if columns_result else []
+        
+        # Get record counts
+        record_counts = {}
+        for table in tables:
+            try:
+                count_query = f"SELECT COUNT(*) as count FROM {table}"
+                count_result = execute_query(count_query, fetch_one=True)
+                record_counts[table] = dict(count_result)['count'] if count_result else 0
+            except:
+                record_counts[table] = "Error"
+        
+        return {
+            "success": True,
+            "database_type": "PostgreSQL",
+            "tables": tables,
+            "table_structures": table_structures,
+            "record_counts": record_counts,
+            "total_tables": len(tables)
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # Additional routes would continue here...
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
     return {
-        "message": "Production web routes with DATABASE SCHEMA FIX are working!", 
+        "message": "Production web routes with DATABASE DEBUG are working!", 
         "routes_loaded": True,
         "debug_enabled": True,
-        "new_feature": "🔧 Database Schema Fix Route at /fix-database-schema",
+        "new_feature": "🗄️ Database Debug Route at /debug-database",
         "features": [
             "Authentication",
             "JWT Cookie Session Management", 
@@ -1259,6 +1311,7 @@ async def test_routes():
             "User Dashboard Access",
             "Real-time Username Validation API",
             "DEBUG REGISTRATION - Shows exact error details",
-            "🔧 DATABASE SCHEMA FIX - Adds missing password column"
+            "🔧 DATABASE SCHEMA FIX - Adds missing password column",
+            "🗄️ DATABASE DEBUG - Shows all tables and structures"
         ]
     }
