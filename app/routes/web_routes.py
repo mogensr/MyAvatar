@@ -1179,14 +1179,76 @@ async def check_username_availability(request: Request):
             "error": "Unable to check username availability"
         }, status_code=500)
 
+# 🔧 DATABASE SCHEMA FIX ROUTE
+@router.get("/fix-database-schema")
+async def fix_database_schema():
+    """Emergency route to add missing password column"""
+    try:
+        print("🔧 FIXING DATABASE SCHEMA - Adding missing password column")
+        logger.info("🔧 FIXING DATABASE SCHEMA - Adding missing password column")
+        
+        # Check if password column exists first
+        try:
+            check_query = """
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'users' AND column_name = 'password'
+            """
+            result = execute_query(check_query, fetch_one=True)
+            
+            if result:
+                return {
+                    "success": True,
+                    "message": "Password column already exists",
+                    "action": "No changes needed"
+                }
+        except Exception as check_error:
+            logger.warning(f"Could not check for password column: {check_error}")
+        
+        # Add missing password column
+        alter_query = "ALTER TABLE users ADD COLUMN password TEXT"
+        execute_query(alter_query)
+        
+        print("🔧 DATABASE FIX - Password column added successfully")
+        logger.info("🔧 DATABASE FIX - Password column added successfully")
+        
+        # Verify table structure
+        result = execute_query("""
+            SELECT column_name, data_type, is_nullable 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' 
+            ORDER BY ordinal_position
+        """, fetch_all=True)
+        
+        table_structure = [dict(row) for row in result] if result else []
+        
+        return {
+            "success": True,
+            "message": "Password column added successfully",
+            "table_structure": table_structure,
+            "next_step": "Now try registration again at /register"
+        }
+        
+    except Exception as e:
+        error_msg = f"Failed to fix database schema: {str(e)}"
+        print(f"🔧 DATABASE FIX ERROR: {error_msg}")
+        logger.error(f"🔧 DATABASE FIX ERROR: {error_msg}")
+        
+        return {
+            "success": False,
+            "error": error_msg,
+            "suggestion": "You may need to manually add the password column to your PostgreSQL database"
+        }
+
 # Additional routes would continue here...
 @router.get("/test-routes")
 async def test_routes():
     """Test endpoint to confirm routes are loaded"""
     return {
-        "message": "Production web routes with DEBUG REGISTRATION are working!", 
+        "message": "Production web routes with DATABASE SCHEMA FIX are working!", 
         "routes_loaded": True,
         "debug_enabled": True,
+        "new_feature": "🔧 Database Schema Fix Route at /fix-database-schema",
         "features": [
             "Authentication",
             "JWT Cookie Session Management", 
@@ -1196,6 +1258,7 @@ async def test_routes():
             "File Upload Security",
             "User Dashboard Access",
             "Real-time Username Validation API",
-            "DEBUG REGISTRATION - Shows exact error details"
+            "DEBUG REGISTRATION - Shows exact error details",
+            "🔧 DATABASE SCHEMA FIX - Adds missing password column"
         ]
     }
