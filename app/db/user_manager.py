@@ -1,6 +1,6 @@
 """
 User management database class for MyAvatar
-FIXED VERSION - PostgreSQL INSERT with RETURNING id
+FIXED VERSION - Uses 'hashed_password' column name to match database
 """
 from .database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_password_hash, verify_password
@@ -59,7 +59,11 @@ class Database:
             )
             if result:
                 log_info(f"User found by ID: {user_id}", "UserManager")
-                return dict(result) if hasattr(result, 'keys') else result
+                user_dict = dict(result) if hasattr(result, 'keys') else result
+                # Map hashed_password to password for compatibility
+                if 'hashed_password' in user_dict and 'password' not in user_dict:
+                    user_dict['password'] = user_dict['hashed_password']
+                return user_dict
             else:
                 log_warning(f"User not found by ID: {user_id}", "UserManager")
                 return None
@@ -68,7 +72,7 @@ class Database:
             return None
     
     def create_user(self, user_data):
-        """Create a new user - FIXED FOR POSTGRESQL"""
+        """Create a new user - FIXED FOR hashed_password COLUMN"""
         try:
             log_info(f"Creating user: {user_data.get('username')}", "UserManager")
             
@@ -76,18 +80,19 @@ class Database:
             password_hash = get_password_hash(user_data['password'])
             
             # FIXED: Use RETURNING id for PostgreSQL, different approach for SQLite
+            # FIXED: Use 'hashed_password' column name to match database schema
             if USE_POSTGRES:
                 # PostgreSQL - use RETURNING to get the ID directly
                 result = execute_query(
                     """
-                    INSERT INTO users (username, email, password, is_admin, created_at) 
+                    INSERT INTO users (username, email, hashed_password, is_admin, created_at) 
                     VALUES (%s, %s, %s, %s, %s)
                     RETURNING id
                     """, 
                     (
                         user_data['username'],
                         user_data['email'], 
-                        password_hash,
+                        password_hash,  # This goes into hashed_password column
                         user_data.get('is_admin', 0),
                         datetime.now()
                     ),
@@ -106,13 +111,13 @@ class Database:
                 # SQLite - insert then get the ID
                 execute_query(
                     """
-                    INSERT INTO users (username, email, password, is_admin, created_at) 
+                    INSERT INTO users (username, email, hashed_password, is_admin, created_at) 
                     VALUES (?, ?, ?, ?, ?)
                     """, 
                     (
                         user_data['username'],
                         user_data['email'], 
-                        password_hash,
+                        password_hash,  # This goes into hashed_password column
                         user_data.get('is_admin', 0),
                         datetime.now()
                     )
