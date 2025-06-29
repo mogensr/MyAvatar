@@ -266,7 +266,6 @@
                     placeholder="Enter your unique username"
                     required
                     autocomplete="username"
-                    value="{{ request.form.get('username', '') if request.form else '' }}"
                 >
                 
                 <!-- USERNAME RULES -->
@@ -300,7 +299,6 @@
                     placeholder="Enter your email address"
                     required
                     autocomplete="email"
-                    value="{{ request.form.get('email', '') if request.form else '' }}"
                 >
             </div>
             
