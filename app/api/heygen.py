@@ -3,22 +3,70 @@ HeyGen API integration module
 FIXED VERSION - Updated to v2 API with correct endpoints
 Enhanced with Text-to-Speech and proper video format support (16:9, 9:16, 1:1)
 Premium features: Templates, Interactive Avatars, Custom Backgrounds
+UPDATED: Now supports both regular avatars AND photo avatars automatically
 """
 import requests
 import json
 from ..logger.log_handler import log_info, log_error, log_warning
 
 #####################################################################
-# HEYGEN API HANDLER - FIXED V2 VERSION WITH PROPER AUDIO SUPPORT
+# HEYGEN API HANDLER - FIXED V2 VERSION WITH PHOTO AVATAR SUPPORT
 #####################################################################
 
-def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, video_format: str = "16:9"):
+def get_character_config(api_key: str, avatar_id: str):
     """
-    Create a video using an audio file URL - FIXED V2 VERSION
+    Auto-detect if avatar is photo avatar and return appropriate character config
     
     Args:
         api_key: HeyGen API key
-        avatar_id: ID of the avatar to use
+        avatar_id: Avatar ID to test
+        
+    Returns:
+        Dictionary with appropriate character configuration
+    """
+    headers = {
+        "X-Api-Key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        # Test if it's a photo avatar by checking the avatar group endpoint
+        response = requests.get(
+            f"https://api.heygen.com/v2/avatar_group/{avatar_id}/avatars",
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            # It's a photo avatar
+            log_info(f"Detected photo avatar: {avatar_id}", "HeyGen API")
+            return {
+                "type": "talking_photo",
+                "talking_photo_id": avatar_id
+            }
+        else:
+            # It's a regular avatar
+            log_info(f"Detected regular avatar: {avatar_id}", "HeyGen API")
+            return {
+                "type": "avatar",
+                "avatar_id": avatar_id,
+                "avatar_style": "normal"
+            }
+    except Exception as e:
+        # If detection fails, assume regular avatar
+        log_warning(f"Avatar detection failed for {avatar_id}, assuming regular avatar: {e}", "HeyGen API")
+        return {
+            "type": "avatar",
+            "avatar_id": avatar_id,
+            "avatar_style": "normal"
+        }
+
+def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, video_format: str = "16:9"):
+    """
+    Create a video using an audio file URL - FIXED V2 VERSION with Photo Avatar Support
+    
+    Args:
+        api_key: HeyGen API key
+        avatar_id: ID of the avatar to use (works with both regular and photo avatars)
         audio_url: URL of the audio file
         video_format: Video format (16:9, 9:16, 1:1)
         
@@ -41,15 +89,14 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
         width = 1280
         height = 720
     
+    # NEW: Auto-detect if this is a photo avatar
+    character_config = get_character_config(api_key, avatar_id)
+    
     # FIXED: Use v2 API format with proper audio voice type
     data = {
         "video_inputs": [
             {
-                "character": {
-                    "type": "avatar",
-                    "avatar_id": avatar_id,
-                    "avatar_style": "normal"
-                },
+                "character": character_config,
                 "voice": {
                     "type": "audio",
                     "audio_url": audio_url  # FIXED: Use audio_url as required by HeyGen
@@ -160,11 +207,11 @@ def create_video_from_audio_file(api_key: str, avatar_id: str, audio_url: str, v
 
 def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format: str = "16:9", voice_id: str = None):
     """
-    Create video using text-to-speech with HeyGen API v2
+    Create video using text-to-speech with HeyGen API v2 - NOW WITH PHOTO AVATAR SUPPORT
     
     Args:
         api_key: HeyGen API key
-        avatar_id: ID of the avatar to use
+        avatar_id: ID of the avatar to use (works with both regular and photo avatars)
         text: Text to convert to speech
         video_format: Video format (16:9, 9:16, 1:1)
         voice_id: ID of the voice to use. If None or 'cloned', will use avatar's cloned voice
@@ -189,15 +236,14 @@ def create_video_from_text(api_key: str, avatar_id: str, text: str, video_format
         width = 1280
         height = 720
     
+    # NEW: Auto-detect if this is a photo avatar
+    character_config = get_character_config(api_key, avatar_id)
+    
     # Build the v2 API request format
     data = {
         "video_inputs": [
             {
-                "character": {
-                    "type": "avatar",
-                    "avatar_id": avatar_id,
-                    "avatar_style": "normal"
-                },
+                "character": character_config,
                 "voice": {
                     "type": "text",
                     "input_text": text
@@ -544,11 +590,11 @@ def create_video_with_template(api_key: str, template_id: str, variables: dict, 
 
 def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, background: dict, video_format: str = "16:9"):
     """
-    Create video with custom background - FIXED V2 VERSION
+    Create video with custom background - FIXED V2 VERSION with Photo Avatar Support
     
     Args:
         api_key: HeyGen API key
-        avatar_id: ID of the avatar to use
+        avatar_id: ID of the avatar to use (works with both regular and photo avatars)
         audio_url: URL of the audio file
         background: Background configuration dictionary
         video_format: Video format (16:9, 9:16, 1:1)
@@ -572,15 +618,14 @@ def create_video_with_background(api_key: str, avatar_id: str, audio_url: str, b
         width = 1280
         height = 720
     
+    # NEW: Auto-detect if this is a photo avatar
+    character_config = get_character_config(api_key, avatar_id)
+    
     # FIXED: Use v2 API format
     data = {
         "video_inputs": [
             {
-                "character": {
-                    "type": "avatar",
-                    "avatar_id": avatar_id,
-                    "avatar_style": "normal"
-                },
+                "character": character_config,
                 "voice": {
                     "type": "audio",
                     "audio_url": audio_url
