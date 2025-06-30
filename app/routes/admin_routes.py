@@ -682,7 +682,7 @@ async def manage_users(request: Request):
         """, fetch_all=True)
         
         return templates.TemplateResponse(
-            "portal/admin_manage_users.html",
+            "portal/admin_users.html",
             {
                 "request": request,
                 "user": user,
