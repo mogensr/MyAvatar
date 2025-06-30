@@ -1,10 +1,10 @@
 """
 Database migration routes for Railway deployment
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, Any
 from ..db.database import execute_query, USE_POSTGRES
-from ..auth.authentication import get_current_user_admin
+from ..auth.authentication import require_admin
 
 router = APIRouter()
 
@@ -30,13 +30,14 @@ def check_column_exists(table_name: str, column_name: str) -> bool:
         raise HTTPException(status_code=500, detail=f"Error checking column: {str(e)}")
 
 @router.post("/admin/migrate/add-description-column")
-async def migrate_add_description_column(
-    current_user: Dict[str, Any] = Depends(get_current_user_admin)
-):
+async def migrate_add_description_column(request: Request):
     """
     Add missing 'description' column to videos table (Admin only)
     Fixes: column "description" of relation "videos" does not exist
     """
+    # Require admin access
+    require_admin(request)
+    
     try:
         # Check if description column already exists
         if check_column_exists('videos', 'description'):
@@ -70,12 +71,13 @@ async def migrate_add_description_column(
         )
 
 @router.get("/admin/migrate/check-schema")
-async def check_database_schema(
-    current_user: Dict[str, Any] = Depends(get_current_user_admin)
-):
+async def check_database_schema(request: Request):
     """
     Check database schema for missing columns (Admin only)
     """
+    # Require admin access
+    require_admin(request)
+    
     try:
         schema_issues = []
         
