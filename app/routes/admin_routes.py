@@ -1234,15 +1234,21 @@ async def manage_voices(request: Request):
         # Require admin access
         user = require_admin(request)
         
-        # Get voice data (placeholder - implement based on your voice system)
-        voices = []  # Replace with actual voice query when voice system is implemented
+        # Get users with voice information
+        users = execute_query("""
+            SELECT u.id, u.username, u.email, u.heygen_voice_id,
+                   us.voice_id as user_setting_voice_id
+            FROM users u
+            LEFT JOIN user_settings us ON u.id = us.user_id
+            ORDER BY u.username
+        """, fetch_all=True)
         
         return templates.TemplateResponse(
             "portal/admin_manage_voices.html",
             {
                 "request": request,
                 "user": user,
-                "voices": voices,
+                "users": users or [],
                 "title": "Manage Voices"
             }
         )
@@ -1260,26 +1266,40 @@ async def manage_voices(request: Request):
         )
 
 @router.get("/manage-avatars")
-async def manage_avatars(request: Request):
+async def manage_avatars(request: Request, user_id: int = None):
     """Admin avatar management page"""
     try:
         # Require admin access
-        user = require_admin(request)
+        admin_user = require_admin(request)
         
-        # Get all avatars from user_avatars table
+        # If no user_id provided, redirect to users page to select a user
+        if not user_id:
+            return RedirectResponse(url="/admin/users", status_code=303)
+        
+        # Get user information
+        user_to_manage = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get user's avatars
         avatars = execute_query("""
-            SELECT ua.*, u.username 
-            FROM user_avatars ua
-            LEFT JOIN users u ON ua.user_id = u.id
-            ORDER BY ua.created_at DESC
-        """, fetch_all=True)
+            SELECT * FROM user_avatars 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
         
         return templates.TemplateResponse(
             "portal/admin_manage_avatars.html",
             {
                 "request": request,
-                "user": user,
-                "avatars": avatars,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "avatars": avatars or [],
                 "title": "Manage Avatars"
             }
         )
@@ -1297,26 +1317,40 @@ async def manage_avatars(request: Request):
         )
 
 @router.get("/manage-videos")
-async def manage_videos(request: Request):
-    """Admin video management page - overview of all videos"""
+async def manage_videos(request: Request, user_id: int = None):
+    """Admin video management page"""
     try:
         # Require admin access
-        user = require_admin(request)
+        admin_user = require_admin(request)
         
-        # Get all videos with user information
+        # If no user_id provided, redirect to users page to select a user
+        if not user_id:
+            return RedirectResponse(url="/admin/users", status_code=303)
+        
+        # Get user information
+        user_to_manage = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get user's videos
         videos = execute_query("""
-            SELECT v.*, u.username, u.email
-            FROM videos v
-            LEFT JOIN users u ON v.user_id = u.id
-            ORDER BY v.created_at DESC
-        """, fetch_all=True)
+            SELECT * FROM videos 
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
         
         return templates.TemplateResponse(
             "portal/admin_manage_videos.html",
             {
                 "request": request,
-                "user": user,
-                "videos": videos,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "videos": videos or [],
                 "title": "Manage Videos"
             }
         )
