@@ -241,6 +241,21 @@ def fetch_and_update_avatars_with_naming():
 # EXISTING ADMIN ROUTES (UNCHANGED)
 # =============================================================================
 
+@router.get("/")
+async def admin_main(request: Request):
+    """Main admin route - redirect to dashboard"""
+    try:
+        # Require admin access
+        require_admin(request)
+        # Redirect to dashboard
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+
 @router.get("/dashboard")
 async def admin_dashboard(request: Request):
     """Admin dashboard page"""
