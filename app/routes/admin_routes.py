@@ -1222,3 +1222,150 @@ async def update_avatar_names_endpoint(request: Request):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+# =============================================================================
+# MISSING ADMIN ROUTES - ADDED FOR FULL FUNCTIONALITY
+# =============================================================================
+
+@router.get("/manage-voices")
+async def manage_voices(request: Request):
+    """Admin voice management page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get voice data (placeholder - implement based on your voice system)
+        voices = []  # Replace with actual voice query when voice system is implemented
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_voices.html",
+            {
+                "request": request,
+                "user": user,
+                "voices": voices,
+                "title": "Manage Voices"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying voice management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Voice management error", "detail": str(e)}
+        )
+
+@router.get("/manage-avatars")
+async def manage_avatars(request: Request):
+    """Admin avatar management page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get all avatars from user_avatars table
+        avatars = execute_query("""
+            SELECT ua.*, u.username 
+            FROM user_avatars ua
+            LEFT JOIN users u ON ua.user_id = u.id
+            ORDER BY ua.created_at DESC
+        """, fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_avatars.html",
+            {
+                "request": request,
+                "user": user,
+                "avatars": avatars,
+                "title": "Manage Avatars"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying avatar management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Avatar management error", "detail": str(e)}
+        )
+
+@router.get("/manage-videos")
+async def manage_videos(request: Request):
+    """Admin video management page - overview of all videos"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get all videos with user information
+        videos = execute_query("""
+            SELECT v.*, u.username, u.email
+            FROM videos v
+            LEFT JOIN users u ON v.user_id = u.id
+            ORDER BY v.created_at DESC
+        """, fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_videos.html",
+            {
+                "request": request,
+                "user": user,
+                "videos": videos,
+                "title": "Manage Videos"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying video management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Video management error", "detail": str(e)}
+        )
+
+@router.get("/emergency-controls")
+async def emergency_controls(request: Request):
+    """Admin emergency controls page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get system stats for emergency overview
+        stats = {
+            "total_users": execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True),
+            "total_videos": execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True),
+            "failed_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'failed'", fetch_one=True),
+            "pending_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'pending'", fetch_one=True)
+        }
+        
+        return templates.TemplateResponse(
+            "portal/admin_emergency_controls.html",
+            {
+                "request": request,
+                "user": user,
+                "stats": stats,
+                "title": "Emergency Controls"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying emergency controls page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Emergency controls error", "detail": str(e)}
+        )

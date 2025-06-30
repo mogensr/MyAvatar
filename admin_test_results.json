@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-06-30 23:16:47",
+  "results": {
+    "/admin": true,
+    "/admin/dashboard": true,
+    "/admin/users": true,
+    "/admin/manage-passwords": true,
+    "/admin/manage-voices": false,
+    "/admin/manage-avatars": false,
+    "/admin/manage-videos": false,
+    "/admin/emergency-controls": true
+  },
+  "summary": {
+    "working": [
+      "/admin",
+      "/admin/dashboard",
+      "/admin/users",
+      "/admin/manage-passwords",
+      "/admin/emergency-controls"
+    ],
+    "broken": [
+      "/admin/manage-voices",
+      "/admin/manage-avatars",
+      "/admin/manage-videos"
+    ],
+    "success_rate": 62.5
+  }
+}
