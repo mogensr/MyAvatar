@@ -1229,6 +1229,122 @@ async def update_avatar_names_endpoint(request: Request):
 
 # Removed duplicate routes - original routes exist in voice_routes.py and as user-specific routes
 
+@router.get("/create-user")
+async def create_user_form(request: Request):
+    """Admin create user form"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        return templates.TemplateResponse(
+            "portal/admin_create_user.html",
+            {
+                "request": request,
+                "user": user,
+                "title": "Create New User"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying create user form", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Create user form error", "detail": str(e)}
+        )
+
+@router.get("/edit-user/{user_id}")
+async def edit_user_form(request: Request, user_id: int):
+    """Admin edit user form"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user to edit
+        user_to_edit = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_edit:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        return templates.TemplateResponse(
+            "portal/admin_edit_user.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_edit": user_to_edit,
+                "title": f"Edit User - {user_to_edit['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying edit user form", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Edit user form error", "detail": str(e)}
+        )
+
+@router.get("/manage-avatars/{user_id}")
+async def manage_user_avatars(request: Request, user_id: int):
+    """Admin avatar management page for specific user"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details
+        user_to_manage = execute_query(
+            "SELECT id, username, email FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get all avatars for this user
+        avatars = execute_query("""
+            SELECT id, avatar_id, avatar_name, created_at, is_active
+            FROM user_avatars 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_avatars.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "avatars": avatars or [],
+                "total_avatars": len(avatars) if avatars else 0,
+                "title": f"Manage Avatars - {user_to_manage['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying avatar management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Avatar management error", "detail": str(e)}
+        )
+
 @router.get("/emergency-controls")
 async def emergency_controls(request: Request):
     """Admin emergency controls page"""
