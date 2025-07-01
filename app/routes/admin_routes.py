@@ -1315,7 +1315,7 @@ async def manage_user_avatars(request: Request, user_id: int):
         
         # Get all avatars for this user
         avatars = execute_query("""
-            SELECT id, avatar_id, avatar_name, created_at, is_active
+            SELECT id, avatar_id, avatar_name, created_at, is_default
             FROM user_avatars 
             WHERE user_id = ? 
             ORDER BY created_at DESC
