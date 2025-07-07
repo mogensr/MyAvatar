@@ -241,6 +241,21 @@ def fetch_and_update_avatars_with_naming():
 # EXISTING ADMIN ROUTES (UNCHANGED)
 # =============================================================================
 
+@router.get("/")
+async def admin_main(request: Request):
+    """Main admin route - redirect to dashboard"""
+    try:
+        # Require admin access
+        require_admin(request)
+        # Redirect to dashboard
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+
 @router.get("/dashboard")
 async def admin_dashboard(request: Request):
     """Admin dashboard page"""
@@ -656,18 +671,25 @@ async def manage_users(request: Request):
         # Require admin access
         user = require_admin(request)
         
-        # Get all users with video counts
+        # CORRECTED QUERY - Get avatar image URL from user_avatars table
         users = execute_query("""
             SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin,
-                   COUNT(v.id) as video_count
+                   u.heygen_voice_id,
+                   ua.avatar_id, ua.avatar_name, ua.avatar_image_url,
+                   COUNT(DISTINCT v.id) as video_count,
+                   COUNT(DISTINCT ua2.id) as avatar_count
             FROM users u
             LEFT JOIN videos v ON u.id = v.user_id
-            GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin
+            LEFT JOIN user_avatars ua ON u.id = ua.user_id AND ua.id = (
+                SELECT MIN(ua_sub.id) FROM user_avatars ua_sub WHERE ua_sub.user_id = u.id
+            )
+            LEFT JOIN user_avatars ua2 ON u.id = ua2.user_id
+            GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin, u.heygen_voice_id, ua.avatar_id, ua.avatar_name, ua.avatar_image_url
             ORDER BY u.id
         """, fetch_all=True)
         
         return templates.TemplateResponse(
-            "portal/admin_manage_users.html",
+            "portal/admin_users.html",
             {
                 "request": request,
                 "user": user,
@@ -686,6 +708,68 @@ async def manage_users(request: Request):
         return JSONResponse(
             status_code=500,
             content={"error": "User management error", "detail": str(e)}
+        )
+
+@router.post("/delete-user/{user_id}")
+async def delete_user(request: Request, user_id: int):
+    """Delete a user and all their data (admin only)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details first
+        user_to_delete = execute_query(
+            "SELECT id, username FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_delete:
+            return RedirectResponse(
+                url="/admin/users?error=user_not_found",
+                status_code=303
+            )
+        
+        # Don't allow deleting yourself
+        if user_to_delete['id'] == admin_user['id']:
+            return RedirectResponse(
+                url="/admin/users?error=cannot_delete_yourself",
+                status_code=303
+            )
+        
+        # Delete user's videos first (foreign key constraint)
+        execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+        
+        # Delete user's avatars
+        execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
+        
+        # Delete user's images
+        execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
+        
+        # Delete user's voices
+        execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
+        
+        # Finally delete the user
+        execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+        
+        log_info(f"Admin {admin_user['username']} deleted user {user_to_delete['username']} (ID: {user_id})", "AdminRoutes")
+        
+        return RedirectResponse(
+            url="/admin/users?success=user_deleted",
+            status_code=303
+        )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error deleting user", "AdminRoutes", e)
+        return RedirectResponse(
+            url="/admin/users?error=delete_failed",
+            status_code=303
         )
 
 @router.get("/manage-videos/{user_id}")
@@ -828,6 +912,55 @@ async def clear_user_videos(request: Request, user_id: int):
         return RedirectResponse(
             url=f"/admin/manage-videos/{user_id}?error=clear_failed",
             status_code=303
+        )
+
+@router.get("/manage-avatars/{user_id}")
+async def manage_user_avatars(request: Request, user_id: int):
+    """Admin avatar management page for specific user"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details
+        user_to_manage = execute_query(
+            "SELECT id, username, email FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        # Get all avatars for this user
+        avatars = execute_query("""
+            SELECT id, avatar_id, avatar_name, created_at, is_default
+            FROM user_avatars 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_avatars.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "avatars": avatars or [],
+                "total_avatars": len(avatars) if avatars else 0,
+                "title": f"Manage Avatars - {user_to_manage['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying avatar management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Avatar management error", "detail": str(e)}
         )
 
 @router.post("/fetch-heygen-avatar/{user_id}")
@@ -1206,4 +1339,108 @@ async def update_avatar_names_endpoint(request: Request):
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
+        )
+
+@router.get("/create-user")
+async def create_user_form(request: Request):
+    """Admin create user form"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        return templates.TemplateResponse(
+            "portal/admin_create_user.html",
+            {
+                "request": request,
+                "user": user,
+                "title": "Create New User"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying create user form", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Create user form error", "detail": str(e)}
+        )
+
+@router.get("/edit-user/{user_id}")
+async def edit_user_form(request: Request, user_id: int):
+    """Admin edit user form"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user to edit
+        user_to_edit = execute_query(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_edit:
+            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
+        
+        return templates.TemplateResponse(
+            "portal/admin_edit_user.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_edit": user_to_edit,
+                "title": f"Edit User - {user_to_edit['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying edit user form", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Edit user form error", "detail": str(e)}
+        )
+
+@router.get("/emergency-controls")
+async def emergency_controls(request: Request):
+    """Admin emergency controls page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get system stats for emergency overview
+        stats = {
+            "total_users": execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True),
+            "total_videos": execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True),
+            "failed_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'failed'", fetch_one=True),
+            "pending_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'pending'", fetch_one=True)
+        }
+        
+        return templates.TemplateResponse(
+            "portal/admin_emergency_controls.html",
+            {
+                "request": request,
+                "user": user,
+                "stats": stats,
+                "title": "Emergency Controls"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying emergency controls page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Emergency controls error", "detail": str(e)}
         )
