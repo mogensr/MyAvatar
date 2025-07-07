@@ -712,12 +712,12 @@ async def manage_users(request: Request):
 
 @router.post("/delete-user/{user_id}")
 async def delete_user(request: Request, user_id: int):
-    """Delete a user and all their data (admin only)"""
+    """Delete a user and all their data (admin only) - FIXED VERSION"""
     try:
         # Require admin access
         admin_user = require_admin(request)
         
-        # Get user details first
+        # Get user details first for success message
         user_to_delete = execute_query(
             "SELECT id, username FROM users WHERE id = %s",
             (user_id,),
@@ -725,39 +725,55 @@ async def delete_user(request: Request, user_id: int):
         )
         
         if not user_to_delete:
+            log_warning(f"User {user_id} not found for deletion", "AdminRoutes")
             return RedirectResponse(
                 url="/admin/users?error=user_not_found",
                 status_code=303
             )
         
+        username = user_to_delete['username']
+        
         # Don't allow deleting yourself
         if user_to_delete['id'] == admin_user['id']:
+            log_warning(f"Admin {admin_user['username']} tried to delete themselves", "AdminRoutes")
             return RedirectResponse(
                 url="/admin/users?error=cannot_delete_yourself",
                 status_code=303
             )
         
-        # Delete user's videos first (foreign key constraint)
-        execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
-        
-        # Delete user's avatars
-        execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
-        
-        # Delete user's images
-        execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
-        
-        # Delete user's voices
-        execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
-        
-        # Finally delete the user
-        execute_query("DELETE FROM users WHERE id = %s", (user_id,))
-        
-        log_info(f"Admin {admin_user['username']} deleted user {user_to_delete['username']} (ID: {user_id})", "AdminRoutes")
-        
-        return RedirectResponse(
-            url="/admin/users?success=user_deleted",
-            status_code=303
-        )
+        try:
+            # Delete user's data in proper order (foreign key constraints)
+            log_info(f"Starting deletion of user {username} (ID: {user_id})", "AdminRoutes")
+            
+            # Delete user's videos first (foreign key constraint)
+            execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+            
+            # Delete user's avatars
+            execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
+            
+            # Delete user's images
+            execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
+            
+            # Delete user's voices
+            execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
+            
+            # Finally delete the user
+            execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+            
+            log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id})", "AdminRoutes")
+            
+            # FIXED: Redirect with success message
+            return RedirectResponse(
+                url=f"/admin/users?success=user_deleted&username={username}",
+                status_code=303
+            )
+            
+        except Exception as delete_error:
+            log_error(f"Error during user deletion process: {str(delete_error)}", "AdminRoutes", delete_error)
+            return RedirectResponse(
+                url="/admin/users?error=delete_failed",
+                status_code=303
+            )
         
     except HTTPException as e:
         if e.status_code == 401:
@@ -766,7 +782,7 @@ async def delete_user(request: Request, user_id: int):
             return RedirectResponse(url="/dashboard", status_code=303)
         raise
     except Exception as e:
-        log_error("Error deleting user", "AdminRoutes", e)
+        log_error("Error in delete_user route", "AdminRoutes", e)
         return RedirectResponse(
             url="/admin/users?error=delete_failed",
             status_code=303
@@ -916,14 +932,14 @@ async def clear_user_videos(request: Request, user_id: int):
 
 @router.get("/manage-avatars/{user_id}")
 async def manage_user_avatars(request: Request, user_id: int):
-    """Admin avatar management page for specific user"""
+    """Admin avatar management page for specific user - FIXED VERSION"""
     try:
         # Require admin access
         admin_user = require_admin(request)
         
         # Get user details
         user_to_manage = execute_query(
-            "SELECT id, username, email FROM users WHERE id = ?",
+            "SELECT id, username, email FROM users WHERE id = %s",
             (user_id,),
             fetch_one=True
         )
@@ -931,13 +947,15 @@ async def manage_user_avatars(request: Request, user_id: int):
         if not user_to_manage:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
         
-        # Get all avatars for this user
+        # FIXED QUERY - Now includes avatar_image_url
         avatars = execute_query("""
-            SELECT id, avatar_id, avatar_name, created_at, is_default
+            SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default
             FROM user_avatars 
-            WHERE user_id = ? 
+            WHERE user_id = %s 
             ORDER BY created_at DESC
         """, (user_id,), fetch_all=True)
+        
+        log_info(f"Found {len(avatars) if avatars else 0} avatars for user {user_to_manage['username']}", "AdminRoutes")
         
         return templates.TemplateResponse(
             "portal/admin_manage_avatars.html",
@@ -1095,7 +1113,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             
             # Check if avatar already exists for this user
             existing_avatar = execute_query(
-                "SELECT id FROM user_avatars WHERE user_id = ? AND avatar_id = ?",
+                "SELECT id FROM user_avatars WHERE user_id = %s AND avatar_id = %s",
                 (user_id, avatar_id),
                 fetch_one=True
             )
@@ -1162,7 +1180,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
 
 @router.post("/delete-image/{image_id}")
 async def delete_user_image(request: Request, image_id: str):
-    """Delete a user avatar (admin only)"""
+    """Delete a user avatar (admin only) - FIXED VERSION"""
     log_info(f"🚨 DELETE ROUTE CALLED! image_id: {image_id}", "AdminRoutes")
     user_id = None
     try:
@@ -1181,7 +1199,7 @@ async def delete_user_image(request: Request, image_id: str):
         
         # Get avatar details before deletion
         avatar = execute_query(
-            "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = ?",
+            "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = %s",
             (numeric_id,),
             fetch_one=True
         )
@@ -1200,7 +1218,7 @@ async def delete_user_image(request: Request, image_id: str):
         
         # Get user info for logging
         user = execute_query(
-            "SELECT username FROM users WHERE id = ?",
+            "SELECT username FROM users WHERE id = %s",
             (user_id,),
             fetch_one=True
         )
@@ -1210,11 +1228,12 @@ async def delete_user_image(request: Request, image_id: str):
         
         # Delete from database
         log_info(f"🔍 DEBUG: About to delete avatar with id: {numeric_id}", "AdminRoutes")
-        delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (numeric_id,))
+        delete_result = execute_query("DELETE FROM user_avatars WHERE id = %s", (numeric_id,))
         log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
         
         log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar['avatar_name']}') for user {user['username'] if user else 'Unknown'}", "AdminRoutes")
         
+        # FIXED: Redirect back to avatar management page with success message
         return RedirectResponse(
             url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
             status_code=303
@@ -1275,7 +1294,7 @@ async def update_avatar_name(request: Request):
         
         # Get avatar info for logging
         avatar = execute_query(
-            "SELECT user_id, avatar_name FROM user_avatars WHERE id = ?",
+            "SELECT user_id, avatar_name FROM user_avatars WHERE id = %s",
             (avatar_id,),
             fetch_one=True
         )
@@ -1378,7 +1397,7 @@ async def edit_user_form(request: Request, user_id: int):
         
         # Get user to edit
         user_to_edit = execute_query(
-            "SELECT * FROM users WHERE id = ?",
+            "SELECT * FROM users WHERE id = %s",
             (user_id,),
             fetch_one=True
         )
