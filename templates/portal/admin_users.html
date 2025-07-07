@@ -121,8 +121,8 @@
                         </small>
                     </td>
                     <td class="align-middle">
-                        {% if user.avatar_img_url %}
-                            <img src="{{ user.avatar_img_url }}" alt="Avatar" class="user-avatar">
+                        {% if user.avatar_image_url %}
+                            <img src="{{ user.avatar_image_url }}" alt="Avatar" class="user-avatar">
                             <br>
                             {% if user.avatar_id %}
                                 <small class="avatar-info">ID: {{ user.avatar_id[:8] }}...</small>
