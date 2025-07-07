@@ -105,8 +105,12 @@
                         {% for avatar in avatars %}
                             <tr>
                                 <td>
-                                    {% if avatar.avatar_url %}
-                                        <img src="{{ avatar.avatar_url }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; display: none;">
+                                            <i class="text-white">❌</i>
+                                        </div>
                                     {% else %}
                                         <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                                             <i class="text-muted">👤</i>
@@ -118,8 +122,8 @@
                                     <br><small class="text-muted">ID: {{ avatar.id }}</small>
                                 </td>
                                 <td>
-                                    {% if avatar.heygen_avatar_id %}
-                                        <code>{{ avatar.heygen_avatar_id }}</code>
+                                    {% if avatar.avatar_id %}
+                                        <code class="small">{{ avatar.avatar_id[:12] }}...</code>
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}

@@ -671,13 +671,14 @@ async def manage_users(request: Request):
         # Require admin access
         user = require_admin(request)
         
-        # Get all users with video counts
+        # Get all users with video counts and avatar info
         users = execute_query("""
             SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin,
+                   u.avatar_id, u.avatar_img_url, u.heygen_voice_id,
                    COUNT(v.id) as video_count
             FROM users u
             LEFT JOIN videos v ON u.id = v.user_id
-            GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin
+            GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin, u.avatar_id, u.avatar_img_url, u.heygen_voice_id
             ORDER BY u.id
         """, fetch_all=True)
         

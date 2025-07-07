@@ -74,7 +74,8 @@
                     <th>Navn</th>
                     <th>Email</th>
                     <th>Telefon</th>
-                    <th>HeyGen ID</th>
+                    <th>Avatar ID</th>
+                    <th>Voice ID</th>
                     <th>Logo</th>
                     <th>Avatar</th>
                     <th>LinkedIn</th>
@@ -96,6 +97,13 @@
                     <td class="align-middle">{{ user.email }}</td>
                     <td class="align-middle">{{ user.phone or '-' }}</td>
                     <td class="align-middle">
+                        {% if user.avatar_id %}
+                            <code class="small">{{ user.avatar_id[:12] }}...</code>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
                         {% if user.heygen_voice_id %}
                             <code class="small">{{ user.heygen_voice_id[:12] }}...</code>
                         {% else %}
@@ -111,7 +119,9 @@
                     </td>
                     <td class="align-middle">
                         {% if user.avatar_img_url %}
-                            <img src="{{ user.avatar_img_url }}" alt="Avatar" class="user-avatar">
+                            <img src="{{ user.avatar_img_url }}" alt="Avatar" class="user-avatar" 
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                            <span class="text-danger small" style="display:none;">❌ Billede fejl</span>
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}
