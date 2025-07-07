@@ -37,12 +37,24 @@
             margin: 1px;
         }
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
+            border: 2px solid #ddd;
         }
         .btn-group .btn {
+            font-size: 0.8rem;
+        }
+        .avatar-info {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        .video-count {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
             font-size: 0.8rem;
         }
     </style>
@@ -71,14 +83,11 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Navn</th>
+                    <th>Bruger</th>
                     <th>Email</th>
-                    <th>Telefon</th>
-                    <th>Avatar ID</th>
-                    <th>Voice ID</th>
-                    <th>Logo</th>
                     <th>Avatar</th>
-                    <th>LinkedIn</th>
+                    <th>Voice ID</th>
+                    <th>Videoer</th>
                     <th>Handlinger</th>
                 </tr>
             </thead>
@@ -93,47 +102,58 @@
                         {% if user.is_admin %}
                             <span class="badge bg-warning text-dark ms-1">Admin</span>
                         {% endif %}
+                        <br>
+                        <small class="text-muted">
+                            {% if user.created_at %}
+                                Oprettet: {{ user.created_at.strftime('%d-%m-%Y') if user.created_at else 'N/A' }}
+                            {% endif %}
+                        </small>
                     </td>
-                    <td class="align-middle">{{ user.email }}</td>
-                    <td class="align-middle">{{ user.phone or '-' }}</td>
                     <td class="align-middle">
-                        {% if user.avatar_id %}
-                            <code class="small">{{ user.avatar_id[:12] }}...</code>
+                        {{ user.email }}
+                        <br>
+                        <small class="text-muted">
+                            {% if user.last_login %}
+                                Sidst aktiv: {{ user.last_login.strftime('%d-%m-%Y') if user.last_login else 'Aldrig' }}
+                            {% else %}
+                                Aldrig logget ind
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td class="align-middle">
+                        {% if user.avatar_image_url %}
+                            <img src="{{ user.avatar_image_url }}" alt="Avatar" class="user-avatar">
+                            <br>
+                            {% if user.avatar_id %}
+                                <small class="avatar-info">ID: {{ user.avatar_id[:8] }}...</small>
+                            {% endif %}
+                            {% if user.avatar_name %}
+                                <br><small class="avatar-info">{{ user.avatar_name }}</small>
+                            {% endif %}
+                            {% if user.avatar_count %}
+                                <br><small class="badge bg-info">{{ user.avatar_count }} avatarer</small>
+                            {% endif %}
                         {% else %}
-                            <span class="text-muted">-</span>
+                            <div class="text-center">
+                                <i class="fas fa-user-circle fa-2x text-muted"></i>
+                                <br>
+                                {% if user.avatar_count and user.avatar_count > 0 %}
+                                    <small class="badge bg-info">{{ user.avatar_count }} avatarer</small>
+                                {% else %}
+                                    <small class="text-muted">Ingen avatar</small>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </td>
                     <td class="align-middle">
                         {% if user.heygen_voice_id %}
-                            <code class="small">{{ user.heygen_voice_id[:12] }}...</code>
+                            <code class="small bg-light p-1 rounded">{{ user.heygen_voice_id[:12] }}...</code>
                         {% else %}
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td class="align-middle">
-                        {% if user.logo_url %}
-                            <img src="{{ user.logo_url }}" alt="Logo" class="user-avatar">
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td class="align-middle">
-                        {% if user.avatar_img_url %}
-                            <img src="{{ user.avatar_img_url }}" alt="Avatar" class="user-avatar" 
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
-                            <span class="text-danger small" style="display:none;">❌ Billede fejl</span>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td class="align-middle">
-                        {% if user.linkedin_url %}
-                            <a href="{{ user.linkedin_url }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                <i class="fab fa-linkedin"></i>
-                            </a>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                    <td class="align-middle text-center">
+                        <span class="video-count">{{ user.video_count or 0 }}</span>
                     </td>
                     <td class="align-middle">
                         <div class="btn-group-vertical btn-group-sm" role="group">
@@ -145,9 +165,17 @@
                                     <i class="fas fa-user-circle"></i> Avatarer
                                 </a>
                             </div>
-                            <a href="/admin/manage-videos/{{ user.id }}" class="btn btn-success btn-sm" title="Administrer videoer">
-                                <i class="fas fa-video"></i> Videoer
-                            </a>
+                            <div class="btn-group btn-group-sm mb-1" role="group">
+                                <a href="/admin/manage-videos/{{ user.id }}" class="btn btn-success btn-sm" title="Administrer videoer">
+                                    <i class="fas fa-video"></i> Videoer
+                                </a>
+                                <form method="POST" action="/admin/delete-user/{{ user.id }}" style="display: inline;" 
+                                      onsubmit="return confirm('Er du sikker på at du vil slette brugeren {{ user.username }}? Dette kan ikke fortrydes!')">
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Slet bruger">
+                                        <i class="fas fa-trash"></i> Slet
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </td>
                 </tr>

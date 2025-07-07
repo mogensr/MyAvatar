@@ -106,11 +106,7 @@
                             <tr>
                                 <td>
                                     {% if avatar.avatar_image_url %}
-                                        <img src="{{ avatar.avatar_image_url }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;"
-                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                        <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; display: none;">
-                                            <i class="text-white">❌</i>
-                                        </div>
+                                        <img src="{{ avatar.avatar_image_url }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
                                     {% else %}
                                         <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                                             <i class="text-muted">👤</i>
@@ -123,7 +119,7 @@
                                 </td>
                                 <td>
                                     {% if avatar.avatar_id %}
-                                        <code class="small">{{ avatar.avatar_id[:12] }}...</code>
+                                        <code>{{ avatar.avatar_id }}</code>
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}
@@ -132,7 +128,7 @@
                                     <small>{{ avatar.created_at }}</small>
                                 </td>
                                 <td>
-                                    <form action="/admin/delete-avatar/{{ avatar.id }}" method="post" style="display: inline;">
+                                    <form action="/admin/delete-image/{{ avatar.id }}" method="post" style="display: inline;">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" 
                                                 onclick="return confirm('Er du sikker på, at du vil slette denne avatar?')">
                                             🗑️ Slet
