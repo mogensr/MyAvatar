@@ -671,7 +671,7 @@ async def manage_users(request: Request):
         # Require admin access
         user = require_admin(request)
         
-        # Get all users with video counts
+        # FIXED QUERY - Removed the problematic u.avatar_id and u.avatar_img_url columns
         users = execute_query("""
             SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin,
                    COUNT(v.id) as video_count
