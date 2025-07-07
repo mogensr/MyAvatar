@@ -150,23 +150,129 @@ def clean_technical_id(avatar_id):
     
     return None
 
+def get_all_heygen_avatars_with_photo_support():
+    """
+    Enhanced function to fetch ALL avatars including photo avatars from HeyGen
+    """
+    try:
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            return {"success": False, "error": "API key not configured"}
+        
+        import requests
+        
+        all_avatars = []
+        
+        # 1. Get regular avatars (existing method)
+        try:
+            regular_response = requests.get(
+                "https://api.heygen.com/v2/avatars",
+                headers={
+                    "X-Api-Key": api_key,
+                    "Accept": "application/json"
+                },
+                timeout=30
+            )
+            
+            if regular_response.status_code == 200:
+                regular_data = regular_response.json()
+                if regular_data.get("error") is None and regular_data.get("data", {}).get("avatars"):
+                    avatars = regular_data["data"]["avatars"]
+                    for avatar in avatars:
+                        avatar_data = {
+                            "avatar_id": avatar.get("avatar_id"),
+                            "avatar_name": avatar.get("avatar_name"),
+                            "avatar_type": "regular",
+                            "preview_image_url": avatar.get("preview_image_url"),
+                            "preview_video_url": avatar.get("preview_video_url"),
+                            "gender": avatar.get("gender"),
+                            "source": "regular_api"
+                        }
+                        all_avatars.append(avatar_data)
+                    log_info(f"Fetched {len(avatars)} regular avatars", "AdminRoutes")
+        
+        except Exception as e:
+            log_error(f"Error fetching regular avatars: {str(e)}", "AdminRoutes")
+        
+        # 2. Get photo avatar groups
+        try:
+            photo_groups_response = requests.get(
+                "https://api.heygen.com/v2/avatar_group.list",
+                headers={
+                    "X-Api-Key": api_key,
+                    "Content-Type": "application/json"
+                },
+                timeout=30
+            )
+            
+            if photo_groups_response.status_code == 200:
+                groups_data = photo_groups_response.json()
+                if groups_data.get("error") is None:
+                    groups = groups_data.get("data", {}).get("avatar_group_list", [])
+                    log_info(f"Found {len(groups)} photo avatar groups", "AdminRoutes")
+                    
+                    # Get avatars from each group
+                    for group in groups:
+                        group_id = group.get("id")
+                        if group_id:
+                            try:
+                                group_avatars_response = requests.get(
+                                    f"https://api.heygen.com/v2/avatar_group/{group_id}/avatars",
+                                    headers={
+                                        "X-Api-Key": api_key,
+                                        "Content-Type": "application/json"
+                                    },
+                                    timeout=30
+                                )
+                                
+                                if group_avatars_response.status_code == 200:
+                                    group_data = group_avatars_response.json()
+                                    if group_data.get("error") is None:
+                                        avatar_list = group_data.get("data", {}).get("avatar_list", [])
+                                        for avatar in avatar_list:
+                                            if avatar.get("status") == "completed":
+                                                # Photo avatars use different field names
+                                                avatar_data = {
+                                                    "avatar_id": avatar.get("id"),  # Photo avatars use 'id'
+                                                    "avatar_name": f"{group.get('name', 'Photo Avatar')} - {avatar.get('name', 'Look')}",
+                                                    "avatar_type": "photo",
+                                                    "preview_image_url": avatar.get("image_url"),  # THIS IS THE KEY FIX
+                                                    "preview_video_url": avatar.get("motion_preview_url"),
+                                                    "gender": None,
+                                                    "source": "photo_api",
+                                                    "group_id": group_id,
+                                                    "group_name": group.get("name")
+                                                }
+                                                all_avatars.append(avatar_data)
+                                        log_info(f"Added {len(avatar_list)} avatars from group {group.get('name')}", "AdminRoutes")
+                            except Exception as e:
+                                log_error(f"Error fetching avatars from group {group_id}: {str(e)}", "AdminRoutes")
+        
+        except Exception as e:
+            log_error(f"Error fetching photo avatar groups: {str(e)}", "AdminRoutes")
+        
+        log_info(f"Total avatars fetched: {len(all_avatars)}", "AdminRoutes")
+        
+        return {
+            "success": True,
+            "avatars": all_avatars,
+            "total_count": len(all_avatars)
+        }
+        
+    except Exception as e:
+        log_error(f"Error in get_all_heygen_avatars_with_photo_support: {str(e)}", "AdminRoutes")
+        return {"success": False, "error": str(e)}
+
 def fetch_and_update_avatars_with_naming():
     """
     Updated function to fetch avatars from HeyGen with enhanced naming logic.
     Use this to replace your existing avatar fetching code.
     """
     try:
-        from ..api.heygen import get_all_available_avatars
+        # Use the enhanced avatar fetching function
+        result = get_all_heygen_avatars_with_photo_support()
         
-        api_key = os.getenv("HEYGEN_API_KEY")
-        if not api_key:
-            log_error("HEYGEN_API_KEY not found", "AdminRoutes")
-            return {"success": False, "error": "API key not configured"}
-        
-        # Fetch ALL avatars from HeyGen (regular + photo)
-        result = get_all_available_avatars(api_key)
-        
-        if not result or not result.get('success', False):
+        if not result.get('success', False):
             log_error("Failed to fetch avatars from HeyGen", "AdminRoutes")
             return {"success": False, "error": "Failed to fetch from HeyGen"}
         
@@ -185,8 +291,8 @@ def fetch_and_update_avatars_with_naming():
             user_friendly_name = generate_user_friendly_name(avatar)
             
             # Get other avatar data
-            preview_url = avatar.get('preview_url', '') or avatar.get('preview_image_url', '')
-            preview_url_mp4 = avatar.get('preview_url_mp4', '')
+            preview_url = avatar.get('preview_image_url', '')
+            preview_url_mp4 = avatar.get('preview_video_url', '')
             
             # Check if avatar already exists
             existing_avatar = execute_query(
@@ -938,22 +1044,37 @@ async def manage_user_avatars(request: Request, user_id: int):
         admin_user = require_admin(request)
         
         # Get user details
-        user_to_manage = execute_query(
-            "SELECT id, username, email FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            user_to_manage = execute_query(
+                "SELECT id, username, email FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user_to_manage = execute_query(
+                "SELECT id, username, email FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
         if not user_to_manage:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
         
         # FIXED QUERY - Now includes avatar_image_url
-        avatars = execute_query("""
-            SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default
-            FROM user_avatars 
-            WHERE user_id = %s 
-            ORDER BY created_at DESC
-        """, (user_id,), fetch_all=True)
+        if USE_POSTGRES:
+            avatars = execute_query("""
+                SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default
+                FROM user_avatars 
+                WHERE user_id = %s 
+                ORDER BY created_at DESC
+            """, (user_id,), fetch_all=True)
+        else:
+            avatars = execute_query("""
+                SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default
+                FROM user_avatars 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC
+            """, (user_id,), fetch_all=True)
         
         log_info(f"Found {len(avatars) if avatars else 0} avatars for user {user_to_manage['username']}", "AdminRoutes")
         
@@ -1001,24 +1122,30 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             )
         
         # Get user to manage
-        user_to_manage = execute_query(
-            "SELECT id, username FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            user_to_manage = execute_query(
+                "SELECT id, username FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user_to_manage = execute_query(
+                "SELECT id, username FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
         if not user_to_manage:
             raise HTTPException(status_code=404, detail="User not found")
         
         # Import HeyGen functions
-        from ..api.heygen import get_all_available_avatars
         import requests
         import uuid
         from pathlib import Path
         
         try:
-            # Fetch ALL avatars from HeyGen (regular + photo) and find the specific one
-            avatars_result = get_all_available_avatars(os.getenv("HEYGEN_API_KEY"))
+            # Use the enhanced avatar fetching function
+            avatars_result = get_all_heygen_avatars_with_photo_support()
             
             if not avatars_result.get("success"):
                 return JSONResponse(
@@ -1034,13 +1161,6 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             log_info(f"Searching for avatar ID: {avatar_id}", "AdminRoutes")
             log_info(f"Total avatars available: {len(avatars)}", "AdminRoutes")
             
-            # Log some sample avatar IDs for debugging
-            photo_avatars = [a for a in avatars if a.get('avatar_type') == 'photo']
-            log_info(f"Photo avatars found: {len(photo_avatars)}", "AdminRoutes")
-            
-            if photo_avatars:
-                log_info(f"Sample photo avatar IDs: {[a.get('avatar_id') for a in photo_avatars[:5]]}", "AdminRoutes")
-            
             for avatar in avatars:
                 if avatar.get("avatar_id") == avatar_id:
                     avatar_details = avatar
@@ -1055,7 +1175,8 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             # USE ENHANCED NAMING LOGIC
             avatar_name = generate_user_friendly_name(avatar_details)
             
-            avatar_image_url = avatar_details.get("preview_image_url") or avatar_details.get("image_url")
+            # Use the correct image URL field (handles both regular and photo avatars)
+            avatar_image_url = avatar_details.get("preview_image_url")
             
             if not avatar_image_url:
                 return JSONResponse(
@@ -1112,11 +1233,18 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 relative_path = avatar_image_url  # Use original URL as fallback
             
             # Check if avatar already exists for this user
-            existing_avatar = execute_query(
-                "SELECT id FROM user_avatars WHERE user_id = %s AND avatar_id = %s",
-                (user_id, avatar_id),
-                fetch_one=True
-            )
+            if USE_POSTGRES:
+                existing_avatar = execute_query(
+                    "SELECT id FROM user_avatars WHERE user_id = %s AND avatar_id = %s",
+                    (user_id, avatar_id),
+                    fetch_one=True
+                )
+            else:
+                existing_avatar = execute_query(
+                    "SELECT id FROM user_avatars WHERE user_id = ? AND avatar_id = ?",
+                    (user_id, avatar_id),
+                    fetch_one=True
+                )
             
             if existing_avatar:
                 # Update existing avatar with enhanced name
@@ -1198,11 +1326,18 @@ async def delete_user_image(request: Request, image_id: str):
             numeric_id = image_id
         
         # Get avatar details before deletion
-        avatar = execute_query(
-            "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = %s",
-            (numeric_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            avatar = execute_query(
+                "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = %s",
+                (numeric_id,),
+                fetch_one=True
+            )
+        else:
+            avatar = execute_query(
+                "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = ?",
+                (numeric_id,),
+                fetch_one=True
+            )
         
         log_info(f"🔍 DEBUG: Avatar query result: {avatar}", "AdminRoutes")
         
@@ -1217,18 +1352,28 @@ async def delete_user_image(request: Request, image_id: str):
         log_info(f"🔍 DEBUG: Found avatar for user_id: {user_id}", "AdminRoutes")
         
         # Get user info for logging
-        user = execute_query(
-            "SELECT username FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            user = execute_query(
+                "SELECT username FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user = execute_query(
+                "SELECT username FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
         # Note: For HeyGen avatars, we don't delete physical files since they're external URLs
         # Only delete local uploaded files if needed in the future
         
         # Delete from database
         log_info(f"🔍 DEBUG: About to delete avatar with id: {numeric_id}", "AdminRoutes")
-        delete_result = execute_query("DELETE FROM user_avatars WHERE id = %s", (numeric_id,))
+        if USE_POSTGRES:
+            delete_result = execute_query("DELETE FROM user_avatars WHERE id = %s", (numeric_id,))
+        else:
+            delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (numeric_id,))
         log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
         
         log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar['avatar_name']}') for user {user['username'] if user else 'Unknown'}", "AdminRoutes")
@@ -1293,11 +1438,18 @@ async def update_avatar_name(request: Request):
             )
         
         # Get avatar info for logging
-        avatar = execute_query(
-            "SELECT user_id, avatar_name FROM user_avatars WHERE id = %s",
-            (avatar_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            avatar = execute_query(
+                "SELECT user_id, avatar_name FROM user_avatars WHERE id = %s",
+                (avatar_id,),
+                fetch_one=True
+            )
+        else:
+            avatar = execute_query(
+                "SELECT user_id, avatar_name FROM user_avatars WHERE id = ?",
+                (avatar_id,),
+                fetch_one=True
+            )
         
         if avatar:
             log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} name to '{new_name}'", "AdminRoutes")
@@ -1396,11 +1548,18 @@ async def edit_user_form(request: Request, user_id: int):
         admin_user = require_admin(request)
         
         # Get user to edit
-        user_to_edit = execute_query(
-            "SELECT * FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        if USE_POSTGRES:
+            user_to_edit = execute_query(
+                "SELECT * FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user_to_edit = execute_query(
+                "SELECT * FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
         if not user_to_edit:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
