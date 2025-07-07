@@ -1110,7 +1110,7 @@ async def login_user(request: Request):
                 "error": "Invalid username or password"
             }, status_code=401)
         
-        stored_password = user.get("password", "") or user.get("hashed_password", "")
+        stored_password = user.get("password_hash", "")
         if not stored_password or not verify_password(password, stored_password):
             return templates.TemplateResponse("portal/login.html", {
                 "request": request,

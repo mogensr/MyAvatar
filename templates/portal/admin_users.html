@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="da">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Brugeroversigt - Admin</title>
+    <title>User Management - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -57,6 +57,16 @@
             border-radius: 10px;
             font-size: 0.8rem;
         }
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        .delete-btn {
+            transition: all 0.3s ease;
+        }
+        .delete-btn:hover {
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -64,17 +74,58 @@
     <div class="header-gradient">
         <h1 class="mb-1">
             <i class="fas fa-users me-2"></i>
-            Brugeroversigt
+            User Management
         </h1>
-        <p class="mb-0 opacity-90">Administrer alle brugere og deres indhold</p>
+        <p class="mb-0 opacity-90">Manage all users and their content</p>
     </div>
+    
+    <!-- Success/Error Messages -->
+    {% if request.query_params.get('success') == 'user_deleted' %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Success!</strong> User "{{ request.query_params.get('username', 'Unknown') }}" has been deleted successfully.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    {% if request.query_params.get('error') == 'user_not_found' %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error!</strong> User not found.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    {% if request.query_params.get('error') == 'cannot_delete_yourself' %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-ban me-2"></i>
+            <strong>Error!</strong> You cannot delete yourself.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    {% if request.query_params.get('error') == 'cannot_delete_admin' %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Error!</strong> Cannot delete other administrators.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+    
+    {% if request.query_params.get('error') == 'delete_failed' %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-times-circle me-2"></i>
+            <strong>Error!</strong> Failed to delete user. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
     
     <div class="mb-4">
         <a href="/admin/dashboard" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Tilbage til admin-dashboard
+            <i class="fas fa-arrow-left me-2"></i>Back to Admin Dashboard
         </a>
         <a href="/admin/create-user" class="btn btn-primary ms-2">
-            <i class="fas fa-plus me-2"></i>Opret ny bruger
+            <i class="fas fa-plus me-2"></i>Create New User
         </a>
     </div>
 
@@ -83,12 +134,12 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Bruger</th>
+                    <th>User</th>
                     <th>Email</th>
                     <th>Avatar</th>
                     <th>Voice ID</th>
-                    <th>Videoer</th>
-                    <th>Handlinger</th>
+                    <th>Videos</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -105,7 +156,7 @@
                         <br>
                         <small class="text-muted">
                             {% if user.created_at %}
-                                Oprettet: {{ user.created_at.strftime('%d-%m-%Y') if user.created_at else 'N/A' }}
+                                Created: {{ user.created_at.strftime('%d-%m-%Y') if user.created_at else 'N/A' }}
                             {% endif %}
                         </small>
                     </td>
@@ -114,15 +165,16 @@
                         <br>
                         <small class="text-muted">
                             {% if user.last_login %}
-                                Sidst aktiv: {{ user.last_login.strftime('%d-%m-%Y') if user.last_login else 'Aldrig' }}
+                                Last active: {{ user.last_login.strftime('%d-%m-%Y') if user.last_login else 'Never' }}
                             {% else %}
-                                Aldrig logget ind
+                                Never logged in
                             {% endif %}
                         </small>
                     </td>
                     <td class="align-middle">
                         {% if user.avatar_image_url %}
-                            <img src="{{ user.avatar_image_url }}" alt="Avatar" class="user-avatar">
+                            <img src="{{ user.avatar_image_url }}" alt="Avatar" class="user-avatar" 
+                                 onerror="this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;40&quot; height=&quot;40&quot; viewBox=&quot;0 0 40 40&quot;><rect width=&quot;40&quot; height=&quot;40&quot; fill=&quot;%23ddd&quot;/><text x=&quot;20&quot; y=&quot;25&quot; text-anchor=&quot;middle&quot; font-family=&quot;Arial&quot; font-size=&quot;12&quot; fill=&quot;%23666&quot;>No Image</text></svg>'">
                             <br>
                             {% if user.avatar_id %}
                                 <small class="avatar-info">ID: {{ user.avatar_id[:8] }}...</small>
@@ -131,16 +183,16 @@
                                 <br><small class="avatar-info">{{ user.avatar_name }}</small>
                             {% endif %}
                             {% if user.avatar_count %}
-                                <br><small class="badge bg-info">{{ user.avatar_count }} avatarer</small>
+                                <br><small class="badge bg-info">{{ user.avatar_count }} avatars</small>
                             {% endif %}
                         {% else %}
                             <div class="text-center">
                                 <i class="fas fa-user-circle fa-2x text-muted"></i>
                                 <br>
                                 {% if user.avatar_count and user.avatar_count > 0 %}
-                                    <small class="badge bg-info">{{ user.avatar_count }} avatarer</small>
+                                    <small class="badge bg-info">{{ user.avatar_count }} avatars</small>
                                 {% else %}
-                                    <small class="text-muted">Ingen avatar</small>
+                                    <small class="text-muted">No avatar</small>
                                 {% endif %}
                             </div>
                         {% endif %}
@@ -158,21 +210,22 @@
                     <td class="align-middle">
                         <div class="btn-group-vertical btn-group-sm" role="group">
                             <div class="btn-group btn-group-sm mb-1" role="group">
-                                <a href="/admin/edit-user/{{ user.id }}" class="btn btn-warning btn-sm" title="Rediger bruger">
-                                    <i class="fas fa-edit"></i> Rediger
+                                <a href="/admin/edit-user/{{ user.id }}" class="btn btn-warning btn-sm" title="Edit user">
+                                    <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <a href="/admin/manage-avatars/{{ user.id }}" class="btn btn-info btn-sm" title="Administrer avatarer">
-                                    <i class="fas fa-user-circle"></i> Avatarer
+                                <a href="/admin/manage-avatars/{{ user.id }}" class="btn btn-info btn-sm" title="Manage avatars">
+                                    <i class="fas fa-user-circle"></i> Avatars
                                 </a>
                             </div>
                             <div class="btn-group btn-group-sm mb-1" role="group">
-                                <a href="/admin/manage-videos/{{ user.id }}" class="btn btn-success btn-sm" title="Administrer videoer">
-                                    <i class="fas fa-video"></i> Videoer
+                                <a href="/admin/manage-videos/{{ user.id }}" class="btn btn-success btn-sm" title="Manage videos">
+                                    <i class="fas fa-video"></i> Videos
                                 </a>
+                                <!-- FIXED DELETE BUTTON -->
                                 <form method="POST" action="/admin/delete-user/{{ user.id }}" style="display: inline;" 
-                                      onsubmit="return confirm('Er du sikker på at du vil slette brugeren {{ user.username }}? Dette kan ikke fortrydes!')">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Slet bruger">
-                                        <i class="fas fa-trash"></i> Slet
+                                      onsubmit="return confirmDelete('{{ user.username }}', {{ user.video_count or 0 }}, {{ user.avatar_count or 0 }})">
+                                    <button type="submit" class="btn btn-danger btn-sm delete-btn" title="Delete user">
+                                        <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </form>
                             </div>
@@ -187,11 +240,101 @@
     <div class="mt-4 text-center">
         <p class="text-muted">
             <i class="fas fa-info-circle me-1"></i>
-            Totalt {{ users|length }} brugere i systemet
+            Total {{ users|length }} users in the system
         </p>
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm User Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete the user <strong id="deleteUsername"></strong>?</p>
+                <p>This will also delete:</p>
+                <ul id="deleteDetails">
+                    <li><span id="deleteVideoCount">0</span> videos</li>
+                    <li><span id="deleteAvatarCount">0</span> avatars</li>
+                    <li>All user data and settings</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Delete User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Enhanced delete confirmation function
+function confirmDelete(username, videoCount, avatarCount) {
+    // Simple confirmation for now
+    const message = `Are you sure you want to delete user "${username}"?\n\nThis will delete:\n- ${videoCount} videos\n- ${avatarCount} avatars\n- All user data\n\nThis action cannot be undone!`;
+    
+    return confirm(message);
+}
+
+// Alternative: Modal-based confirmation (uncomment to use)
+/*
+let currentDeleteForm = null;
+
+function confirmDelete(username, videoCount, avatarCount) {
+    // Store the form reference
+    currentDeleteForm = event.target.closest('form');
+    
+    // Update modal content
+    document.getElementById('deleteUsername').textContent = username;
+    document.getElementById('deleteVideoCount').textContent = videoCount;
+    document.getElementById('deleteAvatarCount').textContent = avatarCount;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+    
+    // Prevent form submission
+    return false;
+}
+
+// Handle modal confirm button
+document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+    if (currentDeleteForm) {
+        // Add loading state
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+        this.disabled = true;
+        
+        // Submit the form
+        currentDeleteForm.submit();
+    }
+});
+*/
+
+// Auto-dismiss alerts after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+In Popstgres
+
+user_avatars
+
+I have the following coluims
+
+id, user_id, avatar_id, avatar_name, avatar_image_url, is_default, created_at, 
+
+And in users
+
+I have the following columns
+
+id, username, email, hashed_password, is_admin, heygen_id, avatar_img_url, uploaded_images, phone, logo_url, linkedin_url, created_at, last_login, elevenlabs_api_key, heygen_voice_id, gdpr_consent_given, gdpr_consent_timestamp, gdpr-consent_version, password
+
+
+Now some of these are currently left blank (I suppose for future use), and the difference I see in password, is that in the first one it says hashed password and it is hashed.. While in the other it
+just says password, but is in fact hashed as well.

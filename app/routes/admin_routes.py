@@ -344,7 +344,7 @@ def fetch_and_update_avatars_with_naming():
         return {"success": False, "error": str(e)}
 
 # =============================================================================
-# EXISTING ADMIN ROUTES (UNCHANGED)
+# ADMIN ROUTES
 # =============================================================================
 
 @router.get("/")
@@ -399,377 +399,6 @@ async def admin_dashboard(request: Request):
             content={"error": "Admin dashboard error", "detail": str(e)}
         )
 
-@router.get("/manage-passwords")
-async def manage_passwords(request: Request, message: Optional[str] = None, message_type: Optional[str] = None):
-    """Admin password management page"""
-    try:
-        # Require admin access
-        user = require_admin(request)
-        
-        # Get all users
-        users = execute_query(
-            "SELECT id, username, email, created_at, last_login FROM users ORDER BY id",
-            fetch_all=True
-        )
-        
-        # Return password management page
-        return templates.TemplateResponse(
-            "portal/admin_manage_passwords.html",
-            {
-                "request": request,
-                "user": user,
-                "users": users,
-                "title": "Manage User Passwords",
-                "message": message,
-                "message_type": message_type
-            }
-        )
-    except HTTPException as e:
-        # If unauthorized, redirect to login
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        # If forbidden (not admin), redirect to dashboard
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying password management page", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Password management error", "detail": str(e)}
-        )
-
-@router.post("/api/admin/reset-password", response_class=JSONResponse)
-async def reset_password(request: Request):
-    """Reset a user's password (admin only)"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Get request body
-        data = await request.json()
-        user_id = data.get("user_id")
-        new_password = data.get("new_password")
-        
-        # Validate inputs
-        if not user_id or not new_password:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "User ID and new password are required"}
-            )
-        
-        # Validate password strength
-        is_valid, error_message = validate_password_strength(new_password)
-        if not is_valid:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": error_message}
-            )
-        
-        # Check if user exists
-        user = execute_query(
-            "SELECT id, username FROM users WHERE id = ?",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user:
-            return JSONResponse(
-                status_code=404,
-                content={"success": False, "error": "User not found"}
-            )
-        
-        # Hash the new password
-        hashed_password = get_password_hash(new_password)
-        
-        # Update the password in the database
-        execute_query(
-            "UPDATE users SET hashed_password = ? WHERE id = ?",
-            (hashed_password, user_id)
-        )
-        
-        log_info(f"Admin {admin_user['username']} reset password for user ID {user_id}", "AdminRoutes")
-        
-        return JSONResponse(
-            content={
-                "success": True,
-                "message": f"Password reset successfully for user ID {user_id}"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Authentication required"}
-            )
-        elif e.status_code == 403:
-            return JSONResponse(
-                status_code=403,
-                content={"success": False, "error": "Admin access required"}
-            )
-        raise
-    except Exception as e:
-        log_error(f"Error resetting password", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.get("/check-user")
-async def check_user_status(request: Request):
-    """Check current user status and admin privileges"""
-    try:
-        # Try to get current user
-        user = get_current_user(request)
-        if not user:
-            return JSONResponse(
-                content={
-                    "logged_in": False,
-                    "message": "No user logged in"
-                }
-            )
-        
-        return JSONResponse(
-            content={
-                "logged_in": True,
-                "user_id": user.get("id"),
-                "username": user.get("username"),
-                "email": user.get("email"),
-                "is_admin": user.get("is_admin", False),
-                "message": "User found"
-            }
-        )
-    except Exception as e:
-        return JSONResponse(
-            content={
-                "logged_in": False,
-                "error": str(e),
-                "message": "Error checking user status"
-            }
-        )
-
-@router.get("/migrate-database")
-async def migrate_database_get(request: Request):
-    """Migrate database to add missing description column (GET endpoint)"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Check if column already exists
-        try:
-            test_result = execute_query("SELECT description FROM videos LIMIT 1", fetch_one=True)
-            return JSONResponse(
-                content={
-                    "success": True,
-                    "message": "Database migration not needed - description column already exists"
-                }
-            )
-        except:
-            # Column doesn't exist, proceed with migration
-            pass
-        
-        if USE_POSTGRES:
-            execute_query("ALTER TABLE videos ADD COLUMN description TEXT")
-        else:
-            execute_query("ALTER TABLE videos ADD COLUMN description TEXT DEFAULT ''")
-        
-        log_info(f"Admin {admin_user['username']} migrated database to add missing description column", "AdminRoutes")
-        
-        return JSONResponse(
-            content={
-                "success": True,
-                "message": "Database migrated successfully - description column added to videos table"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return JSONResponse(
-                status_code=403,
-                content={"success": False, "error": "Admin access required"}
-            )
-        raise
-    except Exception as e:
-        log_error(f"Error migrating database", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.post("/api/admin/migrate-database", response_class=JSONResponse)
-async def migrate_database(request: Request):
-    """Migrate database to add missing description column"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        if USE_POSTGRES:
-            execute_query("ALTER TABLE videos ADD COLUMN description TEXT")
-        else:
-            execute_query("ALTER TABLE videos ADD COLUMN description TEXT DEFAULT ''")
-        
-        log_info(f"Admin {admin_user['username']} migrated database to add missing description column", "AdminRoutes")
-        
-        return JSONResponse(
-            content={
-                "success": True,
-                "message": "Database migrated successfully"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Authentication required"}
-            )
-        elif e.status_code == 403:
-            return JSONResponse(
-                status_code=403,
-                content={"success": False, "error": "Admin access required"}
-            )
-        raise
-    except Exception as e:
-        log_error(f"Error migrating database", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.get("/debug-video/{video_id}")
-async def debug_video_status(request: Request, video_id: str):
-    """Debug endpoint to check video status and update from HeyGen"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Get video from database
-        video = execute_query(
-            "SELECT * FROM videos WHERE id = %s OR heygen_video_id = %s",
-            (video_id, video_id),
-            fetch_one=True
-        )
-        
-        if not video:
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "error": f"Video not found with ID: {video_id}"
-                }
-            )
-        
-        # Get HeyGen API key
-        api_key = os.getenv("HEYGEN_API_KEY")
-        if not api_key:
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "error": "HeyGen API key not configured"
-                }
-            )
-        
-        # Import get_video_details function
-        from ..api.heygen import get_video_details
-        
-        # Check status on HeyGen
-        heygen_video_id = video.get("heygen_video_id")
-        if not heygen_video_id:
-            return JSONResponse(
-                content={
-                    "success": False,
-                    "error": "Video has no HeyGen video ID"
-                }
-            )
-        
-        result = get_video_details(api_key, heygen_video_id)
-        
-        debug_info = {
-            "database_video": {
-                "id": video.get("id"),
-                "heygen_video_id": video.get("heygen_video_id"),
-                "status": video.get("status"),
-                "video_url": video.get("video_url"),
-                "user_id": video.get("user_id")
-            },
-            "heygen_api_result": result
-        }
-        
-        # If HeyGen says video is completed, update database
-        if result.get("success") and result.get("details"):
-            details = result["details"]
-            heygen_status = details.get("status")
-            heygen_video_url = (details.get("video_url") or 
-                               details.get("video_url_caption") or 
-                               details.get("url") or 
-                               details.get("download_url"))
-            
-            debug_info["heygen_details"] = {
-                "status": heygen_status,
-                "video_url": heygen_video_url
-            }
-            
-            if heygen_status == "completed" and heygen_video_url:
-                # Update database
-                execute_query(
-                    "UPDATE videos SET status = %s, video_url = %s WHERE id = %s",
-                    ("completed", heygen_video_url, video["id"])
-                )
-                debug_info["database_updated"] = True
-                log_info(f"Admin {admin_user['username']} manually updated video {video['id']} status", "AdminRoutes")
-            else:
-                debug_info["database_updated"] = False
-        
-        return JSONResponse(content=debug_info)
-        
-    except Exception as e:
-        log_error(f"Error debugging video status", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
-@router.get("/make-me-admin")
-async def make_me_admin(request: Request):
-    """Grant admin privileges to current user (for initial setup)"""
-    try:
-        # Get current user
-        user = get_current_user(request)
-        if not user:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "success": False,
-                    "error": "Must be logged in to grant admin privileges"
-                }
-            )
-        
-        # Update user to admin
-        if USE_POSTGRES:
-            execute_query(
-                "UPDATE users SET is_admin = true WHERE id = %s",
-                (user["id"],)
-            )
-        else:
-            execute_query(
-                "UPDATE users SET is_admin = 1 WHERE id = ?",
-                (user["id"],)
-            )
-        
-        log_info(f"User {user['username']} granted admin privileges", "AdminRoutes")
-        
-        return JSONResponse(
-            content={
-                "success": True,
-                "message": f"Admin privileges granted to user {user['username']}"
-            }
-        )
-    except Exception as e:
-        log_error(f"Error granting admin privileges", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": str(e)}
-        )
-
 @router.get("/users")
 async def manage_users(request: Request):
     """Admin user management page"""
@@ -816,19 +445,30 @@ async def manage_users(request: Request):
             content={"error": "User management error", "detail": str(e)}
         )
 
+# =============================================================================
+# FIXED DELETE FUNCTIONS - CLEAR SEPARATION
+# =============================================================================
+
 @router.post("/delete-user/{user_id}")
 async def delete_user(request: Request, user_id: int):
-    """Delete a user and all their data (admin only) - FIXED VERSION"""
+    """Delete a user completely (admin only) - FIXED VERSION"""
     try:
         # Require admin access
         admin_user = require_admin(request)
         
-        # Get user details first for success message
-        user_to_delete = execute_query(
-            "SELECT id, username FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        # Get user details first for logging and validation
+        if USE_POSTGRES:
+            user_to_delete = execute_query(
+                "SELECT id, username, email, is_admin FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user_to_delete = execute_query(
+                "SELECT id, username, email, is_admin FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
         if not user_to_delete:
             log_warning(f"User {user_id} not found for deletion", "AdminRoutes")
@@ -847,28 +487,58 @@ async def delete_user(request: Request, user_id: int):
                 status_code=303
             )
         
+        # Don't allow deleting other admins (optional security measure)
+        if user_to_delete.get('is_admin', 0) == 1:
+            log_warning(f"Admin {admin_user['username']} tried to delete another admin: {username}", "AdminRoutes")
+            return RedirectResponse(
+                url="/admin/users?error=cannot_delete_admin",
+                status_code=303
+            )
+        
         try:
             # Delete user's data in proper order (foreign key constraints)
             log_info(f"Starting deletion of user {username} (ID: {user_id})", "AdminRoutes")
             
             # Delete user's videos first (foreign key constraint)
-            execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+            if USE_POSTGRES:
+                video_count = execute_query("SELECT COUNT(*) as count FROM videos WHERE user_id = %s", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+            else:
+                video_count = execute_query("SELECT COUNT(*) as count FROM videos WHERE user_id = ?", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM videos WHERE user_id = ?", (user_id,))
             
             # Delete user's avatars
-            execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
+            if USE_POSTGRES:
+                avatar_count = execute_query("SELECT COUNT(*) as count FROM user_avatars WHERE user_id = %s", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
+            else:
+                avatar_count = execute_query("SELECT COUNT(*) as count FROM user_avatars WHERE user_id = ?", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_avatars WHERE user_id = ?", (user_id,))
             
             # Delete user's images
-            execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
+            if USE_POSTGRES:
+                image_count = execute_query("SELECT COUNT(*) as count FROM user_images WHERE user_id = %s", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
+            else:
+                image_count = execute_query("SELECT COUNT(*) as count FROM user_images WHERE user_id = ?", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_images WHERE user_id = ?", (user_id,))
             
             # Delete user's voices
-            execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
+            if USE_POSTGRES:
+                voice_count = execute_query("SELECT COUNT(*) as count FROM user_voices WHERE user_id = %s", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
+            else:
+                voice_count = execute_query("SELECT COUNT(*) as count FROM user_voices WHERE user_id = ?", (user_id,), fetch_one=True)
+                execute_query("DELETE FROM user_voices WHERE user_id = ?", (user_id,))
             
             # Finally delete the user
-            execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+            if USE_POSTGRES:
+                execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+            else:
+                execute_query("DELETE FROM users WHERE id = ?", (user_id,))
             
-            log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id})", "AdminRoutes")
+            log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id}) with {video_count['count']} videos, {avatar_count['count']} avatars, {image_count['count']} images, and {voice_count['count']} voices", "AdminRoutes")
             
-            # FIXED: Redirect with success message
             return RedirectResponse(
                 url=f"/admin/users?success=user_deleted&username={username}",
                 status_code=303
@@ -894,147 +564,108 @@ async def delete_user(request: Request, user_id: int):
             status_code=303
         )
 
-@router.get("/manage-videos/{user_id}")
-async def manage_user_videos(request: Request, user_id: int):
-    """Admin video management page for specific user"""
+@router.post("/delete-avatar/{avatar_id}")
+async def delete_avatar(request: Request, avatar_id: int):
+    """Delete a specific avatar (admin only) - RENAMED FROM delete_user_image"""
     try:
-        # Require admin access
+        log_info(f"🚨 DELETE AVATAR ROUTE CALLED! avatar_id: {avatar_id}", "AdminRoutes")
+        
+        # Verify admin access
         admin_user = require_admin(request)
         
-        # Get user details
-        user_to_manage = execute_query(
-            "SELECT id, username, email FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
+        # Get avatar details before deletion
+        if USE_POSTGRES:
+            avatar = execute_query(
+                "SELECT id, user_id, avatar_name, avatar_image_url, avatar_id as heygen_id FROM user_avatars WHERE id = %s",
+                (avatar_id,),
+                fetch_one=True
+            )
+        else:
+            avatar = execute_query(
+                "SELECT id, user_id, avatar_name, avatar_image_url, avatar_id as heygen_id FROM user_avatars WHERE id = ?",
+                (avatar_id,),
+                fetch_one=True
+            )
         
-        if not user_to_manage:
-            raise HTTPException(status_code=404, detail="User not found")
+        log_info(f"🔍 DEBUG: Avatar query result: {avatar}", "AdminRoutes")
         
-        # Get all videos for this user
-        videos = execute_query("""
-            SELECT id, title, status, heygen_video_id, created_at, video_path
-            FROM videos 
-            WHERE user_id = %s 
-            ORDER BY created_at DESC
-        """, (user_id,), fetch_all=True)
-        
-        return templates.TemplateResponse(
-            "portal/admin_manage_videos.html",
-            {
-                "request": request,
-                "user": admin_user,
-                "user_to_manage": user_to_manage,
-                "videos": videos,
-                "total_videos": len(videos),
-                "title": f"Manage Videos - {user_to_manage['username']}"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying video management page", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Video management error", "detail": str(e)}
-        )
-
-@router.post("/delete-video/{video_id}")
-async def delete_video(request: Request, video_id: int):
-    """Delete a specific video (admin only)"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Get video details first
-        video = execute_query(
-            "SELECT id, user_id, title FROM videos WHERE id = %s",
-            (video_id,),
-            fetch_one=True
-        )
-        
-        if not video:
+        if not avatar:
+            log_warning(f"Avatar not found for id: {avatar_id}", "AdminRoutes")
             return RedirectResponse(
-                url=f"/admin/users?error=video_not_found",
+                url="/admin/users?error=avatar_not_found",
                 status_code=303
             )
         
-        # Delete the video
-        execute_query("DELETE FROM videos WHERE id = %s", (video_id,))
+        user_id = avatar['user_id']
+        avatar_name = avatar['avatar_name']
         
-        log_info(f"Admin {admin_user['username']} deleted video {video_id} ('{video['title']}')", "AdminRoutes")
+        # Get user info for logging
+        if USE_POSTGRES:
+            user = execute_query(
+                "SELECT username FROM users WHERE id = %s",
+                (user_id,),
+                fetch_one=True
+            )
+        else:
+            user = execute_query(
+                "SELECT username FROM users WHERE id = ?",
+                (user_id,),
+                fetch_one=True
+            )
         
+        # Delete avatar from database
+        log_info(f"🔍 DEBUG: About to delete avatar with id: {avatar_id}", "AdminRoutes")
+        if USE_POSTGRES:
+            execute_query("DELETE FROM user_avatars WHERE id = %s", (avatar_id,))
+        else:
+            execute_query("DELETE FROM user_avatars WHERE id = ?", (avatar_id,))
+        
+        log_info(f"Admin {admin_user['username']} deleted avatar {avatar_id} ('{avatar_name}') for user {user['username'] if user else 'Unknown'}", "AdminRoutes")
+        
+        # Redirect back to avatar management page with success message
         return RedirectResponse(
-            url=f"/admin/manage-videos/{video['user_id']}?success=video_deleted",
+            url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
             status_code=303
         )
         
     except HTTPException as e:
         if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
+            return RedirectResponse(url="/login?error=admin_required", status_code=303)
         elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
+            return RedirectResponse(url="/admin/users?error=access_denied", status_code=303)
         raise
     except Exception as e:
-        log_error("Error deleting video", "AdminRoutes", e)
+        log_error("Error deleting avatar", "AdminRoutes", e)
+        # Try to get user_id from the avatar if we can, otherwise go to main users page
+        try:
+            if USE_POSTGRES:
+                avatar = execute_query(
+                    "SELECT user_id FROM user_avatars WHERE id = %s",
+                    (avatar_id,),
+                    fetch_one=True
+                )
+            else:
+                avatar = execute_query(
+                    "SELECT user_id FROM user_avatars WHERE id = ?",
+                    (avatar_id,),
+                    fetch_one=True
+                )
+            if avatar:
+                return RedirectResponse(
+                    url=f"/admin/manage-avatars/{avatar['user_id']}?error=delete_failed",
+                    status_code=303
+                )
+        except:
+            pass
+        
         return RedirectResponse(
             url="/admin/users?error=delete_failed",
             status_code=303
         )
 
-@router.post("/clear-user-videos/{user_id}")
-async def clear_user_videos(request: Request, user_id: int):
-    """Clear all videos for a specific user (admin only)"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Get user details
-        user_to_manage = execute_query(
-            "SELECT id, username FROM users WHERE id = %s",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        if not user_to_manage:
-            return RedirectResponse(
-                url="/admin/users?error=user_not_found",
-                status_code=303
-            )
-        
-        # Count videos before deletion
-        video_count = execute_query(
-            "SELECT COUNT(*) as count FROM videos WHERE user_id = %s",
-            (user_id,),
-            fetch_one=True
-        )
-        
-        # Delete all videos for this user
-        execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
-        
-        log_info(f"Admin {admin_user['username']} cleared {video_count['count']} videos for user {user_to_manage['username']}", "AdminRoutes")
-        
-        return RedirectResponse(
-            url=f"/admin/manage-videos/{user_id}?success=all_videos_cleared",
-            status_code=303
-        )
-        
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error clearing user videos", "AdminRoutes", e)
-        return RedirectResponse(
-            url=f"/admin/manage-videos/{user_id}?error=clear_failed",
-            status_code=303
-        )
+# =============================================================================
+# AVATAR MANAGEMENT ROUTES
+# =============================================================================
 
 @router.get("/manage-avatars/{user_id}")
 async def manage_user_avatars(request: Request, user_id: int):
@@ -1306,106 +937,292 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             status_code=500
         )
 
-@router.post("/delete-image/{image_id}")
-async def delete_user_image(request: Request, image_id: str):
-    """Delete a user avatar (admin only) - FIXED VERSION"""
-    log_info(f"🚨 DELETE ROUTE CALLED! image_id: {image_id}", "AdminRoutes")
-    user_id = None
+# =============================================================================
+# OTHER ADMIN ROUTES (UNCHANGED)
+# =============================================================================
+
+@router.get("/manage-passwords")
+async def manage_passwords(request: Request, message: Optional[str] = None, message_type: Optional[str] = None):
+    """Admin password management page"""
     try:
-        log_info(f"🔍 DEBUG: Delete request for image_id: {image_id} (type: {type(image_id)})", "AdminRoutes")
+        # Require admin access
+        user = require_admin(request)
         
-        # Verify admin access
+        # Get all users
+        users = execute_query(
+            "SELECT id, username, email, created_at, last_login FROM users ORDER BY id",
+            fetch_all=True
+        )
+        
+        # Return password management page
+        return templates.TemplateResponse(
+            "portal/admin_manage_passwords.html",
+            {
+                "request": request,
+                "user": user,
+                "users": users,
+                "title": "Manage User Passwords",
+                "message": message,
+                "message_type": message_type
+            }
+        )
+    except HTTPException as e:
+        # If unauthorized, redirect to login
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        # If forbidden (not admin), redirect to dashboard
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying password management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Password management error", "detail": str(e)}
+        )
+
+@router.post("/api/admin/reset-password", response_class=JSONResponse)
+async def reset_password(request: Request):
+    """Reset a user's password (admin only)"""
+    try:
+        # Require admin access
         admin_user = require_admin(request)
         
-        # Convert image_id to int if it's numeric, otherwise use as string
-        try:
-            numeric_id = int(image_id)
-            log_info(f"🔍 DEBUG: Converted image_id to int: {numeric_id}", "AdminRoutes")
-        except ValueError:
-            log_info(f"🔍 DEBUG: Using image_id as string: {image_id}", "AdminRoutes")
-            numeric_id = image_id
+        # Get request body
+        data = await request.json()
+        user_id = data.get("user_id")
+        new_password = data.get("new_password")
         
-        # Get avatar details before deletion
+        # Validate inputs
+        if not user_id or not new_password:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": "User ID and new password are required"}
+            )
+        
+        # Validate password strength
+        is_valid, error_message = validate_password_strength(new_password)
+        if not is_valid:
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": error_message}
+            )
+        
+        # Check if user exists
+        user = execute_query(
+            "SELECT id, username FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user:
+            return JSONResponse(
+                status_code=404,
+                content={"success": False, "error": "User not found"}
+            )
+        
+        # Hash the new password
+        hashed_password = get_password_hash(new_password)
+        
+        # Update the password in the database
+        execute_query(
+            "UPDATE users SET hashed_password = ? WHERE id = ?",
+            (hashed_password, user_id)
+        )
+        
+        log_info(f"Admin {admin_user['username']} reset password for user ID {user_id}", "AdminRoutes")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Password reset successfully for user ID {user_id}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error(f"Error resetting password", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/check-user")
+async def check_user_status(request: Request):
+    """Check current user status and admin privileges"""
+    try:
+        # Try to get current user
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                content={
+                    "logged_in": False,
+                    "message": "No user logged in"
+                }
+            )
+        
+        return JSONResponse(
+            content={
+                "logged_in": True,
+                "user_id": user.get("id"),
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "is_admin": user.get("is_admin", False),
+                "message": "User found"
+            }
+        )
+    except Exception as e:
+        return JSONResponse(
+            content={
+                "logged_in": False,
+                "error": str(e),
+                "message": "Error checking user status"
+            }
+        )
+
+@router.get("/make-me-admin")
+async def make_me_admin(request: Request):
+    """Grant admin privileges to current user (for initial setup)"""
+    try:
+        # Get current user
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "success": False,
+                    "error": "Must be logged in to grant admin privileges"
+                }
+            )
+        
+        # Update user to admin
         if USE_POSTGRES:
-            avatar = execute_query(
-                "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = %s",
-                (numeric_id,),
-                fetch_one=True
+            execute_query(
+                "UPDATE users SET is_admin = true WHERE id = %s",
+                (user["id"],)
             )
         else:
-            avatar = execute_query(
-                "SELECT id, user_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = ?",
-                (numeric_id,),
-                fetch_one=True
+            execute_query(
+                "UPDATE users SET is_admin = 1 WHERE id = ?",
+                (user["id"],)
             )
         
-        log_info(f"🔍 DEBUG: Avatar query result: {avatar}", "AdminRoutes")
+        log_info(f"User {user['username']} granted admin privileges", "AdminRoutes")
         
-        if not avatar:
-            log_warning(f"🔍 DEBUG: Avatar not found for id: {numeric_id}", "AdminRoutes")
+        return JSONResponse(
+            content={
+                "success": True,
+                "message": f"Admin privileges granted to user {user['username']}"
+            }
+        )
+    except Exception as e:
+        log_error(f"Error granting admin privileges", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/manage-videos/{user_id}")
+async def manage_user_videos(request: Request, user_id: int):
+    """Admin video management page for specific user"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get user details
+        user_to_manage = execute_query(
+            "SELECT id, username, email FROM users WHERE id = %s",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if not user_to_manage:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get all videos for this user
+        videos = execute_query("""
+            SELECT id, title, status, heygen_video_id, created_at, video_path
+            FROM videos 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+        """, (user_id,), fetch_all=True)
+        
+        return templates.TemplateResponse(
+            "portal/admin_manage_videos.html",
+            {
+                "request": request,
+                "user": admin_user,
+                "user_to_manage": user_to_manage,
+                "videos": videos,
+                "total_videos": len(videos),
+                "title": f"Manage Videos - {user_to_manage['username']}"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying video management page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Video management error", "detail": str(e)}
+        )
+
+@router.post("/delete-video/{video_id}")
+async def delete_video(request: Request, video_id: int):
+    """Delete a specific video (admin only)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get video details first
+        video = execute_query(
+            "SELECT id, user_id, title FROM videos WHERE id = %s",
+            (video_id,),
+            fetch_one=True
+        )
+        
+        if not video:
             return RedirectResponse(
-                url="/admin/users?error=avatar_not_found",
+                url=f"/admin/users?error=video_not_found",
                 status_code=303
             )
         
-        user_id = avatar['user_id']  # Store user_id for redirect
-        log_info(f"🔍 DEBUG: Found avatar for user_id: {user_id}", "AdminRoutes")
+        # Delete the video
+        execute_query("DELETE FROM videos WHERE id = %s", (video_id,))
         
-        # Get user info for logging
-        if USE_POSTGRES:
-            user = execute_query(
-                "SELECT username FROM users WHERE id = %s",
-                (user_id,),
-                fetch_one=True
-            )
-        else:
-            user = execute_query(
-                "SELECT username FROM users WHERE id = ?",
-                (user_id,),
-                fetch_one=True
-            )
+        log_info(f"Admin {admin_user['username']} deleted video {video_id} ('{video['title']}')", "AdminRoutes")
         
-        # Note: For HeyGen avatars, we don't delete physical files since they're external URLs
-        # Only delete local uploaded files if needed in the future
-        
-        # Delete from database
-        log_info(f"🔍 DEBUG: About to delete avatar with id: {numeric_id}", "AdminRoutes")
-        if USE_POSTGRES:
-            delete_result = execute_query("DELETE FROM user_avatars WHERE id = %s", (numeric_id,))
-        else:
-            delete_result = execute_query("DELETE FROM user_avatars WHERE id = ?", (numeric_id,))
-        log_info(f"🔍 DEBUG: Delete result: {delete_result}", "AdminRoutes")
-        
-        log_info(f"Admin {admin_user['username']} deleted avatar {numeric_id} ('{avatar['avatar_name']}') for user {user['username'] if user else 'Unknown'}", "AdminRoutes")
-        
-        # FIXED: Redirect back to avatar management page with success message
         return RedirectResponse(
-            url=f"/admin/manage-avatars/{user_id}?success=avatar_deleted",
+            url=f"/admin/manage-videos/{video['user_id']}?success=video_deleted",
             status_code=303
         )
         
     except HTTPException as e:
         if e.status_code == 401:
-            return RedirectResponse(url="/login?error=admin_required", status_code=303)
+            return RedirectResponse(url="/login", status_code=303)
         elif e.status_code == 403:
-            return RedirectResponse(url="/admin/users?error=access_denied", status_code=303)
+            return RedirectResponse(url="/dashboard", status_code=303)
         raise
     except Exception as e:
-        log_error("Error deleting user image", "AdminRoutes", e)
-        if user_id:
-            return RedirectResponse(
-                url=f"/admin/manage-avatars/{user_id}?error=delete_failed",
-                status_code=303
-            )
-        else:
-            return RedirectResponse(
-                url="/admin/users?error=delete_failed",
-                status_code=303
-            )
-
-# =============================================================================
-# NEW ENHANCED AVATAR MANAGEMENT ENDPOINTS
-# =============================================================================
+        log_error("Error deleting video", "AdminRoutes", e)
+        return RedirectResponse(
+            url="/admin/users?error=delete_failed",
+            status_code=303
+        )
 
 @router.post("/update-avatar-name")
 async def update_avatar_name(request: Request):
@@ -1510,115 +1327,4 @@ async def update_avatar_names_endpoint(request: Request):
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
-        )
-
-@router.get("/create-user")
-async def create_user_form(request: Request):
-    """Admin create user form"""
-    try:
-        # Require admin access
-        user = require_admin(request)
-        
-        return templates.TemplateResponse(
-            "portal/admin_create_user.html",
-            {
-                "request": request,
-                "user": user,
-                "title": "Create New User"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying create user form", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Create user form error", "detail": str(e)}
-        )
-
-@router.get("/edit-user/{user_id}")
-async def edit_user_form(request: Request, user_id: int):
-    """Admin edit user form"""
-    try:
-        # Require admin access
-        admin_user = require_admin(request)
-        
-        # Get user to edit
-        if USE_POSTGRES:
-            user_to_edit = execute_query(
-                "SELECT * FROM users WHERE id = %s",
-                (user_id,),
-                fetch_one=True
-            )
-        else:
-            user_to_edit = execute_query(
-                "SELECT * FROM users WHERE id = ?",
-                (user_id,),
-                fetch_one=True
-            )
-        
-        if not user_to_edit:
-            return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
-        
-        return templates.TemplateResponse(
-            "portal/admin_edit_user.html",
-            {
-                "request": request,
-                "user": admin_user,
-                "user_to_edit": user_to_edit,
-                "title": f"Edit User - {user_to_edit['username']}"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying edit user form", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Edit user form error", "detail": str(e)}
-        )
-
-@router.get("/emergency-controls")
-async def emergency_controls(request: Request):
-    """Admin emergency controls page"""
-    try:
-        # Require admin access
-        user = require_admin(request)
-        
-        # Get system stats for emergency overview
-        stats = {
-            "total_users": execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True),
-            "total_videos": execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True),
-            "failed_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'failed'", fetch_one=True),
-            "pending_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'pending'", fetch_one=True)
-        }
-        
-        return templates.TemplateResponse(
-            "portal/admin_emergency_controls.html",
-            {
-                "request": request,
-                "user": user,
-                "stats": stats,
-                "title": "Emergency Controls"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying emergency controls page", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Emergency controls error", "detail": str(e)}
         )
