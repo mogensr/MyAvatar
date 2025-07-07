@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 import re
+import urllib.parse
 
 from ..db.database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_current_user, require_admin, get_password_hash, validate_password_strength
@@ -33,7 +34,7 @@ def generate_user_friendly_name(avatar_data):
     """
     
     # Priority 1: Use explicit display/user-friendly fields if available
-    display_fields = ['display_name', 'title', 'name', 'friendly_name', 'label']
+    display_fields = ['display_name', 'title', 'name', 'friendly_name', 'label', 'avatar_name']
     for field in display_fields:
         if field in avatar_data and avatar_data[field]:
             name = str(avatar_data[field]).strip()
@@ -80,7 +81,7 @@ def generate_user_friendly_name(avatar_data):
     
     # Priority 3: Use original avatar_id but clean it up
     if not name_parts:
-        avatar_id = avatar_data.get('avatar_id', '')
+        avatar_id = avatar_data.get('avatar_id', '') or avatar_data.get('id', '')
         cleaned_name = clean_technical_id(avatar_id)
         if cleaned_name:
             return cleaned_name
@@ -150,95 +151,187 @@ def clean_technical_id(avatar_id):
     
     return None
 
-def fetch_and_update_avatars_with_naming():
+# =============================================================================
+# PHOTO AVATAR SUPPORT FUNCTIONS
+# =============================================================================
+
+def get_all_heygen_avatars_with_photo_support():
     """
-    Updated function to fetch avatars from HeyGen with enhanced naming logic.
-    Use this to replace your existing avatar fetching code.
+    Enhanced function to fetch ALL avatars including photo avatars from HeyGen
     """
     try:
-        from ..api.heygen import get_all_available_avatars
-        
         api_key = os.getenv("HEYGEN_API_KEY")
         if not api_key:
-            log_error("HEYGEN_API_KEY not found", "AdminRoutes")
             return {"success": False, "error": "API key not configured"}
         
-        # Fetch ALL avatars from HeyGen (regular + photo)
-        result = get_all_available_avatars(api_key)
+        import requests
         
-        if not result or not result.get('success', False):
-            log_error("Failed to fetch avatars from HeyGen", "AdminRoutes")
-            return {"success": False, "error": "Failed to fetch from HeyGen"}
+        all_avatars = []
         
-        avatars_data = result.get('avatars', [])
-        log_info(f"Fetched {len(avatars_data)} avatars from HeyGen", "AdminRoutes")
+        # 1. Get regular avatars (existing method)
+        try:
+            regular_response = requests.get(
+                "https://api.heygen.com/v2/avatars",
+                headers={
+                    "X-Api-Key": api_key,
+                    "Accept": "application/json"
+                },
+                timeout=30
+            )
+            
+            if regular_response.status_code == 200:
+                regular_data = regular_response.json()
+                if regular_data.get("error") is None and regular_data.get("data", {}).get("avatars"):
+                    avatars = regular_data["data"]["avatars"]
+                    for avatar in avatars:
+                        # Standardize the avatar data structure
+                        avatar_data = {
+                            "avatar_id": avatar.get("avatar_id"),
+                            "avatar_name": avatar.get("avatar_name"),
+                            "avatar_type": "regular",
+                            "preview_image_url": avatar.get("preview_image_url"),
+                            "preview_video_url": avatar.get("preview_video_url"),
+                            "gender": avatar.get("gender"),
+                            "source": "regular_api"
+                        }
+                        all_avatars.append(avatar_data)
+                    log_info(f"Fetched {len(avatars)} regular avatars", "AdminRoutes")
         
+        except Exception as e:
+            log_error(f"Error fetching regular avatars: {str(e)}", "AdminRoutes")
+        
+        # 2. Get photo avatar groups
+        try:
+            photo_groups_response = requests.get(
+                "https://api.heygen.com/v2/avatar_group.list",
+                headers={
+                    "X-Api-Key": api_key,
+                    "Content-Type": "application/json"
+                },
+                timeout=30
+            )
+            
+            if photo_groups_response.status_code == 200:
+                groups_data = photo_groups_response.json()
+                if groups_data.get("error") is None:
+                    groups = groups_data.get("data", {}).get("avatar_group_list", [])
+                    log_info(f"Found {len(groups)} photo avatar groups", "AdminRoutes")
+                    
+                    # Get avatars from each group
+                    for group in groups:
+                        group_id = group.get("id")
+                        if group_id:
+                            try:
+                                group_avatars_response = requests.get(
+                                    f"https://api.heygen.com/v2/avatar_group/{group_id}/avatars",
+                                    headers={
+                                        "X-Api-Key": api_key,
+                                        "Content-Type": "application/json"
+                                    },
+                                    timeout=30
+                                )
+                                
+                                if group_avatars_response.status_code == 200:
+                                    group_data = group_avatars_response.json()
+                                    if group_data.get("error") is None:
+                                        avatar_list = group_data.get("data", {}).get("avatar_list", [])
+                                        for avatar in avatar_list:
+                                            if avatar.get("status") == "completed":
+                                                # Photo avatars use different field names
+                                                avatar_data = {
+                                                    "avatar_id": avatar.get("id"),  # Photo avatars use 'id' not 'avatar_id'
+                                                    "avatar_name": f"{group.get('name', 'Photo Avatar')} - {avatar.get('name', 'Look')}",
+                                                    "avatar_type": "photo",
+                                                    "preview_image_url": avatar.get("image_url"),  # Photo avatars use 'image_url'
+                                                    "preview_video_url": avatar.get("motion_preview_url"),
+                                                    "gender": None,  # Photo avatars don't have gender field
+                                                    "source": "photo_api",
+                                                    "group_id": group_id,
+                                                    "group_name": group.get("name")
+                                                }
+                                                all_avatars.append(avatar_data)
+                                        log_info(f"Added {len(avatar_list)} avatars from group {group.get('name')}", "AdminRoutes")
+                            except Exception as e:
+                                log_error(f"Error fetching avatars from group {group_id}: {str(e)}", "AdminRoutes")
+        
+        except Exception as e:
+            log_error(f"Error fetching photo avatar groups: {str(e)}", "AdminRoutes")
+        
+        log_info(f"Total avatars fetched: {len(all_avatars)}", "AdminRoutes")
+        
+        return {
+            "success": True,
+            "avatars": all_avatars,
+            "total_count": len(all_avatars)
+        }
+        
+    except Exception as e:
+        log_error(f"Error in get_all_heygen_avatars_with_photo_support: {str(e)}", "AdminRoutes")
+        return {"success": False, "error": str(e)}
+
+def fetch_and_update_avatars_with_naming():
+    """
+    Updated function to fetch avatars from HeyGen with enhanced naming logic and photo support.
+    """
+    try:
+        # Get all avatars including photo avatars
+        result = get_all_heygen_avatars_with_photo_support()
+        
+        if not result.get("success"):
+            return result
+        
+        avatars = result.get("avatars", [])
         updated_count = 0
         
-        # Process each avatar with enhanced naming
-        for avatar in avatars_data:
-            avatar_id = avatar.get('avatar_id')
+        for avatar in avatars:
+            avatar_id = avatar.get("avatar_id")
             if not avatar_id:
                 continue
             
-            # Use enhanced naming logic
+            # Generate user-friendly name
             user_friendly_name = generate_user_friendly_name(avatar)
             
-            # Get other avatar data
-            preview_url = avatar.get('preview_url', '') or avatar.get('preview_image_url', '')
-            preview_url_mp4 = avatar.get('preview_url_mp4', '')
+            # Get image URL - photo avatars use different field
+            image_url = avatar.get("preview_image_url", "")
+            preview_video_url = avatar.get("preview_video_url", "")
             
             # Check if avatar already exists
             existing_avatar = execute_query(
-                "SELECT id, name FROM user_avatars WHERE avatar_id = ?",
+                "SELECT id, avatar_name FROM user_avatars WHERE avatar_id = %s",
                 (avatar_id,),
                 fetch_one=True
             )
             
             if existing_avatar:
-                # Update existing avatar if name has improved
-                current_name = existing_avatar['name']
-                if is_technical_id(current_name) and not is_technical_id(user_friendly_name):
-                    if USE_POSTGRES:
-                        execute_query(
-                            "UPDATE user_avatars SET name = %s, preview_url = %s, preview_url_mp4 = %s WHERE avatar_id = %s",
-                            (user_friendly_name, preview_url, preview_url_mp4, avatar_id)
-                        )
-                    else:
-                        execute_query(
-                            "UPDATE user_avatars SET name = ?, preview_url = ?, preview_url_mp4 = ? WHERE avatar_id = ?",
-                            (user_friendly_name, preview_url, preview_url_mp4, avatar_id)
-                        )
-                    log_info(f"Updated avatar {avatar_id}: '{current_name}' → '{user_friendly_name}'", "AdminRoutes")
-                    updated_count += 1
+                # Update existing avatar
+                execute_query(
+                    "UPDATE user_avatars SET avatar_name = %s, avatar_image_url = %s, preview_url_mp4 = %s WHERE avatar_id = %s",
+                    (user_friendly_name, image_url, preview_video_url, avatar_id)
+                )
+                log_info(f"Updated avatar {avatar_id}: '{user_friendly_name}' ({avatar.get('avatar_type', 'regular')})", "AdminRoutes")
             else:
-                # Insert new avatar with user-friendly name
-                if USE_POSTGRES:
-                    execute_query(
-                        "INSERT INTO user_avatars (avatar_id, name, preview_url, preview_url_mp4) VALUES (%s, %s, %s, %s)",
-                        (avatar_id, user_friendly_name, preview_url, preview_url_mp4)
-                    )
-                else:
-                    execute_query(
-                        "INSERT INTO user_avatars (avatar_id, name, preview_url, preview_url_mp4) VALUES (?, ?, ?, ?)",
-                        (avatar_id, user_friendly_name, preview_url, preview_url_mp4)
-                    )
-                log_info(f"Added new avatar {avatar_id}: '{user_friendly_name}'", "AdminRoutes")
-                updated_count += 1
+                # Insert new avatar
+                execute_query(
+                    "INSERT INTO user_avatars (avatar_id, avatar_name, avatar_image_url, preview_url_mp4) VALUES (%s, %s, %s, %s)",
+                    (avatar_id, user_friendly_name, image_url, preview_video_url)
+                )
+                log_info(f"Added new avatar {avatar_id}: '{user_friendly_name}' ({avatar.get('avatar_type', 'regular')})", "AdminRoutes")
+            
+            updated_count += 1
         
         return {
             "success": True,
-            "total_avatars": len(avatars_data),
-            "updated_count": updated_count,
-            "message": f"Successfully processed {len(avatars_data)} avatars, updated {updated_count} names"
+            "message": f"Successfully processed {len(avatars)} avatars (regular + photo), updated {updated_count} records",
+            "total_avatars": len(avatars),
+            "updated_count": updated_count
         }
         
     except Exception as e:
-        log_error(f"Error in fetch_and_update_avatars_with_naming: {str(e)}", "AdminRoutes", e)
+        log_error(f"Error updating avatar database: {str(e)}", "AdminRoutes")
         return {"success": False, "error": str(e)}
 
 # =============================================================================
-# EXISTING ADMIN ROUTES (UNCHANGED)
+# EXISTING ADMIN ROUTES (ENHANCED)
 # =============================================================================
 
 @router.get("/")
@@ -249,10 +342,55 @@ async def admin_main(request: Request):
         require_admin(request)
         # Redirect to dashboard
         return RedirectResponse(url="/admin/dashboard", status_code=302)
+            except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying edit user form", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Edit user form error", "detail": str(e)}
+        )
+
+@router.get("/emergency-controls")
+async def emergency_controls(request: Request):
+    """Admin emergency controls page"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        # Get system stats for emergency overview
+        stats = {
+            "total_users": execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True),
+            "total_videos": execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True),
+            "failed_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'failed'", fetch_one=True),
+            "pending_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'pending'", fetch_one=True)
+        }
+        
+        return templates.TemplateResponse(
+            "portal/admin_emergency_controls.html",
+            {
+                "request": request,
+                "user": user,
+                "stats": stats,
+                "title": "Emergency Controls"
+            }
+        )
     except HTTPException as e:
         if e.status_code == 401:
             return RedirectResponse(url="/login", status_code=303)
         elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error displaying emergency controls page", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Emergency controls error", "detail": str(e)}
+        ) == 403:
             return RedirectResponse(url="/dashboard", status_code=303)
         raise
 
@@ -666,10 +804,32 @@ async def make_me_admin(request: Request):
 
 @router.get("/users")
 async def manage_users(request: Request):
-    """Admin user management page"""
+    """Admin user management page with better error handling"""
     try:
         # Require admin access
         user = require_admin(request)
+        
+        # Get query parameters for success/error messages
+        success_msg = request.query_params.get("success")
+        error_msg = request.query_params.get("error")
+        username = request.query_params.get("username", "")
+        
+        # Generate appropriate flash messages
+        message = None
+        message_type = None
+        
+        if success_msg == "user_deleted":
+            message = f"User '{username}' has been successfully deleted."
+            message_type = "success"
+        elif error_msg == "user_not_found":
+            message = "User not found."
+            message_type = "error"
+        elif error_msg == "cannot_delete_yourself":
+            message = "You cannot delete your own account."
+            message_type = "error"
+        elif error_msg == "delete_failed":
+            message = "Failed to delete user. Please try again."
+            message_type = "error"
         
         # FIXED QUERY - Use MAX to pick one avatar per user for GROUP BY
         users = execute_query("""
@@ -694,6 +854,8 @@ async def manage_users(request: Request):
                 "request": request,
                 "user": user,
                 "users": users,
+                "message": message,
+                "message_type": message_type,
                 "title": "Manage Users"
             }
         )
@@ -712,7 +874,7 @@ async def manage_users(request: Request):
 
 @router.post("/delete-user/{user_id}")
 async def delete_user(request: Request, user_id: int):
-    """Delete a user and all their data (admin only) - FIXED VERSION"""
+    """Delete a user and all their data (admin only) - COMPLETELY FIXED VERSION"""
     try:
         # Require admin access
         admin_user = require_admin(request)
@@ -746,25 +908,35 @@ async def delete_user(request: Request, user_id: int):
             log_info(f"Starting deletion of user {username} (ID: {user_id})", "AdminRoutes")
             
             # Delete user's videos first (foreign key constraint)
+            video_count = execute_query("SELECT COUNT(*) as count FROM videos WHERE user_id = %s", (user_id,), fetch_one=True)
             execute_query("DELETE FROM videos WHERE user_id = %s", (user_id,))
+            log_info(f"Deleted {video_count['count'] if video_count else 0} videos for user {username}", "AdminRoutes")
             
             # Delete user's avatars
+            avatar_count = execute_query("SELECT COUNT(*) as count FROM user_avatars WHERE user_id = %s", (user_id,), fetch_one=True)
             execute_query("DELETE FROM user_avatars WHERE user_id = %s", (user_id,))
+            log_info(f"Deleted {avatar_count['count'] if avatar_count else 0} avatars for user {username}", "AdminRoutes")
             
             # Delete user's images
+            image_count = execute_query("SELECT COUNT(*) as count FROM user_images WHERE user_id = %s", (user_id,), fetch_one=True)
             execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
+            log_info(f"Deleted {image_count['count'] if image_count else 0} images for user {username}", "AdminRoutes")
             
             # Delete user's voices
+            voice_count = execute_query("SELECT COUNT(*) as count FROM user_voices WHERE user_id = %s", (user_id,), fetch_one=True)
             execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
+            log_info(f"Deleted {voice_count['count'] if voice_count else 0} voices for user {username}", "AdminRoutes")
             
             # Finally delete the user
             execute_query("DELETE FROM users WHERE id = %s", (user_id,))
             
             log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id})", "AdminRoutes")
             
-            # FIXED: Redirect with success message
+            # FIXED: Use proper URL encoding for username parameter
+            encoded_username = urllib.parse.quote(username)
+            
             return RedirectResponse(
-                url=f"/admin/users?success=user_deleted&username={username}",
+                url=f"/admin/users?success=user_deleted&username={encoded_username}",
                 status_code=303
             )
             
@@ -932,7 +1104,7 @@ async def clear_user_videos(request: Request, user_id: int):
 
 @router.get("/manage-avatars/{user_id}")
 async def manage_user_avatars(request: Request, user_id: int):
-    """Admin avatar management page for specific user - FIXED VERSION"""
+    """Admin avatar management page for specific user - FIXED VERSION WITH PHOTO SUPPORT"""
     try:
         # Require admin access
         admin_user = require_admin(request)
@@ -947,9 +1119,28 @@ async def manage_user_avatars(request: Request, user_id: int):
         if not user_to_manage:
             return RedirectResponse(url="/admin/users?error=user_not_found", status_code=303)
         
-        # FIXED QUERY - Now includes avatar_image_url
+        # Get query parameters for success/error messages
+        success_msg = request.query_params.get("success")
+        error_msg = request.query_params.get("error")
+        
+        # Generate appropriate flash messages
+        message = None
+        message_type = None
+        
+        if success_msg == "avatar_deleted":
+            message = "Avatar deleted successfully."
+            message_type = "success"
+        elif error_msg == "avatar_not_found":
+            message = "Avatar not found."
+            message_type = "error"
+        elif error_msg == "delete_failed":
+            message = "Failed to delete avatar. Please try again."
+            message_type = "error"
+        
+        # FIXED QUERY - Now includes avatar_image_url for photo avatars
         avatars = execute_query("""
-            SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default
+            SELECT id, avatar_id, avatar_name, avatar_image_url, created_at, is_default,
+                   preview_url_mp4
             FROM user_avatars 
             WHERE user_id = %s 
             ORDER BY created_at DESC
@@ -965,6 +1156,8 @@ async def manage_user_avatars(request: Request, user_id: int):
                 "user_to_manage": user_to_manage,
                 "avatars": avatars or [],
                 "total_avatars": len(avatars) if avatars else 0,
+                "message": message,
+                "message_type": message_type,
                 "title": f"Manage Avatars - {user_to_manage['username']}"
             }
         )
@@ -983,7 +1176,7 @@ async def manage_user_avatars(request: Request, user_id: int):
 
 @router.post("/fetch-heygen-avatar/{user_id}")
 async def fetch_avatar_from_heygen(request: Request, user_id: int):
-    """Fetch avatar image from HeyGen API and save to user - UPDATED WITH ENHANCED NAMING"""
+    """Fetch avatar image from HeyGen API and save to user - UPDATED WITH PHOTO AVATAR SUPPORT"""
     try:
         # Check admin authentication
         admin_user = get_current_user(request)
@@ -1011,14 +1204,13 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             raise HTTPException(status_code=404, detail="User not found")
         
         # Import HeyGen functions
-        from ..api.heygen import get_all_available_avatars
         import requests
         import uuid
         from pathlib import Path
         
         try:
-            # Fetch ALL avatars from HeyGen (regular + photo) and find the specific one
-            avatars_result = get_all_available_avatars(os.getenv("HEYGEN_API_KEY"))
+            # Use the enhanced avatar fetching function
+            avatars_result = get_all_heygen_avatars_with_photo_support()
             
             if not avatars_result.get("success"):
                 return JSONResponse(
@@ -1034,13 +1226,6 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             log_info(f"Searching for avatar ID: {avatar_id}", "AdminRoutes")
             log_info(f"Total avatars available: {len(avatars)}", "AdminRoutes")
             
-            # Log some sample avatar IDs for debugging
-            photo_avatars = [a for a in avatars if a.get('avatar_type') == 'photo']
-            log_info(f"Photo avatars found: {len(photo_avatars)}", "AdminRoutes")
-            
-            if photo_avatars:
-                log_info(f"Sample photo avatar IDs: {[a.get('avatar_id') for a in photo_avatars[:5]]}", "AdminRoutes")
-            
             for avatar in avatars:
                 if avatar.get("avatar_id") == avatar_id:
                     avatar_details = avatar
@@ -1055,6 +1240,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             # USE ENHANCED NAMING LOGIC
             avatar_name = generate_user_friendly_name(avatar_details)
             
+            # Use the correct image URL field (handles both regular and photo avatars)
             avatar_image_url = avatar_details.get("preview_image_url") or avatar_details.get("image_url")
             
             if not avatar_image_url:
@@ -1120,40 +1306,29 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             
             if existing_avatar:
                 # Update existing avatar with enhanced name
-                if USE_POSTGRES:
-                    execute_query(
-                        "UPDATE user_avatars SET avatar_name = %s, avatar_image_url = %s WHERE user_id = %s AND avatar_id = %s",
-                        (avatar_name, avatar_image_url, user_id, avatar_id)
-                    )
-                else:
-                    execute_query(
-                        "UPDATE user_avatars SET avatar_name = ?, avatar_image_url = ? WHERE user_id = ? AND avatar_id = ?",
-                        (avatar_name, avatar_image_url, user_id, avatar_id)
-                    )
+                execute_query(
+                    "UPDATE user_avatars SET avatar_name = %s, avatar_image_url = %s WHERE user_id = %s AND avatar_id = %s",
+                    (avatar_name, avatar_image_url, user_id, avatar_id)
+                )
                 log_info(f"Admin {admin_user['username']} updated avatar {avatar_id} for user {user_to_manage['username']} with enhanced name: '{avatar_name}'", "AdminRoutes")
             else:
                 # Insert new avatar with enhanced name
-                if USE_POSTGRES:
-                    execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (%s, %s, %s, %s)",
-                        (user_id, avatar_id, avatar_name, avatar_image_url)
-                    )
-                else:
-                    execute_query(
-                        "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (?, ?, ?, ?)",
-                        (user_id, avatar_id, avatar_name, avatar_image_url)
-                    )
+                execute_query(
+                    "INSERT INTO user_avatars (user_id, avatar_id, avatar_name, avatar_image_url) VALUES (%s, %s, %s, %s)",
+                    (user_id, avatar_id, avatar_name, avatar_image_url)
+                )
                 log_info(f"Admin {admin_user['username']} added avatar {avatar_id} for user {user_to_manage['username']} with enhanced name: '{avatar_name}'", "AdminRoutes")
             
             return JSONResponse(
                 content={
                     "success": True, 
-                    "message": "Avatar fetched and saved successfully with enhanced naming! Image also added to user gallery!",
+                    "message": f"Avatar '{avatar_name}' fetched and saved successfully! {'(Photo Avatar)' if avatar_details.get('avatar_type') == 'photo' else '(Regular Avatar)'} Image also added to user gallery!",
                     "avatar": {
                         "id": avatar_id,
                         "name": avatar_name,
                         "image_url": avatar_image_url,
-                        "local_image_path": relative_path
+                        "local_image_path": relative_path,
+                        "type": avatar_details.get('avatar_type', 'regular')
                     }
                 }
             )
@@ -1262,6 +1437,39 @@ async def delete_user_image(request: Request, image_id: str):
 # NEW ENHANCED AVATAR MANAGEMENT ENDPOINTS
 # =============================================================================
 
+@router.get("/refresh-avatars")
+async def refresh_avatars_endpoint(request: Request):
+    """Admin endpoint to refresh all avatars including photo avatars"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Update database with photo avatar support
+        result = fetch_and_update_avatars_with_naming()
+        
+        log_info(f"Admin {admin_user['username']} triggered avatar refresh with photo support", "AdminRoutes")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error("Error refreshing avatars", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.post("/update-avatar-name")
 async def update_avatar_name(request: Request):
     """Update a specific avatar's name"""
@@ -1281,16 +1489,10 @@ async def update_avatar_name(request: Request):
             )
         
         # Update avatar name in database
-        if USE_POSTGRES:
-            result = execute_query(
-                "UPDATE user_avatars SET avatar_name = %s WHERE id = %s",
-                (new_name, avatar_id)
-            )
-        else:
-            result = execute_query(
-                "UPDATE user_avatars SET avatar_name = ? WHERE id = ?",
-                (new_name, avatar_id)
-            )
+        result = execute_query(
+            "UPDATE user_avatars SET avatar_name = %s WHERE id = %s",
+            (new_name, avatar_id)
+        )
         
         # Get avatar info for logging
         avatar = execute_query(
@@ -1417,49 +1619,4 @@ async def edit_user_form(request: Request, user_id: int):
     except HTTPException as e:
         if e.status_code == 401:
             return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying edit user form", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Edit user form error", "detail": str(e)}
-        )
-
-@router.get("/emergency-controls")
-async def emergency_controls(request: Request):
-    """Admin emergency controls page"""
-    try:
-        # Require admin access
-        user = require_admin(request)
-        
-        # Get system stats for emergency overview
-        stats = {
-            "total_users": execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True),
-            "total_videos": execute_query("SELECT COUNT(*) as count FROM videos", fetch_one=True),
-            "failed_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'failed'", fetch_one=True),
-            "pending_videos": execute_query("SELECT COUNT(*) as count FROM videos WHERE status = 'pending'", fetch_one=True)
-        }
-        
-        return templates.TemplateResponse(
-            "portal/admin_emergency_controls.html",
-            {
-                "request": request,
-                "user": user,
-                "stats": stats,
-                "title": "Emergency Controls"
-            }
-        )
-    except HTTPException as e:
-        if e.status_code == 401:
-            return RedirectResponse(url="/login", status_code=303)
-        elif e.status_code == 403:
-            return RedirectResponse(url="/dashboard", status_code=303)
-        raise
-    except Exception as e:
-        log_error("Error displaying emergency controls page", "AdminRoutes", e)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "Emergency controls error", "detail": str(e)}
-        )
+        elif e.status_code
