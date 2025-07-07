@@ -671,7 +671,7 @@ async def manage_users(request: Request):
         # Require admin access
         user = require_admin(request)
         
-        # CORRECTED QUERY - Get avatar image URL from user_avatars table
+        # SIMPLIFIED QUERY - Get first avatar with image URL
         users = execute_query("""
             SELECT u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin,
                    u.heygen_voice_id,
@@ -680,9 +680,7 @@ async def manage_users(request: Request):
                    COUNT(DISTINCT ua2.id) as avatar_count
             FROM users u
             LEFT JOIN videos v ON u.id = v.user_id
-            LEFT JOIN user_avatars ua ON u.id = ua.user_id AND ua.id = (
-                SELECT MIN(ua_sub.id) FROM user_avatars ua_sub WHERE ua_sub.user_id = u.id
-            )
+            LEFT JOIN user_avatars ua ON u.id = ua.user_id AND ua.avatar_image_url IS NOT NULL
             LEFT JOIN user_avatars ua2 ON u.id = ua2.user_id
             GROUP BY u.id, u.username, u.email, u.created_at, u.last_login, u.is_admin, u.heygen_voice_id, ua.avatar_id, ua.avatar_name, ua.avatar_image_url
             ORDER BY u.id
