@@ -1872,7 +1872,7 @@
                             <div class="video-info">
                                 <div class="video-title">{{ video.title or 'Untitled Video' }}</div>
                                 <div class="video-meta">
-                                    <span><i class="fas fa-calendar"></i> {{ video.created_at.strftime('%Y-%m-%d') if video.created_at else 'Unknown' }}</span>
+                               <span><i class="fas fa-calendar"></i> {{ video.created_at if video.created_at else 'Unknown' }}</span>     
                                     <span><i class="fas fa-film"></i> {{ video.format or '16:9' }}</span>
                                 </div>
                                 
