@@ -1489,7 +1489,7 @@ async def dashboard_page(request: Request):
         if videos:
             for video in videos:
                 if isinstance(video, dict):
-                    video_url = video.get('video_url')
+                    video_url = video.get('video_path')  # Fixed: use actual database column name
                     logger.info(f"Processing video {video.get('id')}: status={video.get('status')}, video_url={'YES' if video_url else 'NO'}, url_type={type(video_url)}")
                     processed_videos.append({
                         'id': video.get('id'),
