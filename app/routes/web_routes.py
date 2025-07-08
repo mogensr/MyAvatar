@@ -2063,12 +2063,12 @@ async def get_completed_videos_api(request: Request):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id
+            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id, video_url
             FROM videos 
             WHERE user_id = %s 
             AND status = 'completed' 
-            AND heygen_video_id IS NOT NULL 
-            AND heygen_video_id != ''
+            AND video_url IS NOT NULL 
+            AND video_url != ''
             ORDER BY created_at DESC
         """, (user["id"],))
         
@@ -2082,17 +2082,11 @@ async def get_completed_videos_api(request: Request):
             if video_dict.get('created_at'):
                 video_dict['created_at'] = video_dict['created_at'].strftime('%b %d, %Y')
             
-            # Get video URL from HeyGen API
-            if video_dict.get('heygen_video_id'):
-                video_url = get_video_url_from_heygen(video_dict['heygen_video_id'])
-                video_dict['video_url'] = video_url
-                if video_url:
-                    logger.info(f"🎬 Got video URL from HeyGen API for '{video_dict.get('title')}'")
-                else:
-                    logger.warning(f"⚠️ Could not get video URL for '{video_dict.get('title')}'")
+            # Use existing video_url from database (no need to call HeyGen API)
+            if video_dict.get('video_url'):
+                logger.info(f"🎬 Using existing video URL for '{video_dict.get('title')}'")
             else:
-                video_dict['video_url'] = None
-                logger.warning(f"⚠️ No heygen_video_id for video '{video_dict.get('title')}'")
+                logger.warning(f"⚠️ No video_url for video '{video_dict.get('title')}'")
                 
             video_list.append(video_dict)
         
