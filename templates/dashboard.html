@@ -3,509 +3,416 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyAvatar Studio - Professional AI Video Platform</title>
-    
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Dashboard CSS -->
-    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <title>Dashboard - MyAvatar</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .video-card {
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .video-thumbnail {
+            aspect-ratio: 16/9;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .video-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+        }
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .play-button:hover {
+            background: rgba(0,0,0,0.9);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        .action-buttons {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .action-btn:hover {
+            background: rgba(0,0,0,0.9);
+        }
+        .debug-info {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-completed {
+            background: #10b981;
+            color: white;
+        }
+        .status-processing {
+            background: #f59e0b;
+            color: white;
+        }
+        .status-failed {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
 </head>
-<body>
-    <!-- Status Indicator -->
-    <div id="statusIndicator" class="status-indicator">
-        <div id="statusContent"></div>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">🎭 MyAvatar Dashboard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600">Welcome, {{ user.username }}!</span>
+                    <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Create New Video Section -->
+        <div class="bg-white overflow-hidden shadow rounded-lg mb-8">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                    <i class="fas fa-plus-circle text-blue-500 mr-2"></i>Create New Video
+                </h3>
+                <a href="/create-video" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    <i class="fas fa-video mr-2"></i>Start Creating
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Videos Section -->
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">
+                        <i class="fas fa-history text-purple-500 mr-2"></i>Recent Videos
+                    </h3>
+                    <button onclick="refreshVideos()" class="text-sm text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-refresh mr-1"></i>Refresh
+                    </button>
+                </div>
+
+                <!-- Videos Container -->
+                <div id="videos-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Videos will be loaded here -->
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-gray-400 text-2xl mb-2"></i>
+                        <p class="text-gray-500">Loading your videos...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- App Container -->
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <span class="logo-icon">🎬</span>
-                    <span>MyAvatar</span>
-                </div>
-            </div>
-            
-            <nav class="nav-menu">
-                <div class="nav-section">
-                    <div class="nav-section-title">Main</div>
-                    <div class="nav-item">
-                        <a href="#dashboard" class="nav-link active">
-                            <i class="fas fa-home"></i>
-                            <span>Dashboard</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#create" class="nav-link">
-                            <i class="fas fa-plus-circle"></i>
-                            <span>Create Video</span>
-                            <span class="nav-badge">New</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="/videos" class="nav-link">
-                            <i class="fas fa-video"></i>
-                            <span>My Videos</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#templates" class="nav-link">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Templates</span>
-                            <span class="premium-badge">Premium</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Advanced</div>
-                    <div class="nav-item">
-                        <a href="#interactive" class="nav-link">
-                            <i class="fas fa-users"></i>
-                            <span>Interactive Avatars</span>
-                            <span class="soon-badge">Soon</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="/backgrounds" class="nav-link">
-                            <i class="fas fa-image"></i>
-                            <span>Backgrounds</span>
-                            <span class="premium-badge">Premium</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="/backgroundfx" class="nav-link">
-                            <i class="fas fa-magic"></i>
-                            <span>BackGroundFX</span>
-                            <span class="premium-badge">New</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#distribution" class="nav-link">
-                            <i class="fas fa-share-alt"></i>
-                            <span>Distribution</span>
-                            <span class="soon-badge">Soon</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#analytics" class="nav-link">
-                            <i class="fas fa-chart-line"></i>
-                            <span>Analytics</span>
-                            <span class="soon-badge">Soon</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <div class="nav-section">
-                    <div class="nav-section-title">Account</div>
-                    <div class="nav-item">
-                        <a href="#subscription" class="nav-link">
-                            <i class="fas fa-crown"></i>
-                            <span>Subscription</span>
-                        </a>
-                    </div>
-                    <div class="nav-item">
-                        <a href="#settings" class="nav-link">
-                            <i class="fas fa-cog"></i>
-                            <span>Settings</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Interactive Support Avatar -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Support</div>
-                    <div class="support-avatar-widget" id="supportWidget">
-                        <div class="support-avatar-header" onclick="toggleSupportChat()">
-                            <div class="support-avatar-icon">
-                                <div class="avatar-pulse"></div>
-                                🤖
-                            </div>
-                            <div class="support-avatar-info">
-                                <div class="support-avatar-name">AI Assistant</div>
-                                <div class="support-avatar-status" id="supportStatus">Ready to help</div>
-                            </div>
-                            <i class="fas fa-chevron-up support-toggle-icon" id="supportToggleIcon"></i>
-                        </div>
-                        
-                        <div class="support-chat-container" id="supportChatContainer">
-                            <div class="support-chat-messages" id="supportMessages">
-                                <div class="support-message bot-message">
-                                    <div class="message-avatar">🤖</div>
-                                    <div class="message-content">
-                                        <p>Hi! I'm your AI assistant. I can help you with:</p>
-                                        <ul>
-                                            <li>Creating better videos</li>
-                                            <li>Troubleshooting issues</li>
-                                            <li>Feature suggestions</li>
-                                            <li>General questions</li>
-                                        </ul>
-                                        <p>How can I assist you today?</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="support-chat-input">
-                                <input type="text" 
-                                       id="supportInput" 
-                                       placeholder="Type your message..." 
-                                       onkeypress="handleSupportKeyPress(event)">
-                                <button onclick="sendSupportMessage()" class="support-send-btn">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                            
-                            <div class="support-quick-actions">
-                                <button onclick="sendQuickMessage('I need help with video creation')" class="quick-action-btn">
-                                    📹 Video Help
-                                </button>
-                                <button onclick="sendQuickMessage('I found a bug')" class="quick-action-btn">
-                                    🐛 Report Bug
-                                </button>
-                                <button onclick="sendQuickMessage('I have a feature idea')" class="quick-action-btn">
-                                    💡 Feature Idea
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    
-                    <div class="search-bar">
-                        <input type="text" class="search-input" placeholder="Search videos, templates...">
-                        <i class="fas fa-search search-icon"></i>
-                    </div>
-                </div>
-                
-                <div class="header-right">
-                    <button class="header-btn" onclick="toggleTheme()">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    
-                    <button class="header-btn">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-dot"></span>
-                    </button>
-                    
-                    <!-- Updated User Menu with Dropdown -->
-                    <div class="user-menu" onclick="toggleUserDropdown()">
-                        <div class="user-avatar" id="userAvatar">U</div>
-                        <div class="user-info">
-                            <div class="user-name" id="userName">{{ username or 'User' }}</div>
-                            <div class="user-role">Pro Member</div>
-                        </div>
-                        <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);" id="dropdownIcon"></i>
-                        
-                        <!-- Dropdown Menu -->
-                        <div class="user-dropdown" id="userDropdown">
-                            <a href="#profile" class="dropdown-item">
-                                <i class="fas fa-user"></i>
-                                <span>Profile</span>
-                            </a>
-                            <a href="#settings" class="dropdown-item">
-                                <i class="fas fa-cog"></i>
-                                <span>Settings</span>
-                            </a>
-                            <a href="#subscription" class="dropdown-item">
-                                <i class="fas fa-crown"></i>
-                                <span>Subscription</span>
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <button onclick="logout()" class="dropdown-item">
-                                <i class="fas fa-sign-out-alt"></i>
-                                <span>Logout</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </header>
-            
-            <!-- Page Content -->
-            <div class="page-content">
-                <!-- Welcome Header -->
-                <div class="welcome-header">
-                    <div class="welcome-content">
-                        <h1 class="welcome-title">Welcome back, {{ username or 'User' }}! 👋</h1>
-                        <p class="welcome-subtitle">Ready to create amazing AI videos today?</p>
-                    </div>
-                    <div class="avatar-carousel-container">
-                        <div class="avatar-carousel-label">Your Avatars</div>
-                        {% if user_avatars and user_avatars|length > 0 %}
-                            <div class="avatar-carousel" id="avatarCarousel">
-                                {% for avatar in user_avatars %}
-                                    <img src="{{ avatar.image_url }}" 
-                                         alt="{{ avatar.name }}" 
-                                         class="carousel-avatar"
-                                         title="{{ avatar.name }}"
-                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
-                                {% endfor %}
-                                <!-- Duplicate avatars for seamless loop -->
-                                {% for avatar in user_avatars %}
-                                    <img src="{{ avatar.image_url }}" 
-                                         alt="{{ avatar.name }}" 
-                                         class="carousel-avatar"
-                                         title="{{ avatar.name }}"
-                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="no-avatars-message">
-                                <div>
-                                    <i class="fas fa-user-plus" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
-                                    <br>
-                                    No avatars yet. <a href="/interactive-avatars" style="color: rgba(255,255,255,0.9); text-decoration: underline;">Create your first avatar!</a>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Stats Overview - REAL DATA -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-video"></i>
-                        </div>
-                        <div class="stat-value">{{ total_videos or '0' }}</div>
-                        <div class="stat-label">Total Videos</div>
-                        <span class="stat-change">+12%</span>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: var(--gradient-premium);">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="stat-value">{{ total_duration or '0h 0m' }}</div>
-                        <div class="stat-label">Total Duration</div>
-                        <span class="stat-change">+8%</span>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: var(--gradient-success);">
-                            <i class="fas fa-eye"></i>
-                        </div>
-                        <div class="stat-value">{{ total_views or '0' }}</div>
-                        <div class="stat-label">Total Views</div>
-                        <span class="stat-change">+24%</span>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: var(--gradient-warning);">
-                            <i class="fas fa-share"></i>
-                        </div>
-                        <div class="stat-value">{{ total_shares or '0' }}</div>
-                        <div class="stat-label">Shares</div>
-                        <span class="stat-change negative">-5%</span>
-                    </div>
-                </div>
-                
-                <!-- Feature Grid -->
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-magic"></i>
-                        Choose Your Creation Method
-                    </h2>
-                </div>
-                
-                <div class="feature-grid">
-                    <div class="feature-card" onclick="startCreation('voice')">
-                        <div class="feature-icon">
-                            <i class="fas fa-microphone"></i>
-                        </div>
-                        <h3 class="feature-title">Voice Recording</h3>
-                        <p class="feature-description">Record your voice and let our AI avatars speak for you. Perfect for personalized messages and authentic content.</p>
-                        <div class="feature-tags">
-                            <span class="tag">Popular</span>
-                            <span class="tag">Easy</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card" onclick="startCreation('text')">
-                        <div class="feature-icon">
-                            <i class="fas fa-keyboard"></i>
-                        </div>
-                        <h3 class="feature-title">Text to Speech</h3>
-                        <p class="feature-description">Type your script and choose from multiple AI voices in different languages and accents.</p>
-                        <div class="feature-tags">
-                            <span class="tag">Multiple Voices</span>
-                            <span class="tag new">New</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card premium" onclick="window.location.href='/backgrounds'">
-                        <div class="feature-icon">
-                            <i class="fas fa-image"></i>
-                        </div>
-                        <h3 class="feature-title">
-                            Backgrounds
-                            <span class="premium-badge">Premium</span>
-                        </h3>
-                        <p class="feature-description">Choose from professional backgrounds and environments for your avatar videos.</p>
-                        <div class="feature-tags">
-                            <span class="tag available">Available</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card premium" onclick="showPremiumModal()">
-                        <div class="feature-icon">
-                            <i class="fas fa-magic"></i>
-                        </div>
-                        <h3 class="feature-title">
-                            Templates
-                            <span class="premium-badge">Premium</span>
-                        </h3>
-                        <p class="feature-description">Use pre-made templates for common scenarios like sales pitches, tutorials, and presentations.</p>
-                        <div class="feature-tags">
-                            <span class="tag coming-soon">Coming Soon</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card premium" onclick="showPremiumModal()">
-                        <div class="feature-icon">
-                            <i class="fas fa-comments"></i>
-                        </div>
-                        <h3 class="feature-title">
-                            Interactive Avatars
-                            <span class="premium-badge">Premium</span>
-                        </h3>
-                        <p class="feature-description">Create avatars that can interact with viewers in real-time conversations.</p>
-                        <div class="feature-tags">
-                            <span class="tag coming-soon">Coming Soon</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feature-card premium" onclick="showPremiumModal()">
-                        <div class="feature-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <h3 class="feature-title">
-                            AI Script Generator
-                            <span class="premium-badge">Premium</span>
-                        </h3>
-                        <p class="feature-description">Let AI write compelling scripts for your videos based on your topic and goals.</p>
-                        <div class="feature-tags">
-                            <span class="tag coming-soon">Coming Soon</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Recent Videos (Only 3 videos, rest goes to separate page) -->
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <i class="fas fa-history"></i>
-                        Recent Videos
-                    </h2>
-                    <a href="/videos" class="section-action">View All Videos</a>
-                </div>
-                
-                <div class="videos-grid">
-                    {% if videos %}
-                        {% for video in videos[:3] %}
-                        <div class="video-card" data-video-id="{{ video.heygen_video_id or video.id }}" data-status="{{ video.status }}">
-                            
-                            <!-- DEBUG INFO - TEMPORARY -->
-                            <div style="background: #ffeb3b; padding: 8px; font-size: 10px; margin-bottom: 8px; border-radius: 4px;">
-                                <strong>🐛 DEBUG:</strong><br>
-                                ID: {{ video.id or 'None' }}<br>
-                                HeyGen ID: {{ video.heygen_video_id or 'None' }}<br>
-                                Title: {{ video.title or 'None' }}<br>
-                                Status: {{ video.status or 'None' }}<br>
-                                Video Path: {{ video.video_path or 'None' }}<br>
-                                Final ID Used: {{ video.heygen_video_id or video.id or 'UNDEFINED' }}
-                            </div>
-                            
-                            <div class="video-thumbnail">
-                                <!-- FIXED: Changed video.video_url to video.video_path -->
-                                {% if video.status == 'completed' and video.video_path %}
-                                    <video controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
-                                        <source src="{{ video.video_path }}" type="video/mp4">
-                                        <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
-                                    </video>
-                                {% else %}
-                                    <div class="video-placeholder">
-                                        <i class="fas fa-video" style="font-size: 3rem;"></i>
-                                        <div style="font-size: 0.8rem; margin-top: 10px; color: #666;">Status: {{ video.status }}<br>URL: {{ 'Yes' if video.video_path else 'No' }}</div>
-                                    </div>
-                                {% endif %}
-                                
-                                <span class="video-status-badge status-{{ video.status }}">
-                                    {{ video.status }}
-                                </span>
-                                
-                                {% if video.duration %}
-                                    <span class="video-duration">{{ video.duration }}</span>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="video-info">
-                                <div class="video-title">{{ video.title or 'Untitled Video' }}</div>
-                                <div class="video-meta">
-                                    <span><i class="fas fa-calendar"></i> {{ video.created_at if video.created_at else 'Unknown' }}</span>     
-                                    <span><i class="fas fa-film"></i> {{ video.format or '16:9' }}</span>
-                                </div>
-                                
-                                <div class="video-actions">
-                                    <!-- FIXED: Changed video.video_url to video.video_path -->
-                                    {% if video.status == 'completed' and video.video_path %}
-                                        <!-- DEBUG VERSION WITH BETTER ERROR HANDLING -->
-                                        <button onclick="debugPlayVideo('{{ video.heygen_video_id or video.id }}')" class="video-action primary">
-                                            <i class="fas fa-play"></i> Play (ID: {{ video.heygen_video_id or video.id or 'NONE' }})
-                                        </button>
-                                        <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" download class="video-action secondary">
-                                            <i class="fas fa-download"></i> Download
-                                        </a>
-                                    {% elif video.status in ['processing', 'pending'] %}
-                                        <button onclick="refreshVideoStatus('{{ video.heygen_video_id or video.id }}')" class="video-action refresh-btn">
-                                            <i class="fas fa-sync-alt"></i> Refresh
-                                        </button>
-                                    {% elif video.status == 'failed' %}
-                                        <span class="video-action secondary" style="opacity: 0.6;">
-                                            <i class="fas fa-exclamation-triangle"></i> Failed
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="empty-state">
-                            <i class="fas fa-video empty-icon"></i>
-                            <h3>No videos created yet</h3>
-                            <p>Start by creating your first AI video using one of the methods above!</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </main>
-    </div>
-    
-    <!-- Dashboard JavaScript -->
-    <script src="/static/js/dashboard.js"></script>
-    
-    <!-- DEBUG JAVASCRIPT - TEMPORARY -->
     <script>
-        function debugPlayVideo(videoId) {
-            console.log('🎬 DEBUG: Attempting to play video with ID:', videoId);
+        let videosData = [];
+
+        // Load videos when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVideos();
+        });
+
+        async function loadVideos() {
+            try {
+                console.log('🎬 Loading videos from API...');
+                const response = await fetch('/api/completed-videos');
+                const data = await response.json();
+                
+                console.log('📊 API Response:', data);
+                
+                if (data.videos && Array.isArray(data.videos)) {
+                    videosData = data.videos;
+                    displayVideos(videosData);
+                } else {
+                    displayNoVideos();
+                }
+            } catch (error) {
+                console.error('❌ Error loading videos:', error);
+                displayError();
+            }
+        }
+
+        function displayVideos(videos) {
+            const container = document.getElementById('videos-container');
             
-            if (!videoId || videoId === 'undefined' || videoId === 'None') {
-                alert('⚠️ DEBUG: Video ID is undefined or null!\nID received: ' + videoId);
+            if (!videos || videos.length === 0) {
+                displayNoVideos();
+                return;
+            }
+
+            container.innerHTML = videos.map(video => createVideoCard(video)).join('');
+        }
+
+        function createVideoCard(video) {
+            const hasVideoUrl = video.video_path && video.video_path !== 'None' && video.video_path.trim() !== '';
+            const videoUrl = hasVideoUrl ? video.video_path : null;
+            
+            // Debug info for troubleshooting
+            const debugInfo = `
+                ID: ${video.id || 'N/A'}<br>
+                HeyGen ID: ${video.heygen_video_id || 'N/A'}<br>
+                Title: ${video.title || 'Untitled'}<br>
+                Status: ${video.status || 'unknown'}<br>
+                Video Path: ${video.video_path ? 'YES' : 'NO'}<br>
+                Final ID Used: ${video.heygen_video_id || video.id || 'N/A'}
+            `;
+
+            return `
+                <div class="video-card bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="video-thumbnail">
+                        ${hasVideoUrl ? `
+                            <!-- Video Preview -->
+                            <video preload="metadata" muted>
+                                <source src="${videoUrl}" type="video/mp4">
+                            </video>
+                            
+                            <!-- Play Button -->
+                            <button class="play-button" onclick="playVideo('${videoUrl}')" title="Play Video">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            
+                            <!-- Action Buttons -->
+                            <div class="action-buttons">
+                                <button class="action-btn" onclick="downloadVideo('${videoUrl}', '${video.title || 'video'}')" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="action-btn" onclick="shareVideo('${videoUrl}')" title="Share">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <!-- Placeholder for no video -->
+                            <div class="video-placeholder">
+                                <i class="fas fa-video-slash"></i>
+                            </div>
+                        `}
+                        
+                        <!-- Status Badge -->
+                        <div class="status-badge ${getStatusClass(video.status)}">
+                            ${video.status || 'unknown'}
+                        </div>
+                    </div>
+                    
+                    <!-- Video Info -->
+                    <div class="p-4">
+                        <h4 class="font-semibold text-gray-900 mb-2">${video.title || 'Untitled Video'}</h4>
+                        
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
+                            <span>
+                                <i class="fas fa-calendar mr-1"></i>
+                                ${formatDate(video.created_at)}
+                            </span>
+                            <span>
+                                <i class="fas fa-clock mr-1"></i>
+                                ${formatTime(video.created_at)}
+                            </span>
+                        </div>
+                        
+                        <div class="text-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">Status:</span>
+                                <span class="font-medium ${getStatusTextClass(video.status)}">${video.status || 'unknown'}</span>
+                            </div>
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-gray-600">URL:</span>
+                                <span class="font-medium ${hasVideoUrl ? 'text-green-600' : 'text-red-600'}">
+                                    ${hasVideoUrl ? 'Available' : 'No'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Debug Information -->
+                        <div class="debug-info">
+                            <strong>🔍 DEBUG:</strong><br>
+                            ${debugInfo}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayNoVideos() {
+            const container = document.getElementById('videos-container');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-video text-gray-300 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No videos yet</h3>
+                    <p class="text-gray-500 mb-4">Create your first AI avatar video to get started!</p>
+                    <a href="/create-video" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-plus mr-2"></i>Create Video
+                    </a>
+                </div>
+            `;
+        }
+
+        function displayError() {
+            const container = document.getElementById('videos-container');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <i class="fas fa-exclamation-triangle text-red-300 text-6xl mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error loading videos</h3>
+                    <p class="text-gray-500 mb-4">There was a problem loading your videos. Please try again.</p>
+                    <button onclick="loadVideos()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-refresh mr-2"></i>Try Again
+                    </button>
+                </div>
+            `;
+        }
+
+        // Utility functions
+        function getStatusClass(status) {
+            switch(status) {
+                case 'completed': return 'status-completed';
+                case 'processing': return 'status-processing';
+                case 'failed': return 'status-failed';
+                default: return 'status-processing';
+            }
+        }
+
+        function getStatusTextClass(status) {
+            switch(status) {
+                case 'completed': return 'text-green-600';
+                case 'processing': return 'text-yellow-600';
+                case 'failed': return 'text-red-600';
+                default: return 'text-gray-600';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Unknown';
+            const date = new Date(dateString);
+            return date.toLocaleDateString();
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return 'Unknown';
+            const date = new Date(dateString);
+            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Video interaction functions
+        function playVideo(videoUrl) {
+            if (!videoUrl) {
+                alert('Video URL not available');
                 return;
             }
             
-            console.log('✅ DEBUG: Video ID is valid, navigating to: /video/' + videoId);
-            window.location.href = `/video/${videoId}`;
+            console.log('🎬 Opening video in new tab:', videoUrl);
+            window.open(videoUrl, '_blank');
+        }
+
+        function downloadVideo(videoUrl, title) {
+            if (!videoUrl) {
+                alert('Video URL not available for download');
+                return;
+            }
+            
+            console.log('📥 Downloading video:', videoUrl);
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = videoUrl;
+            link.download = `${title || 'video'}.mp4`;
+            link.target = '_blank';
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function shareVideo(videoUrl) {
+            if (!videoUrl) {
+                alert('Video URL not available for sharing');
+                return;
+            }
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'My AI Avatar Video',
+                    text: 'Check out my AI-generated avatar video!',
+                    url: videoUrl
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(videoUrl).then(() => {
+                    alert('Video URL copied to clipboard!');
+                }).catch(() => {
+                    prompt('Copy this video URL:', videoUrl);
+                });
+            }
+        }
+
+        function refreshVideos() {
+            console.log('🔄 Refreshing videos...');
+            const container = document.getElementById('videos-container');
+            container.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <i class="fas fa-spinner fa-spin text-gray-400 text-2xl mb-2"></i>
+                    <p class="text-gray-500">Refreshing videos...</p>
+                </div>
+            `;
+            loadVideos();
         }
     </script>
 </body>
