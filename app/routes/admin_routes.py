@@ -587,10 +587,18 @@ async def admin_main(request: Request):
 
 @router.get("/dashboard")
 async def admin_dashboard(request: Request):
-    """Admin dashboard page"""
+    """Admin dashboard page with auto photo avatar refresh"""
     try:
         # Require admin access
         user = require_admin(request)
+        
+        # AUTO-REFRESH EXPIRED PHOTO AVATARS when admin accesses dashboard
+        try:
+            refresh_result = refresh_photo_avatar_urls()
+            if refresh_result.get("refreshed_count", 0) > 0:
+                log_info(f"🔄 Auto-refreshed {refresh_result['refreshed_count']} expired photo avatars for admin {user['username']}", "AdminRoutes")
+        except Exception as refresh_error:
+            log_error(f"Auto-refresh failed: {refresh_error}", "AdminRoutes")
         
         # Get system stats
         user_count = execute_query("SELECT COUNT(*) as count FROM users", fetch_one=True)
@@ -1359,6 +1367,10 @@ async def create_user_action(request: Request):
             status_code=303
         )
 
+# =============================================================================
+# PHOTO AVATAR REFRESH ENDPOINTS - ENHANCED
+# =============================================================================
+
 @router.post("/refresh-photo-avatars")
 async def refresh_photo_avatars_endpoint(request: Request):
     """Admin endpoint to refresh all expired photo avatar URLs"""
@@ -1387,6 +1399,38 @@ async def refresh_photo_avatars_endpoint(request: Request):
         raise
     except Exception as e:
         log_error("Error refreshing photo avatars", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.get("/test-refresh-photo-avatars")
+async def test_refresh_photo_avatars(request: Request):
+    """Test endpoint to manually refresh photo avatars (GET request)"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Call the refresh function
+        result = refresh_photo_avatar_urls()
+        
+        log_info(f"Admin {admin_user['username']} manually triggered photo avatar refresh", "AdminRoutes")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": str(e)}
@@ -1424,6 +1468,10 @@ async def refresh_single_avatar_endpoint(request: Request, avatar_id: int):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+
+# =============================================================================
+# REMAINING ROUTES (UNCHANGED)
+# =============================================================================
 
 @router.get("/check-user")
 async def check_user_status(request: Request):
@@ -1696,7 +1744,11 @@ async def update_avatar_names_endpoint(request: Request):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
-    # Quick fix routes - add these at the end of admin_routes.py
+
+# =============================================================================
+# QUICK FIX ROUTES - REDIRECTS
+# =============================================================================
+
 @router.get("/upload-avatar")
 async def upload_avatar_redirect(request: Request):
     """Redirect upload avatar to users management"""
@@ -1736,6 +1788,10 @@ async def manage_data_redirect(request: Request):
             return RedirectResponse(url="/dashboard", status_code=303)
         raise
 
+# =============================================================================
+# DEBUG AND TEMPORARY ENDPOINTS
+# =============================================================================
+
 @router.get("/reset-admin-password")
 async def reset_admin_password():
     """Temporary endpoint to reset admin password"""
@@ -1760,7 +1816,7 @@ async def reset_admin_password():
         return {"success": True, "message": "Admin password reset to admin123"}
     except Exception as e:
         return {"success": False, "error": str(e)}
-    
+
 @router.get("/debug-admin-user")
 async def debug_admin_user():
     """Debug endpoint to check admin user data"""
@@ -1794,22 +1850,6 @@ async def debug_admin_user():
             "password_hash_starts_with": user['hashed_password'][:20] + "...",
             "password_verification": password_check,
             "user_id": user['id']
-        }
-    except Exception as e:
-        return {"error": str(e)}
-    
-@router.post("/debug-login")
-async def debug_login(request: Request):
-    """Debug the actual login process"""
-    try:
-        form = await request.form()
-        username = form.get("username")
-        password = form.get("password")
-        
-        return {
-            "received_username": username,
-            "received_password": password,
-            "form_data": dict(form)
         }
     except Exception as e:
         return {"error": str(e)}
