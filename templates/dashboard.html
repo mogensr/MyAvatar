@@ -1849,14 +1849,18 @@
                         {% for video in videos[:3] %}
                         <div class="video-card" data-video-id="{{ video.heygen_video_id or video.id }}" data-status="{{ video.status }}">
                             <div class="video-thumbnail">
+                                <!-- DEBUG: Status={{ video.status }}, URL={{ video.video_url[:50] if video.video_url else 'None' }} -->
                                 {% if video.status == 'completed' and video.video_url %}
+                                    <!-- DEBUG: SHOWING VIDEO PLAYER -->
                                     <video controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
                                         <source src="{{ video.video_url }}" type="video/mp4">
                                         <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
                                     </video>
                                 {% else %}
+                                    <!-- DEBUG: SHOWING PLACEHOLDER - Status={{ video.status }}, HasURL={{ 'Yes' if video.video_url else 'No' }} -->
                                     <div class="video-placeholder">
                                         <i class="fas fa-video" style="font-size: 3rem;"></i>
+                                        <div style="font-size: 0.8rem; margin-top: 10px; color: #666;">Status: {{ video.status }}<br>URL: {{ 'Yes' if video.video_url else 'No' }}</div>
                                     </div>
                                 {% endif %}
                                 
