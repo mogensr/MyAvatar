@@ -2385,4 +2385,92 @@
         }
     </script>
 </body>
+<script>
+// === VIDEO URL DEBUG === (Added by advisor)
+console.log('=== VIDEO URL DEBUG ===');
+
+// If you're using server-side rendering, check template data
+if (typeof videos !== 'undefined') {
+    console.log('Template videos data:', videos);
+    videos.forEach((video, index) => {
+        console.log(`Video ${index}:`, {
+            video_path: video.video_path,
+            full_object: video
+        });
+    });
+}
+
+// If you're using API calls, intercept the response
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    return originalFetch.apply(this, args).then(response => {
+        if (args[0].includes('completed-videos')) {
+            response.clone().json().then(data => {
+                console.log('API Response for completed-videos:', data);
+                if (data.videos && Array.isArray(data.videos)) {
+                    data.videos.forEach((video, index) => {
+                        console.log(`API Video ${index}:`, {
+                            id: video.id,
+                            video_path: video.video_path,
+                            video_url: video.video_url,
+                            title: video.title,
+                            full_object: video
+                        });
+                    });
+                } else if (Array.isArray(data)) {
+                    data.forEach((video, index) => {
+                        console.log(`API Video ${index}:`, {
+                            id: video.id,
+                            video_path: video.video_path,
+                            video_url: video.video_url,
+                            title: video.title,
+                            full_object: video
+                        });
+                    });
+                }
+            }).catch(err => console.log('Error parsing API response:', err));
+        }
+        return response;
+    });
+};
+
+// Check what URLs are being used for video elements
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const videoElements = document.querySelectorAll('video, source');
+        console.log('Found video elements:', videoElements.length);
+        
+        videoElements.forEach((element, index) => {
+            console.log(`Video element ${index}:`, {
+                src: element.src,
+                tagName: element.tagName,
+                outerHTML: element.outerHTML.substring(0, 200)
+            });
+        });
+        
+        // Check for any links that might be video-related
+        const videoLinks = document.querySelectorAll('a[href*="video"], a[href*="/video/"]');
+        console.log('Found video links:', videoLinks.length);
+        videoLinks.forEach((link, index) => {
+            console.log(`Video link ${index}:`, {
+                href: link.href,
+                text: link.textContent,
+                outerHTML: link.outerHTML.substring(0, 200)
+            });
+        });
+    }, 2000);
+});
+
+// Debug any clicks on video-related elements
+document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-video-id]') || e.target.href && e.target.href.includes('video')) {
+        console.log('Video-related click:', {
+            target: e.target,
+            href: e.target.href,
+            dataset: e.target.dataset,
+            closest_video_element: e.target.closest('[data-video-id]')
+        });
+    }
+});
+</script>
 </html>

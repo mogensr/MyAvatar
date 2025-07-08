@@ -2138,13 +2138,37 @@ async def get_completed_videos_api(request: Request):
         
         logger.info(f"✅ Completed videos API: Found {len(video_list)} videos for user {user['id']}")
         
-        return JSONResponse(
-            content={
-                "videos": video_list,
-                "count": len(video_list),
-                "success": True
-            }
-        )
+        # === VIDEO API DEBUG ===
+        print("=== VIDEO API DEBUG ===")
+        print(f"Found {len(video_list)} videos")
+        
+        for i, video in enumerate(video_list):
+            print(f"Video {i}:")
+            print(f"  id: {video.get('id')}")
+            print(f"  title: {video.get('title')}")
+            print(f"  video_path: {video.get('video_path')}")
+            print(f"  video_path type: {type(video.get('video_path'))}")
+            print(f"  raw video object keys: {list(video.keys())}")
+            
+            # Check if video_path contains proper URL
+            video_path = video.get('video_path')
+            if video_path:
+                if not str(video_path).startswith('http'):
+                    print(f"  ⚠️  WARNING: video_path doesn't start with http: {video_path}")
+                else:
+                    print(f"  ✅ video_path looks like valid URL")
+            else:
+                print(f"  ❌ video_path is None/empty")
+        
+        response_data = {
+            "videos": video_list,
+            "count": len(video_list),
+            "success": True
+        }
+        print(f"API Response structure: {list(response_data.keys())}")
+        print(f"First video in response: {video_list[0] if video_list else 'No videos'}")
+        
+        return JSONResponse(content=response_data)
         
     except Exception as e:
         logger.error(f"❌ Error fetching completed videos: {e}")
