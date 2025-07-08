@@ -1,7 +1,7 @@
 """
 Authentication functions for MyAvatar - Enhanced Modular Version
 ================================================================
-FIXED VERSION - Proper row_to_dict function placement
+FIXED VERSION - Corrected column names to match database schema
 """
 
 #####################################################################
@@ -62,7 +62,7 @@ def row_to_dict(row, columns=None):
     # If it's a tuple, use column mapping
     if isinstance(row, tuple):
         if columns is None:
-            columns = ['id', 'username', 'email', 'password', 'created_at',
+            columns = ['id', 'username', 'email', 'password_hash', 'created_at',
                       'last_login', 'is_admin', 'api_key', 'avatar_id',
                       'avatar_img_url', 'avatar_video_url', 'is_premium',
                       'credits_remaining', 'subscription_tier', 'subscription_expires',
@@ -104,7 +104,7 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
 def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
     """Authenticate user by username and password"""
     try:
-        # Fetch user from database
+        # Fetch user from database - FIXED: using correct column name
         user_raw = execute_query(
             "SELECT * FROM users WHERE username = ?",
             (username,),
@@ -115,12 +115,12 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
         log_info(f"Raw database result: {user_raw}", "Auth")
         log_info(f"Raw database result type: {type(user_raw)}", "Auth")
         
-        # Convert to dict - this should work now with our fixed database cursor
+        # Convert to dict
         user = row_to_dict(user_raw)
         
         # DEBUG: Print converted result
         log_info(f"Converted user dict: {user}", "Auth")
-        log_info(f"Converted user type: {type(user)}", "Auth")
+        log_info(f"Available keys: {list(user.keys()) if user else 'None'}", "Auth")
         
         if not user:
             log_info(f"Authentication failed: User {username} not found", "Auth")
@@ -131,13 +131,14 @@ def authenticate_user(username: str, password: str) -> Optional[Dict[str, Any]]:
             log_warning(f"Authentication failed: User {username} is inactive", "Auth")
             return None
 
-        # DEBUG: Check if password key exists
-        if 'hashed_password' not in user:
-            log_error(f"Password key not found in user dict. Available keys: {list(user.keys()) if isinstance(user, dict) else 'Not a dict'}", "Auth")
+        # FIXED: Check for correct password column name
+        password_hash = user.get('password_hash') or user.get('hashed_password')
+        if not password_hash:
+            log_error(f"No password hash found for user {username}. Available keys: {list(user.keys())}", "Auth")
             return None
 
         # Verify password
-        if not verify_password(password, user['hashed_password']):
+        if not verify_password(password, password_hash):
             log_info(f"Authentication failed: Invalid password for user {username}", "Auth")
             return None
 
@@ -179,8 +180,14 @@ def authenticate_user_by_email(email: str, password: str) -> Optional[Dict[str, 
             log_warning(f"Authentication failed: User with email {email} is inactive", "Auth")
             return None
 
+        # FIXED: Check for correct password column name
+        password_hash = user.get('password_hash') or user.get('hashed_password')
+        if not password_hash:
+            log_error(f"No password hash found for email {email}. Available keys: {list(user.keys())}", "Auth")
+            return None
+
         # Verify password
-        if not verify_password(password, user['password']):
+        if not verify_password(password, password_hash):
             log_info(f"Authentication failed: Invalid password for email {email}", "Auth")
             return None
 
@@ -468,6 +475,36 @@ def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         log_error(f"Error fetching user by email: {email}", "Auth", e)
         return None
+
+#####################################################################
+# PASSWORD TESTING UTILITY
+#####################################################################
+def test_user_password(username: str, test_password: str) -> bool:
+    """Test if a password works for a user - for debugging purposes"""
+    try:
+        user_raw = execute_query(
+            "SELECT username, password_hash FROM users WHERE username = ?",
+            (username,),
+            fetch_one=True
+        )
+        
+        user = row_to_dict(user_raw)
+        if not user:
+            print(f"User {username} not found")
+            return False
+            
+        password_hash = user.get('password_hash')
+        if not password_hash:
+            print(f"No password hash found for {username}")
+            return False
+            
+        result = verify_password(test_password, password_hash)
+        print(f"Password test for {username}: {'PASS' if result else 'FAIL'}")
+        return result
+        
+    except Exception as e:
+        print(f"Error testing password for {username}: {e}")
+        return False
 
 #####################################################################
 # END OF FILE
