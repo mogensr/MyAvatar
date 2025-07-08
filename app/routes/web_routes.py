@@ -1441,6 +1441,7 @@ async def dashboard_page(request: Request):
         
         # Get user data
         videos = db.get_user_videos(user["id"])
+        logger.info(f"🎬 DEBUG: Got {len(videos) if videos else 0} videos for user {user['id']}")
         user_video_count = len(videos) if videos else 0
         
         # Get user avatars with verification
