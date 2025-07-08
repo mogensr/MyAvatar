@@ -1567,7 +1567,7 @@ async def manage_user_videos(request: Request, user_id: int):
         
         # Get all videos for this user
         videos = execute_query("""
-            SELECT id, title, status, heygen_video_id, created_at, video_url
+            SELECT id, title, status, heygen_video_id, created_at, video_path
             FROM videos 
             WHERE user_id = %s 
             ORDER BY created_at DESC
