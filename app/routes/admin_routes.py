@@ -1797,3 +1797,19 @@ async def debug_admin_user():
         }
     except Exception as e:
         return {"error": str(e)}
+    
+@router.post("/debug-login")
+async def debug_login(request: Request):
+    """Debug the actual login process"""
+    try:
+        form = await request.form()
+        username = form.get("username")
+        password = form.get("password")
+        
+        return {
+            "received_username": username,
+            "received_password": password,
+            "form_data": dict(form)
+        }
+    except Exception as e:
+        return {"error": str(e)}
