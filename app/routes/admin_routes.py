@@ -7,8 +7,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from urllib.parse import parse_qs, urlparse
 import re
+import requests
 
 from ..db.database import execute_query, USE_POSTGRES
 from ..auth.authentication import get_current_user, require_admin, get_password_hash, validate_password_strength
@@ -21,6 +23,227 @@ templates = Jinja2Templates(directory=str(templates_path))
 
 # Create router
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# =============================================================================
+# PHOTO AVATAR URL REFRESH FUNCTIONS
+# =============================================================================
+
+def is_photo_avatar_url(url):
+    """Check if URL is a photo avatar (signed URL that expires)"""
+    if not url:
+        return False
+    return '/talking_photo/' in url and 'Expires=' in url
+
+def is_url_expired(url):
+    """Check if a signed URL has expired"""
+    if not is_photo_avatar_url(url):
+        return False
+    
+    try:
+        parsed = urlparse(url)
+        query_params = parse_qs(parsed.query)
+        expires_timestamp = query_params.get('Expires', [None])[0]
+        
+        if expires_timestamp:
+            expires_time = datetime.fromtimestamp(int(expires_timestamp), tz=timezone.utc)
+            current_time = datetime.now(timezone.utc)
+            is_expired = current_time >= expires_time
+            
+            log_info(f"URL expires: {expires_time}, Current: {current_time}, Expired: {is_expired}", "PhotoAvatarRefresh")
+            return is_expired
+    except Exception as e:
+        log_error(f"Error checking URL expiration: {e}", "PhotoAvatarRefresh")
+        return True  # Assume expired if we can't parse
+    
+    return False
+
+def get_fresh_photo_avatar_url(avatar_id):
+    """Get a fresh image URL for a photo avatar from HeyGen API"""
+    try:
+        api_key = os.getenv("HEYGEN_API_KEY")
+        if not api_key:
+            log_error("No HeyGen API key found", "PhotoAvatarRefresh")
+            return None
+        
+        log_info(f"Refreshing photo avatar URL for: {avatar_id}", "PhotoAvatarRefresh")
+        
+        # Get all photo avatar groups
+        response = requests.get(
+            "https://api.heygen.com/v2/avatar_group.list",
+            headers={
+                "X-Api-Key": api_key,
+                "Content-Type": "application/json"
+            },
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            log_error(f"Failed to get avatar groups: {response.status_code}", "PhotoAvatarRefresh")
+            return None
+        
+        groups_data = response.json()
+        groups = groups_data.get("data", {}).get("avatar_group_list", [])
+        
+        # Search through all groups for the avatar
+        for group in groups:
+            group_id = group.get("id")
+            if not group_id:
+                continue
+                
+            try:
+                # Get avatars in this group
+                group_response = requests.get(
+                    f"https://api.heygen.com/v2/avatar_group/{group_id}/avatars",
+                    headers={
+                        "X-Api-Key": api_key,
+                        "Content-Type": "application/json"
+                    },
+                    timeout=30
+                )
+                
+                if group_response.status_code == 200:
+                    group_data = group_response.json()
+                    avatar_list = group_data.get("data", {}).get("avatar_list", [])
+                    
+                    # Look for our avatar
+                    for avatar in avatar_list:
+                        if avatar.get("id") == avatar_id and avatar.get("status") == "completed":
+                            fresh_url = avatar.get("image_url")
+                            if fresh_url:
+                                log_info(f"Found fresh URL for {avatar_id}: {fresh_url[:50]}...", "PhotoAvatarRefresh")
+                                return fresh_url
+                            
+            except Exception as e:
+                log_error(f"Error checking group {group_id}: {e}", "PhotoAvatarRefresh")
+                continue
+        
+        log_warning(f"Could not find fresh URL for photo avatar: {avatar_id}", "PhotoAvatarRefresh")
+        return None
+        
+    except Exception as e:
+        log_error(f"Error getting fresh photo avatar URL: {e}", "PhotoAvatarRefresh")
+        return None
+
+def refresh_photo_avatar_urls():
+    """Refresh all expired photo avatar URLs in the database"""
+    try:
+        log_info("Starting photo avatar URL refresh process", "PhotoAvatarRefresh")
+        
+        # Get all avatars with photo URLs
+        avatars = execute_query(
+            "SELECT id, avatar_id, avatar_name, avatar_image_url FROM user_avatars WHERE avatar_image_url IS NOT NULL",
+            fetch_all=True
+        )
+        
+        refreshed_count = 0
+        
+        for avatar in avatars:
+            avatar_db_id = avatar['id']
+            avatar_id = avatar['avatar_id']
+            avatar_name = avatar['avatar_name']
+            current_url = avatar['avatar_image_url']
+            
+            # Check if this is a photo avatar and if URL is expired
+            if is_photo_avatar_url(current_url) and is_url_expired(current_url):
+                log_info(f"Refreshing expired URL for {avatar_name} ({avatar_id})", "PhotoAvatarRefresh")
+                
+                # Get fresh URL
+                fresh_url = get_fresh_photo_avatar_url(avatar_id)
+                
+                if fresh_url:
+                    # Update database with fresh URL
+                    if USE_POSTGRES:
+                        execute_query(
+                            "UPDATE user_avatars SET avatar_image_url = %s WHERE id = %s",
+                            (fresh_url, avatar_db_id)
+                        )
+                    else:
+                        execute_query(
+                            "UPDATE user_avatars SET avatar_image_url = ? WHERE id = ?",
+                            (fresh_url, avatar_db_id)
+                        )
+                    
+                    refreshed_count += 1
+                    log_info(f"✅ Refreshed URL for {avatar_name}", "PhotoAvatarRefresh")
+                else:
+                    log_warning(f"❌ Could not get fresh URL for {avatar_name}", "PhotoAvatarRefresh")
+        
+        log_info(f"Photo avatar refresh complete. Refreshed {refreshed_count} URLs", "PhotoAvatarRefresh")
+        return {
+            "success": True,
+            "refreshed_count": refreshed_count,
+            "message": f"Successfully refreshed {refreshed_count} photo avatar URLs"
+        }
+        
+    except Exception as e:
+        log_error(f"Error in refresh_photo_avatar_urls: {e}", "PhotoAvatarRefresh")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def refresh_single_avatar_url(avatar_db_id):
+    """Refresh URL for a single avatar"""
+    try:
+        # Get avatar details
+        if USE_POSTGRES:
+            avatar = execute_query(
+                "SELECT id, avatar_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = %s",
+                (avatar_db_id,),
+                fetch_one=True
+            )
+        else:
+            avatar = execute_query(
+                "SELECT id, avatar_id, avatar_name, avatar_image_url FROM user_avatars WHERE id = ?",
+                (avatar_db_id,),
+                fetch_one=True
+            )
+        
+        if not avatar:
+            return {"success": False, "error": "Avatar not found"}
+        
+        avatar_id = avatar['avatar_id']
+        avatar_name = avatar['avatar_name']
+        current_url = avatar['avatar_image_url']
+        
+        # Only refresh if it's a photo avatar
+        if not is_photo_avatar_url(current_url):
+            return {"success": False, "error": "Not a photo avatar - no refresh needed"}
+        
+        # Get fresh URL
+        fresh_url = get_fresh_photo_avatar_url(avatar_id)
+        
+        if fresh_url:
+            # Update database
+            if USE_POSTGRES:
+                execute_query(
+                    "UPDATE user_avatars SET avatar_image_url = %s WHERE id = %s",
+                    (fresh_url, avatar_db_id)
+                )
+            else:
+                execute_query(
+                    "UPDATE user_avatars SET avatar_image_url = ? WHERE id = ?",
+                    (fresh_url, avatar_db_id)
+                )
+            
+            log_info(f"✅ Refreshed URL for {avatar_name}", "PhotoAvatarRefresh")
+            return {
+                "success": True,
+                "message": f"Successfully refreshed URL for {avatar_name}",
+                "new_url": fresh_url
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Could not get fresh URL for {avatar_name}"
+            }
+            
+    except Exception as e:
+        log_error(f"Error refreshing single avatar URL: {e}", "PhotoAvatarRefresh")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 # =============================================================================
 # ENHANCED AVATAR NAMING LOGIC
@@ -515,21 +738,8 @@ async def delete_user(request: Request, user_id: int):
                 avatar_count = execute_query("SELECT COUNT(*) as count FROM user_avatars WHERE user_id = ?", (user_id,), fetch_one=True)
                 execute_query("DELETE FROM user_avatars WHERE user_id = ?", (user_id,))
             
-            # Delete user's images
-            if USE_POSTGRES:
-                image_count = execute_query("SELECT COUNT(*) as count FROM user_images WHERE user_id = %s", (user_id,), fetch_one=True)
-                execute_query("DELETE FROM user_images WHERE user_id = %s", (user_id,))
-            else:
-                image_count = execute_query("SELECT COUNT(*) as count FROM user_images WHERE user_id = ?", (user_id,), fetch_one=True)
-                execute_query("DELETE FROM user_images WHERE user_id = ?", (user_id,))
-            
-            # Delete user's voices
-            if USE_POSTGRES:
-                voice_count = execute_query("SELECT COUNT(*) as count FROM user_voices WHERE user_id = %s", (user_id,), fetch_one=True)
-                execute_query("DELETE FROM user_voices WHERE user_id = %s", (user_id,))
-            else:
-                voice_count = execute_query("SELECT COUNT(*) as count FROM user_voices WHERE user_id = ?", (user_id,), fetch_one=True)
-                execute_query("DELETE FROM user_voices WHERE user_id = ?", (user_id,))
+            # REMOVED: user_images deletion - table doesn't exist
+            # REMOVED: user_voices deletion - table doesn't exist
             
             # Finally delete the user
             if USE_POSTGRES:
@@ -537,7 +747,7 @@ async def delete_user(request: Request, user_id: int):
             else:
                 execute_query("DELETE FROM users WHERE id = ?", (user_id,))
             
-            log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id}) with {video_count['count']} videos, {avatar_count['count']} avatars, {image_count['count']} images, and {voice_count['count']} voices", "AdminRoutes")
+            log_info(f"Admin {admin_user['username']} successfully deleted user {username} (ID: {user_id}) with {video_count['count']} videos and {avatar_count['count']} avatars", "AdminRoutes")
             
             return RedirectResponse(
                 url=f"/admin/users?success=user_deleted&username={username}",
@@ -841,22 +1051,8 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
                 
                 log_info(f"Avatar image saved to: {image_path}", "AdminRoutes")
                 
-                # Save image record to user_images table
+                # REMOVED: Save image record to user_images table - table doesn't exist
                 relative_path = f"static/uploads/{unique_filename}"
-                
-                # Insert image record
-                if USE_POSTGRES:
-                    execute_query(
-                        "INSERT INTO user_images (user_id, filename, original_filename, file_path, file_size, content_type, created_at) VALUES (%s, %s, %s, %s, %s, %s, NOW())",
-                        (user_id, unique_filename, f"{avatar_name}{file_extension}", relative_path, len(image_response.content), f"image/{file_extension[1:]}")
-                    )
-                else:
-                    execute_query(
-                        "INSERT INTO user_images (user_id, filename, original_filename, file_path, file_size, content_type, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))",
-                        (user_id, unique_filename, f"{avatar_name}{file_extension}", relative_path, len(image_response.content), f"image/{file_extension[1:]}")
-                    )
-                
-                log_info(f"Avatar image added to user {user_to_manage['username']}'s gallery", "AdminRoutes")
                 
             except Exception as img_error:
                 log_error(f"Failed to download/save avatar image: {str(img_error)}", "AdminRoutes")
@@ -907,7 +1103,7 @@ async def fetch_avatar_from_heygen(request: Request, user_id: int):
             return JSONResponse(
                 content={
                     "success": True, 
-                    "message": "Avatar fetched and saved successfully with enhanced naming! Image also added to user gallery!",
+                    "message": "Avatar fetched and saved successfully with enhanced naming!",
                     "avatar": {
                         "id": avatar_id,
                         "name": avatar_name,
@@ -1057,6 +1253,178 @@ async def reset_password(request: Request):
             content={"success": False, "error": str(e)}
         )
 
+@router.get("/create-user")
+async def create_user_form(request: Request):
+    """Admin create user form"""
+    try:
+        # Require admin access
+        user = require_admin(request)
+        
+        return templates.TemplateResponse(
+            "portal/admin_create_user.html",
+            {
+                "request": request,
+                "user": user,
+                "title": "Create New User"
+            }
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+
+@router.post("/create-user")
+async def create_user_action(request: Request):
+    """Admin create user action"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Get form data
+        form = await request.form()
+        username = form.get("username", "").strip()
+        email = form.get("email", "").strip()
+        password = form.get("password", "").strip()
+        is_admin = form.get("is_admin") == "on"
+        
+        # Validate inputs
+        if not username or not email or not password:
+            return RedirectResponse(
+                url="/admin/create-user?error=missing_fields",
+                status_code=303
+            )
+        
+        # Validate password strength
+        is_valid, error_message = validate_password_strength(password)
+        if not is_valid:
+            return RedirectResponse(
+                url=f"/admin/create-user?error=weak_password&message={error_message}",
+                status_code=303
+            )
+        
+        # Check if user already exists
+        if USE_POSTGRES:
+            existing_user = execute_query(
+                "SELECT id FROM users WHERE username = %s OR LOWER(email) = LOWER(%s)",
+                (username, email),
+                fetch_one=True
+            )
+        else:
+            existing_user = execute_query(
+                "SELECT id FROM users WHERE username = ? OR LOWER(email) = LOWER(?)",
+                (username, email),
+                fetch_one=True
+            )
+        
+        if existing_user:
+            return RedirectResponse(
+                url="/admin/create-user?error=user_exists",
+                status_code=303
+            )
+        
+        # Hash password
+        hashed_password = get_password_hash(password)
+        
+        # Create user
+        if USE_POSTGRES:
+            execute_query(
+                "INSERT INTO users (username, email, password_hash, is_admin, created_at) VALUES (%s, %s, %s, %s, NOW())",
+                (username, email.lower(), hashed_password, is_admin)
+            )
+        else:
+            execute_query(
+                "INSERT INTO users (username, email, password_hash, is_admin, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
+                (username, email.lower(), hashed_password, 1 if is_admin else 0)
+            )
+        
+        log_info(f"Admin {admin_user['username']} created new user: {username} (admin: {is_admin})", "AdminRoutes")
+        
+        return RedirectResponse(
+            url=f"/admin/users?success=user_created&username={username}",
+            status_code=303
+        )
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+    except Exception as e:
+        log_error("Error creating user", "AdminRoutes", e)
+        return RedirectResponse(
+            url="/admin/create-user?error=creation_failed",
+            status_code=303
+        )
+
+@router.post("/refresh-photo-avatars")
+async def refresh_photo_avatars_endpoint(request: Request):
+    """Admin endpoint to refresh all expired photo avatar URLs"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Refresh photo avatar URLs
+        result = refresh_photo_avatar_urls()
+        
+        log_info(f"Admin {admin_user['username']} triggered photo avatar refresh", "AdminRoutes")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error("Error refreshing photo avatars", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
+@router.post("/refresh-avatar-url/{avatar_id}")
+async def refresh_single_avatar_endpoint(request: Request, avatar_id: int):
+    """Admin endpoint to refresh URL for a single avatar"""
+    try:
+        # Require admin access
+        admin_user = require_admin(request)
+        
+        # Refresh single avatar URL
+        result = refresh_single_avatar_url(avatar_id)
+        
+        log_info(f"Admin {admin_user['username']} refreshed avatar {avatar_id}", "AdminRoutes")
+        
+        return JSONResponse(content=result)
+        
+    except HTTPException as e:
+        if e.status_code == 401:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
+        elif e.status_code == 403:
+            return JSONResponse(
+                status_code=403,
+                content={"success": False, "error": "Admin access required"}
+            )
+        raise
+    except Exception as e:
+        log_error("Error refreshing single avatar URL", "AdminRoutes", e)
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": str(e)}
+        )
+
 @router.get("/check-user")
 async def check_user_status(request: Request):
     """Check current user status and admin privileges"""
@@ -1151,7 +1519,7 @@ async def manage_user_videos(request: Request, user_id: int):
         
         # Get all videos for this user
         videos = execute_query("""
-            SELECT id, title, status, heygen_video_id, created_at, video_path
+            SELECT id, title, status, heygen_video_id, created_at, video_url
             FROM videos 
             WHERE user_id = %s 
             ORDER BY created_at DESC
@@ -1328,3 +1696,42 @@ async def update_avatar_names_endpoint(request: Request):
             status_code=500,
             content={"success": False, "error": str(e)}
         )
+    # Quick fix routes - add these at the end of admin_routes.py
+@router.get("/upload-avatar")
+async def upload_avatar_redirect(request: Request):
+    """Redirect upload avatar to users management"""
+    try:
+        require_admin(request)
+        return RedirectResponse(url="/admin/users", status_code=302)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+
+@router.get("/manage-voices")
+async def manage_voices_redirect(request: Request):
+    """Redirect manage voices to users management"""
+    try:
+        require_admin(request)
+        return RedirectResponse(url="/admin/users", status_code=302)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
+
+@router.get("/manage-data")
+async def manage_data_redirect(request: Request):
+    """Redirect manage data to dashboard"""
+    try:
+        require_admin(request)
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    except HTTPException as e:
+        if e.status_code == 401:
+            return RedirectResponse(url="/login", status_code=303)
+        elif e.status_code == 403:
+            return RedirectResponse(url="/dashboard", status_code=303)
+        raise
