@@ -15,6 +15,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import requests
 
 # STEP 1: Configure logging FIRST (before anything uses logger)
 logging.basicConfig(
@@ -2009,6 +2010,42 @@ async def test_routes():
         ]
     }
 
+def get_video_url_from_heygen(heygen_video_id):
+    """Get video URL from HeyGen API"""
+    if not heygen_video_id:
+        return None
+    
+    try:
+        heygen_api_key = os.getenv('HEYGEN_API_KEY')
+        if not heygen_api_key or heygen_api_key == 'your-heygen-api-key':
+            logger.warning("No valid HeyGen API key found")
+            return None
+            
+        headers = {
+            'X-API-KEY': heygen_api_key,
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(
+            f'https://api.heygen.com/v2/video/{heygen_video_id}',
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('code') == 100 and 'data' in data:
+                video_url = data['data'].get('video_url')
+                if video_url:
+                    return video_url
+                    
+        logger.warning(f"Could not get video URL for HeyGen ID: {heygen_video_id}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting video URL from HeyGen: {e}")
+        return None
+
 @router.get("/api/completed-videos")
 async def get_completed_videos_api(request: Request):
     """Get only completed videos with URLs - clean approach"""
@@ -2044,11 +2081,17 @@ async def get_completed_videos_api(request: Request):
             if video_dict.get('created_at'):
                 video_dict['created_at'] = video_dict['created_at'].strftime('%b %d, %Y')
             
-            # Construct video URL from HeyGen video ID
+            # Get video URL from HeyGen API
             if video_dict.get('heygen_video_id'):
-                video_dict['video_url'] = f"https://resource.heygen.ai/video/{video_dict['heygen_video_id']}.mp4"
+                video_url = get_video_url_from_heygen(video_dict['heygen_video_id'])
+                video_dict['video_url'] = video_url
+                if video_url:
+                    logger.info(f"🎬 Got video URL from HeyGen API for '{video_dict.get('title')}'")
+                else:
+                    logger.warning(f"⚠️ Could not get video URL for '{video_dict.get('title')}'")
             else:
                 video_dict['video_url'] = None
+                logger.warning(f"⚠️ No heygen_video_id for video '{video_dict.get('title')}'")
                 
             video_list.append(video_dict)
         
