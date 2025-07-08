@@ -2053,9 +2053,10 @@ async def get_completed_videos_api(request: Request):
     try:
         user = get_current_user(request)
         if not user:
-            # TEMPORARY: Hardcode user for debugging
-            logger.warning("🚨 TEMP DEBUG: Using hardcoded user 3")
-            user = {"id": 3, "username": "MogensR"}
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"}
+            )
         
         # Direct SQL query - bypass existing methods
         conn = psycopg2.connect(os.getenv('DATABASE_URL'))
