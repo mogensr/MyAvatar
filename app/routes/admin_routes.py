@@ -1760,3 +1760,40 @@ async def reset_admin_password():
         return {"success": True, "message": "Admin password reset to admin123"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+    
+@router.get("/debug-admin-user")
+async def debug_admin_user():
+    """Debug endpoint to check admin user data"""
+    try:
+        # Get admin user from database
+        if USE_POSTGRES:
+            user = execute_query(
+                "SELECT id, username, email, hashed_password, is_admin FROM users WHERE username = %s",
+                ("admin",),
+                fetch_one=True
+            )
+        else:
+            user = execute_query(
+                "SELECT id, username, email, hashed_password, is_admin FROM users WHERE username = ?",
+                ("admin",),
+                fetch_one=True
+            )
+        
+        if not user:
+            return {"error": "Admin user not found"}
+        
+        # Test password verification
+        from ..auth.authentication import verify_password
+        password_check = verify_password("admin123", user['hashed_password'])
+        
+        return {
+            "user_exists": True,
+            "username": user['username'],
+            "email": user['email'],
+            "is_admin": user['is_admin'],
+            "password_hash_starts_with": user['hashed_password'][:20] + "...",
+            "password_verification": password_check,
+            "user_id": user['id']
+        }
+    except Exception as e:
+        return {"error": str(e)}
