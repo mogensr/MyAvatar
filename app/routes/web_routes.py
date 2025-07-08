@@ -1481,11 +1481,14 @@ async def dashboard_page(request: Request):
             for video in videos:
                 if isinstance(video, dict):
                     processed_videos.append({
+                        'id': video.get('id'),
+                        'heygen_video_id': video.get('heygen_video_id'),
                         'title': sanitize_input(video.get('title', 'Untitled Video')),
                         'status': sanitize_input(video.get('status', 'unknown')),
                         'duration': video.get('duration', ''),
                         'format': video.get('format', '16:9'),
-                        'video_url': video.get('video_path'),
+                        'video_url': video.get('video_url'),
+                        'thumbnail_url': video.get('thumbnail_url'),
                         'created_at': str(video.get('created_at', 'Unknown'))
                     })
         
