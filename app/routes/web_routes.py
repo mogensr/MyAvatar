@@ -2049,6 +2049,7 @@ def get_video_url_from_heygen(heygen_video_id):
 @router.get("/api/completed-videos")
 async def get_completed_videos_api(request: Request):
     """Get only completed videos with URLs - clean approach"""
+    logger.info("🎬 API CALLED: /api/completed-videos")
     try:
         user = get_current_user(request)
         if not user:

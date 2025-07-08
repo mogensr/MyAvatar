@@ -267,9 +267,12 @@ function downloadVideo(videoUrl, title) {
 
 // Load completed videos
 async function loadCompletedVideos() {
+    console.log('🎬 Loading completed videos...');
     try {
         const response = await fetch('/api/completed-videos');
+        console.log('🎬 API Response status:', response.status);
         const data = await response.json();
+        console.log('🎬 API Response data:', data);
         
         const countElement = document.getElementById('video-count');
         const gridElement = document.getElementById('video-grid');
