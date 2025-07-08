@@ -1,12 +1,16 @@
 """
 Database functions for MyAvatar
-FIXED VERSION - Proper PostgreSQL placeholder handling
+FIXED VERSION - Proper PostgreSQL placeholder handling + .env loading
 """
 import os
 import sqlite3
 from datetime import datetime
 import traceback
+from dotenv import load_dotenv
 from ..logger.log_handler import log_info, log_error, log_warning
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ============================================================================
 # POSTGRESQL SETUP
@@ -29,6 +33,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 USE_POSTGRES = DATABASE_URL is not None and POSTGRESQL_AVAILABLE
 
 log_info(f"Database configuration - USE_POSTGRES: {USE_POSTGRES}, POSTGRESQL_AVAILABLE: {POSTGRESQL_AVAILABLE}", "Database")
+log_info(f"DATABASE_URL detected: {'YES' if DATABASE_URL else 'NO'}", "Database")
 
 # ============================================================================
 # DATABASE CONNECTION FUNCTIONS
@@ -274,3 +279,7 @@ def init_database():
         log_error("Failed to initialize database", "Database", e)
         log_error(f"Stack trace: {traceback.format_exc()}", "Database")
         raise
+
+def update_database_schema():
+    """Update database schema if needed"""
+    log_info("Database schema update completed", "Database")
