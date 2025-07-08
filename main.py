@@ -1,7 +1,7 @@
 """
 MyAvatar - Complete AI Avatar Video Generation Platform
 ========================================================
-Modular version with enhanced organization
+Modular version with enhanced organization - REFACTORED ROUTES
 """
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
@@ -96,32 +96,49 @@ try:
 except Exception as e:
     logger.warning(f"Could not mount static files: {e}")
 
-# SAFE ROUTE IMPORTS - each wrapped individually with DETAILED ERROR LOGGING
+# =============================================================================
+# MODULAR ROUTE IMPORTS - REFACTORED STRUCTURE
+# =============================================================================
+
 routers_loaded = []
 router_errors = []
 
-# Import and register routes safely
-route_imports = [
-    ("app.routes.web_routes", "router"),
-    ("app.routes.api_routes", "router"),
-    ("app.routes.health_routes", "router"),
-    ("app.routes.admin_routes", "router"),
-    ("app.routes.debug_routes", "router"),
-    ("app.routes.voice_routes", "router"),
-    ("app.routes.avatar_rebuild_route", "router"),
-    ("app.routes.migration_routes", "router"),
+# 🔄 NEW MODULAR ROUTES (split from old web_routes.py)
+modular_route_imports = [
+    # Core authentication and user routes (no prefix - root level)
+    ("app.routes.auth_routes", "router", None),
+    
+    # Admin routes with /admin prefix
+    ("app.routes.admin_routes", "router", "/admin"),
+    
+    # API routes with /api prefix  
+    ("app.routes.api_routes", "router", "/api"),
+    
+    # Emergency routes with /emergency prefix
+    ("app.routes.emergency_routes", "router", "/emergency"),
+    
+    # Dashboard and main app routes (if you create web_routes.py for remaining routes)
+    ("app.routes.web_routes", "router", None),
 ]
 
-for module_name, router_name in route_imports:
+# Load modular routes with prefixes
+for module_name, router_name, prefix in modular_route_imports:
     try:
         logger.info(f"Attempting to import {module_name}...")
         module = __import__(module_name, fromlist=[router_name])
         logger.info(f"Successfully imported {module_name}, getting router...")
         router = getattr(module, router_name)
-        logger.info(f"Got router from {module_name}, including in app...")
-        app.include_router(router)
-        routers_loaded.append(module_name)
-        logger.info(f"✅ Successfully loaded router: {module_name}")
+        logger.info(f"Got router from {module_name}, including in app with prefix: {prefix}")
+        
+        if prefix:
+            app.include_router(router, prefix=prefix)
+            logger.info(f"✅ Successfully loaded router: {module_name} (prefix: {prefix})")
+        else:
+            app.include_router(router)
+            logger.info(f"✅ Successfully loaded router: {module_name} (no prefix)")
+            
+        routers_loaded.append(f"{module_name}{' -> ' + prefix if prefix else ''}")
+        
     except Exception as e:
         error_details = {
             "module": module_name,
@@ -132,13 +149,44 @@ for module_name, router_name in route_imports:
         logger.error(f"❌ Could not load router {module_name}: {e}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
 
+# 🔧 LEGACY/REMAINING ROUTES (keep your existing working routes)
+legacy_route_imports = [
+    # Keep these existing routes that still work
+    ("app.routes.health_routes", "router"),
+    ("app.routes.debug_routes", "router"), 
+    ("app.routes.voice_routes", "router"),
+    ("app.routes.avatar_rebuild_route", "router"),
+    ("app.routes.migration_routes", "router"),
+]
+
+# Load legacy routes (no prefixes)
+for module_name, router_name in legacy_route_imports:
+    try:
+        logger.info(f"Attempting to import legacy route {module_name}...")
+        module = __import__(module_name, fromlist=[router_name])
+        logger.info(f"Successfully imported {module_name}, getting router...")
+        router = getattr(module, router_name)
+        logger.info(f"Got router from {module_name}, including in app...")
+        app.include_router(router)
+        routers_loaded.append(f"{module_name} (legacy)")
+        logger.info(f"✅ Successfully loaded legacy router: {module_name}")
+    except Exception as e:
+        error_details = {
+            "module": module_name,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+        router_errors.append(error_details)
+        logger.error(f"❌ Could not load legacy router {module_name}: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+
 # Background routes - conditional and safe
 if ENABLE_BACKGROUND_REPLACEMENT:
     try:
         from app.database.background_schema import initialize_backgrounds_schema, add_default_backgrounds
         from app.routes.background_routes import router as background_router
         app.include_router(background_router, prefix="/background", tags=["background"])
-        routers_loaded.append("background_routes")
+        routers_loaded.append("background_routes -> /background")
         logger.info("Background replacement routes loaded")
     except Exception as e:
         logger.warning(f"Could not load background routes: {e}")
@@ -203,7 +251,12 @@ async def debug_routes():
         "total_routes": len(app.routes),
         "routes_loaded_successfully": routers_loaded,
         "router_import_errors": router_errors,
-        "all_routes": routes
+        "all_routes": routes,
+        "refactoring_status": {
+            "modular_routes_loaded": len([r for r in routers_loaded if not "legacy" in r]),
+            "legacy_routes_loaded": len([r for r in routers_loaded if "legacy" in r]),
+            "total_errors": len(router_errors)
+        }
     }
 
 # TEST ROUTE - Simple route to confirm basic functionality
@@ -213,7 +266,14 @@ async def test_route():
     return {
         "message": "FastAPI is working!", 
         "routers_loaded": routers_loaded,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "refactoring_complete": True,
+        "modular_structure": {
+            "auth_routes": "/login, /register, /logout",
+            "admin_routes": "/admin/*",
+            "api_routes": "/api/*", 
+            "emergency_routes": "/emergency/*"
+        }
     }
 
 # =============================================================================
@@ -495,13 +555,18 @@ async def startup_event():
     
     # Report successful startup
     edition_name = "Premium Edition" if not ENABLE_SAFE_MODE else "Premium Edition (Safe Mode)"
-    log_info(f"MyAvatar {edition_name} is running", "Server")
+    log_info(f"MyAvatar {edition_name} is running with MODULAR ROUTE STRUCTURE", "Server")
     logger.info(f"✅ Successfully loaded {len(routers_loaded)} route modules: {', '.join(routers_loaded)}")
     
     if router_errors:
         logger.error(f"❌ Failed to load {len(router_errors)} route modules")
         for error in router_errors:
             logger.error(f"   - {error['module']}: {error['error']}")
+    
+    # Log refactoring completion
+    modular_count = len([r for r in routers_loaded if not "legacy" in r])
+    legacy_count = len([r for r in routers_loaded if "legacy" in r])
+    logger.info(f"🏗️ REFACTORING COMPLETE: {modular_count} modular routes, {legacy_count} legacy routes")
 
 # Entry point
 if __name__ == "__main__":
