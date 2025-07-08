@@ -1484,7 +1484,7 @@ async def dashboard_page(request: Request):
                         'status': sanitize_input(video.get('status', 'unknown')),
                         'duration': video.get('duration', ''),
                         'format': video.get('format', '16:9'),
-                        'video_url': video.get('video_path') or video.get('video_url'),
+                        'video_url': video.get('video_path'),
                         'created_at': str(video.get('created_at', 'Unknown'))
                     })
         
