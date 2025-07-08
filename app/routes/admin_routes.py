@@ -1735,3 +1735,28 @@ async def manage_data_redirect(request: Request):
         elif e.status_code == 403:
             return RedirectResponse(url="/dashboard", status_code=303)
         raise
+    
+@router.get("/reset-admin-password")
+async def reset_admin_password():
+    """Temporary endpoint to reset admin password"""
+    try:
+        from ..auth.authentication import get_password_hash
+        
+        # Hash the password correctly
+        new_password_hash = get_password_hash("admin123")
+        
+        # Update admin user password
+        if USE_POSTGRES:
+            execute_query(
+                "UPDATE users SET password_hash = %s WHERE username = %s",
+                (new_password_hash, "admin")
+            )
+        else:
+            execute_query(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (new_password_hash, "admin")
+            )
+        
+        return {"success": True, "message": "Admin password reset to admin123"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}    
