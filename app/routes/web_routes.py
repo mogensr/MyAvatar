@@ -1476,6 +1476,11 @@ async def dashboard_page(request: Request):
                 pass
         
         # Process videos
+        logger.info(f"🔍 DEBUG: Raw videos from database: {len(videos) if videos else 0} videos")
+        logger.info(f"🔍 DEBUG: Videos type: {type(videos)}")
+        if videos:
+            logger.info(f"🔍 DEBUG: First video sample: {videos[0] if videos else 'None'}")
+        
         processed_videos = []
         if videos:
             for video in videos:
