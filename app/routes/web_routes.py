@@ -2025,12 +2025,12 @@ async def get_completed_videos_api(request: Request):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT id, title, video_url, thumbnail_url, duration, created_at, heygen_video_id
+            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id
             FROM videos 
             WHERE user_id = %s 
             AND status = 'completed' 
-            AND video_url IS NOT NULL 
-            AND video_url != ''
+            AND heygen_video_id IS NOT NULL 
+            AND heygen_video_id != ''
             ORDER BY created_at DESC
         """, (user["id"],))
         
@@ -2043,6 +2043,13 @@ async def get_completed_videos_api(request: Request):
             video_dict = dict(video)
             if video_dict.get('created_at'):
                 video_dict['created_at'] = video_dict['created_at'].strftime('%b %d, %Y')
+            
+            # Construct video URL from HeyGen video ID
+            if video_dict.get('heygen_video_id'):
+                video_dict['video_url'] = f"https://resource.heygen.ai/video/{video_dict['heygen_video_id']}.mp4"
+            else:
+                video_dict['video_url'] = None
+                
             video_list.append(video_dict)
         
         logger.info(f"✅ Completed videos API: Found {len(video_list)} videos for user {user['id']}")
