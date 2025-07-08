@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import requests
+import time
 
 # STEP 1: Configure logging FIRST (before anything uses logger)
 logging.basicConfig(
@@ -2082,11 +2083,56 @@ async def get_completed_videos_api(request: Request):
             if video_dict.get('created_at'):
                 video_dict['created_at'] = video_dict['created_at'].strftime('%b %d, %Y')
             
-            # Use existing video_url from database (no need to call HeyGen API)
+            # Check if video_url exists and refresh if needed
             if video_dict.get('video_url'):
-                logger.info(f"🎬 Using existing video URL for '{video_dict.get('title')}'")
+                # Check if URL might be expired (simple heuristic)
+                video_url = video_dict['video_url']
+                if 'Expires=' in video_url:
+                    try:
+                        # Extract expiry timestamp
+                        expires_part = video_url.split('Expires=')[1].split('&')[0]
+                        expires_timestamp = int(expires_part)
+                        current_timestamp = int(time.time())
+                        
+                        # If URL expires within 24 hours, refresh it
+                        if expires_timestamp - current_timestamp < 86400:  # 24 hours
+                            logger.info(f"🔄 Refreshing expired/expiring URL for '{video_dict.get('title')}'")
+                            fresh_url = get_video_url_from_heygen(video_dict.get('heygen_video_id'))
+                            if fresh_url:
+                                video_dict['video_url'] = fresh_url
+                                # Update database with fresh URL
+                                cur.execute(
+                                    "UPDATE videos SET video_url = %s WHERE id = %s",
+                                    (fresh_url, video_dict['id'])
+                                )
+                                conn.commit()
+                                logger.info(f"✅ Updated video URL in database for '{video_dict.get('title')}'")
+                            else:
+                                logger.warning(f"⚠️ Could not refresh URL for '{video_dict.get('title')}'")
+                        else:
+                            logger.info(f"🎬 Using existing valid URL for '{video_dict.get('title')}'")
+                    except (ValueError, IndexError) as e:
+                        logger.warning(f"⚠️ Could not parse expiry from URL for '{video_dict.get('title')}': {e}")
+                else:
+                    logger.info(f"🎬 Using existing URL for '{video_dict.get('title')}'")
             else:
-                logger.warning(f"⚠️ No video_url for video '{video_dict.get('title')}'")
+                # No video_url, try to get one from HeyGen
+                if video_dict.get('heygen_video_id'):
+                    logger.info(f"🔄 Getting fresh URL for '{video_dict.get('title')}'")
+                    fresh_url = get_video_url_from_heygen(video_dict.get('heygen_video_id'))
+                    if fresh_url:
+                        video_dict['video_url'] = fresh_url
+                        # Update database
+                        cur.execute(
+                            "UPDATE videos SET video_url = %s WHERE id = %s",
+                            (fresh_url, video_dict['id'])
+                        )
+                        conn.commit()
+                        logger.info(f"✅ Added fresh video URL to database for '{video_dict.get('title')}'")
+                    else:
+                        logger.warning(f"⚠️ Could not get URL for '{video_dict.get('title')}'")
+                else:
+                    logger.warning(f"⚠️ No heygen_video_id for video '{video_dict.get('title')}'")
                 
             video_list.append(video_dict)
         
