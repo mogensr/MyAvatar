@@ -2064,12 +2064,12 @@ async def get_completed_videos_api(request: Request):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id, video_url
+            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id, video_path as video_url
             FROM videos 
             WHERE user_id = %s 
             AND status = 'completed' 
-            AND video_url IS NOT NULL 
-            AND video_url != ''
+            AND video_path IS NOT NULL 
+            AND video_path != ''
             ORDER BY created_at DESC
         """, (user["id"],))
         
@@ -2102,7 +2102,7 @@ async def get_completed_videos_api(request: Request):
                                 video_dict['video_url'] = fresh_url
                                 # Update database with fresh URL
                                 cur.execute(
-                                    "UPDATE videos SET video_url = %s WHERE id = %s",
+                                    "UPDATE videos SET video_path = %s WHERE id = %s",
                                     (fresh_url, video_dict['id'])
                                 )
                                 conn.commit()
@@ -2124,7 +2124,7 @@ async def get_completed_videos_api(request: Request):
                         video_dict['video_url'] = fresh_url
                         # Update database
                         cur.execute(
-                            "UPDATE videos SET video_url = %s WHERE id = %s",
+                            "UPDATE videos SET video_path = %s WHERE id = %s",
                             (fresh_url, video_dict['id'])
                         )
                         conn.commit()
