@@ -465,29 +465,43 @@ router = APIRouter()
 
 # Robust template directory detection
 def find_templates_directory():
-    """Find templates directory with multiple fallback paths"""
+    """Find templates directory - FIXED for your exact Windows path"""
+    
+    # Your exact project structure
+    current_file = Path(__file__)
+    print(f"🔍 Current file: {current_file}")
+    print(f"🔍 Working directory: {os.getcwd()}")
+    
+    # Since we know your exact path, let's try the most likely locations
     possible_paths = [
-        Path(__file__).parent.parent.parent / "templates",
-        Path("templates"),
-        Path("/app/templates"),
+        # Most likely: go up from wherever web_routes.py is to MyAvatar root
+        current_file.parent.parent.parent / "templates",  # If web_routes.py is in app/routes/
+        current_file.parent.parent / "templates",        # If web_routes.py is in app/
+        current_file.parent / "templates",               # If web_routes.py is in root
+        
+        # Your exact absolute path as backup
+        Path("C:/Users/mogen/Projects/python/CHATGPT/MyAvatar/templates"),
+        
+        # Working directory variations
+        Path.cwd() / "templates",
         Path("./templates"),
-        Path(__file__).parent.parent / "templates",
+        Path("templates"),
     ]
     
     for path in possible_paths:
+        print(f"🔍 Checking: {path}")
         if path.exists() and path.is_dir():
-            try:
-                template_files = list(path.glob("*.html"))
-                if template_files:
-                    print(f"Found templates directory: {path} with {len(template_files)} HTML files")
-                    return str(path)
-            except Exception as e:
-                print(f"Error checking template path {path}: {e}")
-                continue
+            dashboard_file = path / "dashboard.html"
+            if dashboard_file.exists():
+                print(f"✅ Found dashboard.html at: {dashboard_file}")
+                return str(path)
+            else:
+                print(f"📁 Directory exists but no dashboard.html: {path}")
     
-    fallback_path = str(possible_paths[0])
-    print(f"No templates directory found, using fallback: {fallback_path}")
-    return fallback_path
+    # Fallback to your known path
+    fallback = "C:/Users/mogen/Projects/python/CHATGPT/MyAvatar/templates"
+    print(f"❌ Using fallback path: {fallback}")
+    return fallback
 
 templates_dir = find_templates_directory()
 templates = Jinja2Templates(directory=templates_dir)
