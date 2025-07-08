@@ -2064,12 +2064,12 @@ async def get_completed_videos_api(request: Request):
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id, video_url
+            SELECT id, title, thumbnail_url, duration, created_at, heygen_video_id, video_path
             FROM videos 
             WHERE user_id = %s 
             AND status = 'completed' 
-            AND video_url IS NOT NULL 
-            AND video_url != ''
+            AND video_path IS NOT NULL 
+            AND video_path != ''
             ORDER BY created_at DESC
         """, (user["id"],))
         
@@ -2083,10 +2083,10 @@ async def get_completed_videos_api(request: Request):
             if video_dict.get('created_at'):
                 video_dict['created_at'] = video_dict['created_at'].strftime('%b %d, %Y')
             
-            # Check if video_url exists and refresh if needed
-            if video_dict.get('video_url'):
+            # Check if video_path exists and refresh if needed
+            if video_dict.get('video_path'):
                 # Check if URL might be expired (simple heuristic)
-                video_url = video_dict['video_url']
+                video_url = video_dict['video_path']
                 if 'Expires=' in video_url:
                     try:
                         # Extract expiry timestamp
@@ -2099,10 +2099,10 @@ async def get_completed_videos_api(request: Request):
                             logger.info(f"🔄 Refreshing expired/expiring URL for '{video_dict.get('title')}'")
                             fresh_url = get_video_url_from_heygen(video_dict.get('heygen_video_id'))
                             if fresh_url:
-                                video_dict['video_url'] = fresh_url
+                                video_dict['video_path'] = fresh_url
                                 # Update database with fresh URL
                                 cur.execute(
-                                    "UPDATE videos SET video_url = %s WHERE id = %s",
+                                    "UPDATE videos SET video_path = %s WHERE id = %s",
                                     (fresh_url, video_dict['id'])
                                 )
                                 conn.commit()
@@ -2116,15 +2116,15 @@ async def get_completed_videos_api(request: Request):
                 else:
                     logger.info(f"🎬 Using existing URL for '{video_dict.get('title')}'")
             else:
-                # No video_url, try to get one from HeyGen
+                # No video_path, try to get one from HeyGen
                 if video_dict.get('heygen_video_id'):
                     logger.info(f"🔄 Getting fresh URL for '{video_dict.get('title')}'")
                     fresh_url = get_video_url_from_heygen(video_dict.get('heygen_video_id'))
                     if fresh_url:
-                        video_dict['video_url'] = fresh_url
+                        video_dict['video_path'] = fresh_url
                         # Update database
                         cur.execute(
-                            "UPDATE videos SET video_url = %s WHERE id = %s",
+                            "UPDATE videos SET video_path = %s WHERE id = %s",
                             (fresh_url, video_dict['id'])
                         )
                         conn.commit()
