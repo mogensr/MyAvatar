@@ -1514,7 +1514,13 @@ async def dashboard_page(request: Request):
         }
         
         try:
+            logger.error(f"🔍 TEMPLATE DEBUG: About to render dashboard.html")
+            logger.error(f"🔍 TEMPLATE DEBUG: Templates dir = {templates_dir}")
+            logger.error(f"🔍 TEMPLATE DEBUG: Context keys = {list(template_context.keys())}")
+            
             response = templates.TemplateResponse("dashboard.html", template_context)
+            
+            logger.error(f"✅ TEMPLATE DEBUG: Rendered successfully")
             
             response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
             response.headers["X-Content-Type-Options"] = "nosniff"
@@ -1522,7 +1528,8 @@ async def dashboard_page(request: Request):
             
             return response
         except Exception as template_error:
-            logger.warning(f"Template error: {template_error}")
+            logger.error(f"❌ TEMPLATE ERROR: {str(template_error)}")
+            logger.error(f"❌ ERROR TYPE: {type(template_error)}")
             return JSONResponse({
                 "message": "Dashboard",
                 "user": user.get("username", "User"),
@@ -1530,7 +1537,7 @@ async def dashboard_page(request: Request):
                 "avatar_count": len(user_avatars),
                 "credits_remaining": credits_remaining,
                 "vacation_mode": True,
-                "status": "Template not found - using JSON response"
+                "status": f"Template error: {str(template_error)}"
             })
         
     except Exception as e:
