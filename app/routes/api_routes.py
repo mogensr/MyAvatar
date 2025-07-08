@@ -39,7 +39,7 @@ async def debug_check_videos(request: Request):
         
         videos = execute_query(
             """
-            SELECT id, heygen_video_id, status, video_path, title, created_at
+            SELECT id, heygen_video_id, status, video_url, title, created_at
             FROM videos 
             WHERE heygen_video_id IN (%s, %s)
             ORDER BY created_at DESC
