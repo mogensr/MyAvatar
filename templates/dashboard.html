@@ -45,7 +45,7 @@
                         </a>
                     </div>
                     <div class="nav-item">
-                        <a href="#videos" class="nav-link">
+                        <a href="/videos" class="nav-link">
                             <i class="fas fa-video"></i>
                             <span>My Videos</span>
                         </a>
@@ -311,9 +311,6 @@
                     </div>
                 </div>
                 
-                <!-- Completed Videos Widget -->
-                {% include 'video_widget.html' %}
-                
                 <!-- Feature Grid -->
                 <div class="section-header">
                     <h2 class="section-title">
@@ -404,19 +401,31 @@
                     </div>
                 </div>
                 
-                <!-- Recent Videos -->
+                <!-- Recent Videos (Only 3 videos, rest goes to separate page) -->
                 <div class="section-header">
                     <h2 class="section-title">
                         <i class="fas fa-history"></i>
                         Recent Videos
                     </h2>
-                    <a href="#videos" class="section-action">View All Videos</a>
+                    <a href="/videos" class="section-action">View All Videos</a>
                 </div>
                 
                 <div class="videos-grid">
                     {% if videos %}
                         {% for video in videos[:3] %}
                         <div class="video-card" data-video-id="{{ video.heygen_video_id or video.id }}" data-status="{{ video.status }}">
+                            
+                            <!-- DEBUG INFO - TEMPORARY -->
+                            <div style="background: #ffeb3b; padding: 8px; font-size: 10px; margin-bottom: 8px; border-radius: 4px;">
+                                <strong>🐛 DEBUG:</strong><br>
+                                ID: {{ video.id or 'None' }}<br>
+                                HeyGen ID: {{ video.heygen_video_id or 'None' }}<br>
+                                Title: {{ video.title or 'None' }}<br>
+                                Status: {{ video.status or 'None' }}<br>
+                                Video Path: {{ video.video_path or 'None' }}<br>
+                                Final ID Used: {{ video.heygen_video_id or video.id or 'UNDEFINED' }}
+                            </div>
+                            
                             <div class="video-thumbnail">
                                 <!-- FIXED: Changed video.video_url to video.video_path -->
                                 {% if video.status == 'completed' and video.video_path %}
@@ -450,8 +459,9 @@
                                 <div class="video-actions">
                                     <!-- FIXED: Changed video.video_url to video.video_path -->
                                     {% if video.status == 'completed' and video.video_path %}
-                                        <button onclick="playVideo('{{ video.heygen_video_id or video.id }}')" class="video-action primary">
-                                            <i class="fas fa-play"></i> Play
+                                        <!-- DEBUG VERSION WITH BETTER ERROR HANDLING -->
+                                        <button onclick="debugPlayVideo('{{ video.heygen_video_id or video.id }}')" class="video-action primary">
+                                            <i class="fas fa-play"></i> Play (ID: {{ video.heygen_video_id or video.id or 'NONE' }})
                                         </button>
                                         <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" download class="video-action secondary">
                                             <i class="fas fa-download"></i> Download
@@ -483,5 +493,20 @@
     
     <!-- Dashboard JavaScript -->
     <script src="/static/js/dashboard.js"></script>
+    
+    <!-- DEBUG JAVASCRIPT - TEMPORARY -->
+    <script>
+        function debugPlayVideo(videoId) {
+            console.log('🎬 DEBUG: Attempting to play video with ID:', videoId);
+            
+            if (!videoId || videoId === 'undefined' || videoId === 'None') {
+                alert('⚠️ DEBUG: Video ID is undefined or null!\nID received: ' + videoId);
+                return;
+            }
+            
+            console.log('✅ DEBUG: Video ID is valid, navigating to: /video/' + videoId);
+            window.location.href = `/video/${videoId}`;
+        }
+    </script>
 </body>
 </html>
