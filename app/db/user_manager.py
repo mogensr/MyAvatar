@@ -132,7 +132,7 @@ class Database:
                 else:
                     log_error("SQLite: Failed to retrieve created user", "UserManager")
                     return None
-                
+                    
         except Exception as e:
             log_error(f"Error creating user {user_data.get('username')}: {str(e)}", "UserManager", e)
             import traceback
@@ -178,12 +178,16 @@ class Database:
     def get_user_videos(self, user_id):
         """Get videos for a user"""
         try:
+            log_info(f"🎬 Getting videos for user {user_id}", "UserManager")
             result = execute_query(
                 "SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC", 
                 (user_id,), 
                 fetch_all=True
             )
-            return [dict(row) if hasattr(row, 'keys') else row for row in result] if result else []
+            log_info(f"🎬 Raw result: {len(result) if result else 0} rows", "UserManager")
+            videos = [dict(row) if hasattr(row, 'keys') else row for row in result] if result else []
+            log_info(f"🎬 Processed videos: {len(videos)}", "UserManager")
+            return videos
         except Exception as e:
             log_error(f"Error getting videos for user {user_id}: {str(e)}", "UserManager", e)
             return []
