@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media - MyAvatar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        
+        .loading-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .loading-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .iframe-container {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            background: white;
+        }
+        
+        .error-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #f8fafc;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .error-icon {
+            font-size: 4rem;
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+        
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .error-message {
+            color: #6b7280;
+            margin-bottom: 2rem;
+            max-width: 500px;
+        }
+        
+        .retry-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .retry-button:hover {
+            background: #5856eb;
+        }
+        
+        .start-button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 1rem;
+        }
+        
+        .start-button:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-container" id="loadingScreen">
+        <div class="loading-icon">🔗</div>
+        <h1 class="loading-title">Social Media Integration</h1>
+        <p class="loading-subtitle">Connecting to LeadGenEngine...</p>
+        <div class="loading-spinner"></div>
+        <button class="start-button" onclick="startGradioUI()">Start LeadGenEngine UI</button>
+    </div>
+    
+    <!-- Error Screen -->
+    <div class="error-container" id="errorScreen">
+        <div class="error-icon">⚠️</div>
+        <h2 class="error-title">LeadGenEngine UI Not Available</h2>
+        <p class="error-message">
+            The LeadGenEngine Gradio interface is not running. Please start it manually or contact support.
+            <br><br>
+            <strong>To start manually:</strong><br>
+            1. Navigate to LeadGenEngine directory<br>
+            2. Run: <code>python frontend.py</code><br>
+            3. Access at: <a href="{{ gradio_url }}" target="_blank">{{ gradio_url }}</a>
+        </p>
+        <button class="retry-button" onclick="retryConnection()">Retry Connection</button>
+        <button class="start-button" onclick="openInNewTab()">Open in New Tab</button>
+    </div>
+    
+    <!-- Main Iframe -->
+    <iframe 
+        id="gradioFrame"
+        src="{{ gradio_url }}"
+        class="iframe-container"
+        allow="camera; microphone; clipboard-write; fullscreen"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
+        style="display: none;">
+    </iframe>
+
+    <script>
+        const loadingScreen = document.getElementById('loadingScreen');
+        const errorScreen = document.getElementById('errorScreen');
+        const iframe = document.getElementById('gradioFrame');
+        
+        let loadTimeout;
+        let retryCount = 0;
+        const maxRetries = 3;
+        const gradioUrl = '{{ gradio_url }}';
+        
+        function showError() {
+            loadingScreen.style.display = 'none';
+            errorScreen.style.display = 'flex';
+            iframe.style.display = 'none';
+        }
+        
+        function showIframe() {
+            loadingScreen.classList.add('hidden');
+            errorScreen.style.display = 'none';
+            iframe.style.display = 'block';
+            
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+        
+        function retryConnection() {
+            if (retryCount < maxRetries) {
+                retryCount++;
+                errorScreen.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                loadingScreen.classList.remove('hidden');
+                
+                // Reload iframe
+                iframe.src = iframe.src;
+                startLoadTimeout();
+            } else {
+                alert('Maximum retry attempts reached. Please start LeadGenEngine manually.');
+            }
+        }
+        
+        function startGradioUI() {
+            // Try to load the iframe
+            iframe.src = gradioUrl;
+            startLoadTimeout();
+        }
+        
+        function openInNewTab() {
+            window.open(gradioUrl, '_blank');
+        }
+        
+        function startLoadTimeout() {
+            clearTimeout(loadTimeout);
+            loadTimeout = setTimeout(() => {
+                if (loadingScreen.style.display !== 'none') {
+                    showError();
+                }
+            }, 10000); // 10 second timeout
+        }
+        
+        // Iframe load handlers
+        iframe.onload = function() {
+            clearTimeout(loadTimeout);
+            showIframe();
+        };
+        
+        iframe.onerror = function() {
+            clearTimeout(loadTimeout);
+            showError();
+        };
+        
+        // Check if Gradio is running
+        async function checkGradioStatus() {
+            try {
+                const response = await fetch('/api/social-media/status');
+                const data = await response.json();
+                
+                if (data.status === 'online') {
+                    // Auto-start if available
+                    setTimeout(startGradioUI, 2000);
+                } else {
+                    setTimeout(showError, 3000);
+                }
+            } catch (error) {
+                setTimeout(showError, 3000);
+            }
+        }
+        
+        // Initialize
+        checkGradioStatus();
+        
+        // Handle iframe communication
+        window.addEventListener('message', function(event) {
+            // Handle messages from Gradio iframe
+            if (event.data.type === 'gradio_ready') {
+                showIframe();
+            } else if (event.data.type === 'gradio_error') {
+                showError();
+            }
+        });
+        
+        // Pass user context to iframe when ready
+        function passUserContext() {
+            const userContext = {
+                type: 'myavatar_user_context',
+                user_id: {{ user_id }},
+                username: '{{ username }}',
+                is_premium: {{ is_premium|lower }}
+            };
+            
+            iframe.contentWindow.postMessage(userContext, '*');
+        }
+        
+        // Pass context after iframe loads
+        iframe.addEventListener('load', () => {
+            setTimeout(passUserContext, 1000);
+        });
+    </script>
+</body>
+</html>

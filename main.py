@@ -439,8 +439,6 @@ class AvatarManager:
 
 # Global avatar manager instance
 avatar_manager = AvatarManager()
-
-# =============================================================================
 # UPDATED ROUTE IMPLEMENTATIONS WITH SELF-HEALING
 # =============================================================================
 
@@ -480,41 +478,7 @@ async def text_to_video_page(request: Request):
         logger.error(traceback.format_exc())
         return RedirectResponse(url="/dashboard", status_code=302)
 
-@app.get("/voice-to-video", response_class=HTMLResponse)
-async def voice_to_video_page(request: Request):
-    """Voice-to-Video creation page - RESTORED to fix HeyGen functionality"""
-    try:
-        user = get_current_user_from_request(request)
-        if not user:
-            return RedirectResponse(url="/login", status_code=302)
-        
-        user_id = int(user['id'])
-        username = user.get('username', 'User')
-        
-        # Get avatars using self-healing avatar manager
-        avatars = avatar_manager.get_user_avatars_safe(user_id)
-        
-        # Additional context for template
-        context = {
-            "request": request,
-            "user": user,
-            "username": username,
-            "avatars": avatars,
-            "user_id": user_id,
-            "avatar_count": len(avatars),
-            "has_custom_avatars": any(not avatar.get('is_default') for avatar in avatars)
-        }
-        
-        if not templates:
-            logger.error("❌ Templates not initialized")
-            return RedirectResponse(url="/dashboard", status_code=302)
-            
-        return templates.TemplateResponse("voice_recording.html", context)
-        
-    except Exception as e:
-        logger.error(f"❌ Error in voice-to-video page: {e}")
-        logger.error(traceback.format_exc())
-        return RedirectResponse(url="/dashboard", status_code=302)
+# REMOVED: /text-to-video route - handled by video_routes.py to avoid conflicts
 
 @app.get("/api/test-main-routes")
 async def test_main_routes():
@@ -652,10 +616,17 @@ try_load_router("app.routes.premium_routes", "router", "", "app.routes.premium_r
 # BackgroundFX routes
 try_load_router("app.routes.backgroundfx_iframe", "router", "", "app.routes.backgroundfx_iframe (HF Space iframe Integration)")
 
+# LeadGenEngine routes
+try_load_router("app.routes.leadgen_iframe", "router", "", "app.routes.leadgen_iframe (Distribution Engine iframe Integration)")
+
+# Social Media routes (LeadGenEngine Gradio UI)
+try_load_router("app.routes.social_media_routes", "router", "", "app.routes.social_media_routes (Social Media Gradio Integration)")
+
 # Host message routes (News from MyAvatar)
 try_load_router("app.routes.host_routes", "router", "", "app.routes.host_routes (News from MyAvatar)")
 
 # AI Assistant routes
+{{ ... }}
 try_load_router("app.routes.assistant_routes", "router", "", "app.routes.assistant_routes (AI Assistant)")
 
 # Video routes (CRITICAL - contains voice-to-video and avatar APIs)

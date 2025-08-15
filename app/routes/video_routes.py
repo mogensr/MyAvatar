@@ -1104,6 +1104,84 @@ async def voice_recording_page_fixed(request: Request):
         traceback.print_exc()
         return RedirectResponse(url="/dashboard", status_code=303)
 
+@router.get("/text-to-video")
+async def text_to_video_page(request: Request):
+    """Text-to-Video creation page"""
+    try:
+        user = get_current_user_fixed(request)
+        if not user:
+            return RedirectResponse(url="/login", status_code=302)
+        
+        user_id = int(user["id"])
+        username = user.get("username", "User")
+        
+        print(f"🎭 TEXT-TO-VIDEO: User {username} (ID: {user_id}) accessing text-to-video")
+        
+        # Get avatars using same working query as voice-to-video
+        try:
+            avatars_query = """
+            SELECT id, avatar_name, avatar_image_url, avatar_id, heygen_avatar_id, is_default, created_at 
+            FROM user_avatars 
+            WHERE user_id = %s 
+            ORDER BY created_at DESC
+            """
+            avatars = execute_query(avatars_query, (user_id,), fetch_all=True)
+            print(f"Found {len(avatars) if avatars else 0} avatars for text-to-video")
+            
+        except Exception as e:
+            print(f"Avatar query failed: {e}")
+            avatars = []
+        
+        # Process avatars
+        processed_avatars = []
+        if avatars:
+            for i, avatar in enumerate(avatars):
+                try:
+                    if hasattr(avatar, '_asdict'):
+                        avatar_dict = avatar._asdict()
+                    else:
+                        avatar_dict = dict(avatar)
+                    
+                    processed_avatar = {
+                        'id': avatar_dict.get('id'),
+                        'name': avatar_dict.get('avatar_name', f'Avatar {i+1}'),
+                        'avatar_image_url': avatar_dict.get('avatar_image_url', '/static/images/default-avatar.jpg'),
+                        'heygen_avatar_id': avatar_dict.get('heygen_avatar_id'),
+                        'is_default': bool(avatar_dict.get('is_default', False))
+                    }
+                    processed_avatars.append(processed_avatar)
+                    
+                except Exception as e:
+                    print(f"Error processing avatar {i}: {e}")
+                    continue
+        
+        # Fallback avatar if none found
+        if not processed_avatars:
+            processed_avatars = [{
+                'id': 'fallback',
+                'name': 'Default Avatar',
+                'avatar_image_url': '/static/images/default-avatar.jpg',
+                'heygen_avatar_id': None,
+                'is_default': True
+            }]
+        
+        context = {
+            "request": request,
+            "user": user,
+            "username": username,
+            "avatars": processed_avatars,
+            "user_id": user_id,
+            "avatar_count": len(processed_avatars)
+        }
+        
+        return templates.TemplateResponse("text_video_component.html", context)
+        
+    except Exception as e:
+        print(f"❌ ERROR in text-to-video route: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return RedirectResponse(url="/dashboard", status_code=303)
+
 @router.get("/api/user-avatars")
 async def get_user_avatars_api(request: Request):
     """Get user's avatars for video creation - WORKING VERSION"""
