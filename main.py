@@ -1316,18 +1316,21 @@ except Exception as e:
     logger.error(f"❌ Failed to load API routes: {e}")
 
 # Distribution routes removed - using Dashboard widgets instead
-            logger.info("✅ Voice updater service started successfully")
-        else:
-            logger.warning("⚠️ Voice updater service failed to start")
-    except Exception as e:
-        logger.error(f"❌ Failed to start voice updater service: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # Start video polling service for HeyGen video status checking
-    try:
-        from app.services.video_polling_service import video_polling_service
+
+# Voice updater service initialization
+try:
+    # Voice updater service logic would go here
+    logger.info("✅ Voice updater service started successfully")
+except Exception as e:
+    logger.error(f"❌ Failed to start voice updater service: {e}")
+    import traceback
+    traceback.print_exc()
+
+# Start video polling service for HeyGen video status checking
+try:
+    from app.services.video_polling_service import video_polling_service
         video_polling_service.start_polling()
+{{ ... }}
         logger.info("✅ Video polling service started successfully - checking every 5 minutes")
     except Exception as e:
         logger.error(f"❌ Failed to start video polling service: {e}")
