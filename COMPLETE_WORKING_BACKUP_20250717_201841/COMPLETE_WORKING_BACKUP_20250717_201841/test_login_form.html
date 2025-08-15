@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login Form</title>
+</head>
+<body>
+    <h2>Test Login Form - Direct POST to /login</h2>
+    <form method="post" action="https://app.myavatar.dk/login">
+        <div>
+            <label>Username:</label>
+            <input type="text" name="username" value="admin" required>
+        </div>
+        <div>
+            <label>Password:</label>
+            <input type="password" name="password" value="admin123" required>
+        </div>
+        <button type="submit">Test Login</button>
+    </form>
+    
+    <h2>Test Form - POST to /test-form</h2>
+    <form method="post" action="https://app.myavatar.dk/test-form">
+        <div>
+            <label>Test Data:</label>
+            <input type="text" name="test" value="hello" required>
+        </div>
+        <button type="submit">Test Form Submission</button>
+    </form>
+</body>
+</html>

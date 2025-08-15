@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice to Video - Clean Implementation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎤 Voice to Video</h1>
+            <p class="text-gray-600 mb-8">Record your voice and create AI avatar videos with HeyGen integration.</p>
+            
+            <!-- Avatar Selection -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">Select Avatar</h2>
+                <div id="avatar-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {% for avatar in user_avatars %}
+                    <div class="avatar-card border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-500 transition-colors" 
+                         data-avatar-id="{{ avatar.id }}">
+                        <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.name }}" 
+                             class="w-full h-32 object-cover rounded mb-2">
+                        <p class="text-sm text-center font-medium">{{ avatar.name }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="avatar-error" class="text-red-600 text-sm mt-2 hidden">Please select an avatar</div>
+            </div>
+            
+            <!-- Audio Recording -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">Record Audio</h2>
+                
+                <!-- Recording Controls -->
+                <div class="text-center mb-4">
+                    <button id="record-btn" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors">
+                        🎤 Start Recording
+                    </button>
+                    <button id="stop-btn" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors hidden ml-4">
+                        ⏹️ Stop Recording
+                    </button>
+                </div>
+                
+                <!-- Recording Status -->
+                <div id="recording-status" class="text-center text-gray-600 mb-4">
+                    Click "Start Recording" to begin
+                </div>
+                
+                <!-- Audio Preview -->
+                <div id="audio-preview" class="hidden">
+                    <h3 class="font-medium mb-2">Preview Recording:</h3>
+                    <audio id="audio-player" controls class="w-full mb-2"></audio>
+                    <button id="re-record-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+                        🔄 Re-record
+                    </button>
+                </div>
+                
+                <div id="audio-error" class="text-red-600 text-sm mt-2 hidden">Please record audio first</div>
+            </div>
+            
+            <!-- Video Settings -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">Video Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Video Title</label>
+                        <input type="text" id="video-title" placeholder="My Voice Video" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Format</label>
+                        <select id="video-format" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="16:9">16:9 (Landscape)</option>
+                            <option value="9:16">9:16 (Portrait)</option>
+                            <option value="1:1">1:1 (Square)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Generate Button -->
+            <div class="text-center mb-8">
+                <button id="generate-btn" disabled
+                        class="bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors">
+                    🎬 Generate Video
+                </button>
+            </div>
+            
+            <!-- Status Display -->
+            <div id="status-display" class="hidden">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mr-3"></div>
+                        <span class="text-blue-800 font-medium">Creating your voice video...</span>
+                    </div>
+                    <p class="text-blue-600">This may take a few minutes. Please don't close this page.</p>
+                </div>
+            </div>
+            
+            <!-- Result Display -->
+            <div id="result-display" class="hidden mt-6"></div>
+        </div>
+    </div>
+
+    <script>
+    // Clean JavaScript implementation - no legacy code
+    class VoiceVideoCreator {
+        constructor() {
+            this.selectedAvatarId = null;
+            this.audioBlob = null;
+            this.mediaRecorder = null;
+            this.isRecording = false;
+            this.recordingTime = 0;
+            this.recordingTimer = null;
+            
+            this.initializeElements();
+            this.setupEventListeners();
+            this.requestMicrophoneAccess();
+        }
+        
+        initializeElements() {
+            this.recordBtn = document.getElementById('record-btn');
+            this.stopBtn = document.getElementById('stop-btn');
+            this.generateBtn = document.getElementById('generate-btn');
+            this.audioPlayer = document.getElementById('audio-player');
+            this.audioPreview = document.getElementById('audio-preview');
+            this.recordingStatus = document.getElementById('recording-status');
+            this.statusDisplay = document.getElementById('status-display');
+            this.resultDisplay = document.getElementById('result-display');
+        }
+        
+        setupEventListeners() {
+            // Avatar selection
+            document.querySelectorAll('.avatar-card').forEach(card => {
+                card.addEventListener('click', () => this.selectAvatar(card));
+            });
+            
+            // Recording controls
+            this.recordBtn.addEventListener('click', () => this.startRecording());
+            this.stopBtn.addEventListener('click', () => this.stopRecording());
+            document.getElementById('re-record-btn').addEventListener('click', () => this.reRecord());
+            
+            // Generate video
+            this.generateBtn.addEventListener('click', () => this.generateVideo());
+        }
+        
+        async requestMicrophoneAccess() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.mediaRecorder = new MediaRecorder(stream);
+                
+                this.mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        this.audioChunks = this.audioChunks || [];
+                        this.audioChunks.push(event.data);
+                    }
+                };
+                
+                this.mediaRecorder.onstop = () => {
+                    this.audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+                    this.audioChunks = [];
+                    this.showAudioPreview();
+                    this.updateGenerateButton();
+                };
+                
+                console.log('Microphone access granted');
+            } catch (error) {
+                console.error('Microphone access denied:', error);
+                this.recordingStatus.textContent = 'Microphone access required for voice recording';
+                this.recordingStatus.className = 'text-center text-red-600 mb-4';
+            }
+        }
+        
+        selectAvatar(card) {
+            // Remove selection from all cards
+            document.querySelectorAll('.avatar-card').forEach(c => {
+                c.classList.remove('border-blue-500', 'bg-blue-50');
+                c.classList.add('border-gray-200');
+            });
+            
+            // Select this card
+            card.classList.remove('border-gray-200');
+            card.classList.add('border-blue-500', 'bg-blue-50');
+            
+            this.selectedAvatarId = card.dataset.avatarId;
+            document.getElementById('avatar-error').classList.add('hidden');
+            this.updateGenerateButton();
+        }
+        
+        startRecording() {
+            if (!this.mediaRecorder) {
+                alert('Microphone not available. Please refresh and allow microphone access.');
+                return;
+            }
+            
+            this.isRecording = true;
+            this.recordingTime = 0;
+            this.audioChunks = [];
+            
+            this.mediaRecorder.start();
+            
+            // Update UI
+            this.recordBtn.classList.add('hidden');
+            this.stopBtn.classList.remove('hidden');
+            this.audioPreview.classList.add('hidden');
+            
+            // Start timer
+            this.recordingTimer = setInterval(() => {
+                this.recordingTime++;
+                const minutes = Math.floor(this.recordingTime / 60);
+                const seconds = this.recordingTime % 60;
+                this.recordingStatus.textContent = `Recording: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                this.recordingStatus.className = 'text-center text-red-600 mb-4 font-medium';
+            }, 1000);
+        }
+        
+        stopRecording() {
+            if (!this.isRecording) return;
+            
+            this.isRecording = false;
+            this.mediaRecorder.stop();
+            
+            // Clear timer
+            clearInterval(this.recordingTimer);
+            
+            // Update UI
+            this.recordBtn.classList.remove('hidden');
+            this.stopBtn.classList.add('hidden');
+            this.recordingStatus.textContent = 'Recording completed!';
+            this.recordingStatus.className = 'text-center text-green-600 mb-4 font-medium';
+        }
+        
+        showAudioPreview() {
+            const audioUrl = URL.createObjectURL(this.audioBlob);
+            this.audioPlayer.src = audioUrl;
+            this.audioPreview.classList.remove('hidden');
+            document.getElementById('audio-error').classList.add('hidden');
+        }
+        
+        reRecord() {
+            this.audioBlob = null;
+            this.audioPreview.classList.add('hidden');
+            this.recordingStatus.textContent = 'Click "Start Recording" to begin';
+            this.recordingStatus.className = 'text-center text-gray-600 mb-4';
+            this.updateGenerateButton();
+        }
+        
+        updateGenerateButton() {
+            const hasAvatar = this.selectedAvatarId !== null;
+            const hasAudio = this.audioBlob !== null;
+            
+            this.generateBtn.disabled = !(hasAvatar && hasAudio);
+            
+            if (!hasAvatar) {
+                document.getElementById('avatar-error').classList.remove('hidden');
+            }
+            if (!hasAudio) {
+                document.getElementById('audio-error').classList.remove('hidden');
+            }
+        }
+        
+        async generateVideo() {
+            if (!this.selectedAvatarId || !this.audioBlob) {
+                this.updateGenerateButton();
+                return;
+            }
+            
+            // Show loading
+            this.generateBtn.disabled = true;
+            this.statusDisplay.classList.remove('hidden');
+            this.resultDisplay.classList.add('hidden');
+            
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('audio', this.audioBlob, 'recording.wav');
+                formData.append('avatar_id', this.selectedAvatarId);
+                formData.append('title', document.getElementById('video-title').value || 'My Voice Video');
+                formData.append('format', document.getElementById('video-format').value);
+                
+                // Make API call
+                const response = await fetch('/api/voice-video/create', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                this.statusDisplay.classList.add('hidden');
+                this.generateBtn.disabled = false;
+                
+                // Show result
+                this.showResult(data);
+                
+            } catch (error) {
+                console.error('Video creation error:', error);
+                this.statusDisplay.classList.add('hidden');
+                this.generateBtn.disabled = false;
+                this.showError('Network error. Please try again.');
+            }
+        }
+        
+        showResult(data) {
+            this.resultDisplay.classList.remove('hidden');
+            
+            if (data.success) {
+                this.resultDisplay.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <h3 class="text-green-800 font-semibold text-lg mb-3">✅ Voice Video Created Successfully!</h3>
+                        <p class="mb-2"><strong>Title:</strong> ${data.title}</p>
+                        <p class="mb-2"><strong>Video ID:</strong> ${data.video_id}</p>
+                        <p class="mb-4 text-green-600">${data.message}</p>
+                        <div class="flex gap-3">
+                            <a href="/videos" id="viewVideosBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+                                View My Videos
+                            </a>
+                            <button onclick="location.reload()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                                Create Another
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                this.showError(data.error || 'Unknown error occurred');
+            }
+        }
+        
+        showError(message) {
+            this.resultDisplay.classList.remove('hidden');
+            this.resultDisplay.innerHTML = `
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+                    <h3 class="text-red-800 font-semibold text-lg mb-3">❌ Video Creation Failed</h3>
+                    <p class="text-red-600 mb-4">${message}</p>
+                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" 
+                            class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">
+                        Close
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    // Function to check processing status and manage button state
+    async function checkProcessingStatus() {
+        console.log('🔍 Checking processing status...');
+        try {
+            const response = await fetch('/api/user/processing-status');
+            console.log('📡 API Response status:', response.status);
+            
+            if (!response.ok) {
+                console.error('❌ API request failed:', response.status, response.statusText);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('📊 Processing data:', data);
+            
+            const viewVideosBtn = document.getElementById('viewVideosBtn');
+            console.log('🎯 Button found:', !!viewVideosBtn);
+            
+            if (viewVideosBtn) {
+                if (data.has_processing_videos) {
+                    console.log('🔄 Setting button to processing state');
+                    // Grey out button when videos are processing
+                    viewVideosBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    viewVideosBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    viewVideosBtn.style.pointerEvents = 'none';
+                    viewVideosBtn.innerHTML = `Processing ${data.processing_count} video(s)...`;
+                } else {
+                    console.log('✅ Setting button to active state');
+                    // Enable button when no videos are processing
+                    viewVideosBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    viewVideosBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    viewVideosBtn.style.pointerEvents = 'auto';
+                    viewVideosBtn.innerHTML = 'View My Videos';
+                }
+            } else {
+                console.warn('⚠️ viewVideosBtn not found in DOM');
+            }
+        } catch (error) {
+            console.error('❌ Error checking processing status:', error);
+        }
+    }
+    
+    // Check processing status every 30 seconds
+    function startProcessingStatusCheck() {
+        checkProcessingStatus(); // Check immediately
+        setInterval(checkProcessingStatus, 30000); // Check every 30 seconds
+    }
+    
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        new VoiceVideoCreator();
+        startProcessingStatusCheck(); // Start checking processing status
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+[build]
+  command = "echo 'FastAPI app - no build needed'"
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/app"
+  status = 200
+
+[functions]
+  directory = "netlify/functions"
+
+[dev]
+  command = "python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"

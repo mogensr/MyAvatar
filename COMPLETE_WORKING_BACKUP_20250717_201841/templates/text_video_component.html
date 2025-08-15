@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Video - MyAvatar Studio</title>
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ==================== DESIGN SYSTEM ==================== */
+        :root {
+            /* Premium Color Palette */
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            
+            /* Neutral Colors */
+            --gray-900: #111827;
+            --gray-800: #1f2937;
+            --gray-700: #374151;
+            --gray-600: #4b5563;
+            --gray-500: #6b7280;
+            --gray-400: #9ca3af;
+            --gray-300: #d1d5db;
+            --gray-200: #e5e7eb;
+            --gray-100: #f3f4f6;
+            --gray-50: #f9fafb;
+            --white: #ffffff;
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-premium: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            
+            /* Animations */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* ==================== GLOBAL STYLES ==================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        /* ==================== HEADER ==================== */
+        .header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            text-decoration: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all var(--transition-fast);
+        }
+        
+        .back-btn:hover {
+            background: var(--gray-200);
+            transform: translateX(-2px);
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .user-avatar {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* ==================== ALERT SYSTEM ==================== */
+        .alert {
+            padding: 12px 16px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* ==================== MAIN CONTENT ==================== */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .video-form {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 2rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.75rem;
+            font-size: 1.125rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+            background: var(--white);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 200px;
+            font-family: inherit;
+        }
+        
+        /* Format Options */
+        .format-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .format-option {
+            border: 3px solid var(--gray-200);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+            background: var(--white);
+        }
+        
+        .format-option:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .format-option.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .format-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .format-description {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
+        /* Avatar Grid */
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .avatar-option {
+            border: 3px solid var(--gray-200);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: center;
+            background: var(--white);
+        }
+        
+        .avatar-option:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .avatar-option.selected {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .avatar-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .avatar-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .avatar-id {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
+        /* ==================== TEXT INPUT SECTION ==================== */
+        .text-input-section {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+        }
+        
+        .text-input-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .text-input-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .text-input-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .text-input-subtitle {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+        }
+        
+        .input-methods {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .text-input-container {
+            position: relative;
+        }
+        
+        .char-counter {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--white);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+        
+        .char-counter.warning {
+            color: var(--warning);
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .char-counter.danger {
+            color: var(--danger);
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .file-upload-area {
+            border: 3px dashed var(--gray-300);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            background: var(--gray-50);
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .file-upload-area.drag-over {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--gray-400);
+            margin-bottom: 1rem;
+        }
+        
+        .upload-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-subtitle {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-formats {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            background: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            display: inline-block;
+        }
+        
+        .file-input {
+            display: none;
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+        
+        .upload-btn {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            margin-top: 1rem;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .text-guidelines {
+            background: var(--gray-50);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .guidelines-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .guidelines-list {
+            list-style: none;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        
+        .guidelines-list li {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .guidelines-list li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        /* ==================== SUBMIT SECTION ==================== */
+        .submit-section {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+        
+        .submit-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .submit-btn {
+            font-size: 1.25rem;
+            font-weight: 700;
+            padding: 1.25rem 3rem;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: 1.5rem;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .submit-status {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
+        /* ==================== PROGRESS MODAL ==================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--white);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: white;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-message {
+            color: var(--gray-600);
+            font-size: 1.125rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .video-form,
+            .text-input-section,
+            .submit-section {
+                padding: 2rem;
+            }
+            
+            .input-methods {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .format-options,
+            .avatar-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .header-content {
+                padding: 0 1rem;
+            }
+            
+            .user-info span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/dashboard" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+            
+            <h1 class="page-title">Text to Video</h1>
+            
+            <div class="user-info">
+                <div class="user-avatar">{{ username[0].upper() if username else 'U' }}</div>
+                <span>{{ username }}</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Video Setup Section -->
+        <div class="video-form">
+            <h2 style="text-align: center; margin-bottom: 2rem; color: var(--gray-900);">🎬 Setup Your Video</h2>
+            
+            <form id="videoSetupForm">
+                <div class="form-group">
+                    <label for="videoTitle" class="form-label">Video Title *</label>
+                    <input type="text" id="videoTitle" name="title" class="form-input" 
+                           placeholder="Enter a descriptive title for your video" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoFormat" class="form-label">Video Format *</label>
+                    <div class="format-options">
+                        <div class="format-option selected" data-format="16:9" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 16/9; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem;"></div>
+                            <div class="format-name">Landscape (16:9)</div>
+                            <div class="format-description">Perfect for YouTube, presentations</div>
+                        </div>
+                        <div class="format-option" data-format="9:16" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 9/16; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem; height: 60px;"></div>
+                            <div class="format-name">Portrait (9:16)</div>
+                            <div class="format-description">Perfect for TikTok, Instagram Stories</div>
+                        </div>
+                        <div class="format-option" data-format="1:1" onclick="selectFormat(this)">
+                            <div class="format-preview" style="aspect-ratio: 1/1; background: var(--gray-200); border-radius: 0.5rem; margin-bottom: 0.5rem; height: 60px;"></div>
+                            <div class="format-name">Square (1:1)</div>
+                            <div class="format-description">Perfect for Instagram posts</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Choose Your Avatar *</label>
+                    <div class="avatar-grid" id="avatarGrid">
+                        {% if avatars %}
+                            {% for avatar in avatars %}
+                            <div class="avatar-option" data-avatar-id="{{ avatar.avatar_id }}" onclick="selectAvatar(this)">
+                                <div class="avatar-image">
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="{{ avatar.avatar_name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                                    {% else %}
+                                        <i class="fas fa-user"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="avatar-name">{{ avatar.avatar_name or 'Avatar' }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--gray-500);">
+                                <i class="fas fa-user-plus" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>No avatars available. Please contact admin to add avatars.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="videoDescription" class="form-label">Description (Optional)</label>
+                    <textarea id="videoDescription" name="description" class="form-input form-textarea" 
+                              placeholder="Add a description for your video"></textarea>
+                </div>
+            </form>
+        </div>
+
+        <!-- Text Input Section -->
+        <div class="text-input-section disabled" id="textInputSection">
+            <div class="text-input-header">
+                <h2 class="text-input-title">📝 Add Your Text</h2>
+                <p class="text-input-subtitle">Complete the setup above, then add your text for AI video generation</p>
+            </div>
+            
+            <div class="input-methods">
+                <div class="text-input-container">
+                    <label for="textContent" class="form-label">Type Your Text</label>
+                    <textarea id="textContent" class="form-input form-textarea" 
+                              placeholder="Enter your text here... The avatar will speak these words in your video."
+                              maxlength="1500" oninput="updateCharCounter()"></textarea>
+                    <div class="char-counter" id="charCounter">0 / 1500 characters</div>
+                </div>
+                
+                <div class="file-upload-container">
+                    <label class="form-label">Or Upload Text File</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <i class="fas fa-cloud-upload upload-icon"></i>
+                        <div class="upload-title">Drop file here or click to upload</div>
+                        <div class="upload-subtitle">Upload your text content from a file</div>
+                        <div class="upload-formats">Supported: .txt, .docx, .pdf (max 1500 chars)</div>
+                    </div>
+                    <input type="file" id="fileInput" class="file-input" accept=".txt,.docx,.pdf" onchange="handleFileUpload(event)">
+                    <button type="button" class="upload-btn" onclick="console.log('Button clicked!'); document.getElementById('fileInput').click()">
+                        <i class="fas fa-file-upload"></i> Choose File
+                    </button>
+                </div>
+            </div>
+            
+            <div class="text-guidelines">
+                <div class="guidelines-title">
+                    <i class="fas fa-lightbulb"></i>
+                    Text Guidelines
+                </div>
+                <ul class="guidelines-list">
+                    <li>Maximum 1,500 characters (~250 words)</li>
+                    <li>Use clear, natural language for best speech synthesis</li>
+                    <li>Avoid special characters and excessive punctuation</li>
+                    <li>Short sentences work better than long, complex ones</li>
+                    <li>The avatar will use its default voice for your text</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="submit-section disabled" id="submitSection">
+            <h2 style="margin-bottom: 1rem; color: var(--gray-900);">🚀 Create Your Video</h2>
+            <button class="submit-btn" id="submitBtn" onclick="submitVideo()" disabled>
+                <i class="fas fa-video"></i>
+                Generate AI Video
+            </button>
+            <div class="submit-status" id="submitStatus">Complete setup and add text to continue</div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-spinner"></div>
+            <h3 class="modal-title">Creating Your AI Video</h3>
+            <p class="modal-message" id="modalMessage">Please wait while we process your request...</p>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // IMMEDIATE TEST - This should show up right away
+        console.log('🔥 SCRIPT STARTED - JavaScript is running!');
+        
+        // Utility function to get cookie value
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+        
+        let selectedAvatarId = null;
+        let selectedFormat = "16:9"; // Default format
+        let hasText = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 JavaScript loaded and DOM ready!');
+            
+            checkSetupComplete();
+            
+            // Add click handler to file upload area
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            if (fileUploadArea) {
+                console.log('✅ Found file upload area element');
+                
+                fileUploadArea.addEventListener('click', function() {
+                    console.log('📁 Upload area clicked!');
+                    document.getElementById('fileInput').click();
+                });
+                
+                // Add drag event handlers
+                fileUploadArea.addEventListener('dragenter', handleDragEnter);
+                fileUploadArea.addEventListener('dragover', handleDragOver);
+                fileUploadArea.addEventListener('dragleave', handleDragLeave);
+                fileUploadArea.addEventListener('drop', handleDrop);
+                
+                console.log('✅ All event listeners attached successfully');
+            } else {
+                console.error('❌ Could not find file upload area element!');
+            }
+            
+            // Prevent default drag behavior on the whole document
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+            });
+            
+            console.log('✅ Global drag prevention added');
+        });
+
+        // Alert system functions
+        function showAlert(message, type = 'warning') {
+            hideAlert(); // Remove any existing alert
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'validationAlert';
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">${type === 'error' ? '❌' : '⚠️'}</span>
+                    <span>${message}</span>
+                    <button onclick="hideAlert()" style="margin-left: auto; background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+                </div>
+            `;
+            
+            // Insert after the header
+            const header = document.querySelector('h1');
+            header.parentNode.insertBefore(alertDiv, header.nextSibling);
+            
+            // Auto-hide after 5 seconds for warnings
+            if (type === 'warning') {
+                setTimeout(hideAlert, 5000);
+            }
+        }
+
+        function hideAlert() {
+            const existingAlert = document.getElementById('validationAlert');
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+        }
+
+        // Check if setup is complete
+        function checkSetupComplete() {
+            const title = document.getElementById('videoTitle').value.trim();
+            const textContent = document.getElementById('textContent').value.trim();
+            
+            const textInputSection = document.getElementById('textInputSection');
+            const submitSection = document.getElementById('submitSection');
+            
+            // Enable text input if setup is complete
+            if (title && selectedAvatarId && selectedFormat) {
+                textInputSection.classList.remove('disabled');
+                hasText = textContent.length > 0;
+                hideAlert(); // Hide alerts when setup is complete
+            } else {
+                textInputSection.classList.add('disabled');
+                hasText = false;
+            }
+            
+            // Enable submit if everything is ready
+            if (title && selectedAvatarId && selectedFormat && hasText) {
+                submitSection.classList.remove('disabled');
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitStatus').textContent = 'Ready to create your video!';
+            } else {
+                submitSection.classList.add('disabled');
+                document.getElementById('submitBtn').disabled = true;
+                
+                if (!title || !selectedAvatarId || !selectedFormat) {
+                    document.getElementById('submitStatus').textContent = 'Complete setup and add text to continue';
+                } else if (!hasText) {
+                    document.getElementById('submitStatus').textContent = 'Add your text content to continue';
+                }
+            }
+        }
+
+        // Format selection
+        function selectFormat(element) {
+            document.querySelectorAll('.format-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            selectedFormat = element.getAttribute('data-format');
+            
+            console.log('Selected format:', selectedFormat);
+            checkSetupComplete();
+        }
+
+        // Avatar selection
+        function selectAvatar(element) {
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            selectedAvatarId = element.getAttribute('data-avatar-id');
+            
+            console.log('Selected avatar:', selectedAvatarId);
+            checkSetupComplete();
+        }
+
+        // Character counter
+        function updateCharCounter() {
+            const textContent = document.getElementById('textContent');
+            const charCounter = document.getElementById('charCounter');
+            const length = textContent.value.length;
+            const maxLength = 1500;
+            
+            charCounter.textContent = `${length} / ${maxLength} characters`;
+            
+            // Update styling based on length
+            charCounter.classList.remove('warning', 'danger');
+            if (length > maxLength * 0.9) {
+                charCounter.classList.add('danger');
+            } else if (length > maxLength * 0.75) {
+                charCounter.classList.add('warning');
+            }
+            
+            hasText = length > 0;
+            checkSetupComplete();
+        }
+
+        // Form validation
+        document.getElementById('videoTitle').addEventListener('input', checkSetupComplete);
+        document.getElementById('textContent').addEventListener('input', updateCharCounter);
+
+        // Drag and drop event handlers
+        function handleDragEnter(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log('🎯 Drag enter');
+            document.getElementById('fileUploadArea').classList.add('drag-over');
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log('🎯 Drag over');
+            document.getElementById('fileUploadArea').classList.add('drag-over');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            console.log('🎯 Drag leave');
+            document.getElementById('fileUploadArea').classList.remove('drag-over');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const uploadArea = document.getElementById('fileUploadArea');
+            uploadArea.classList.remove('drag-over');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                console.log('📁 File dropped:', file.name, 'Size:', file.size, 'Type:', file.type);
+                
+                // Validate file type
+                const allowedExtensions = ['.txt', '.docx', '.pdf'];
+                const fileExtension = '.' + file.name.toLowerCase().split('.').pop();
+                
+                if (!allowedExtensions.includes(fileExtension)) {
+                    const errorMsg = `❌ Unsupported file type. Please use: ${allowedExtensions.join(', ')}`;
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                    return;
+                }
+                
+                // Validate file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                    return;
+                }
+                
+                // Show loading message
+                showMessage('📄 Processing document...', 'info', 3000);
+                
+                // Create FormData and send to API
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                fetch('/api/document-parser', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include' // Include cookies for authentication
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Set the content in the textarea
+                        const textArea = document.getElementById('textContent');
+                        if (textArea) {
+                            textArea.value = data.text;
+                            console.log('✅ Content set in textarea');
+                            
+                            let successMsg = `✅ File "${data.filename}" loaded successfully! (${data.final_length} characters)`;
+                            if (data.truncated) {
+                                successMsg += ` - Text was truncated from ${data.original_length} characters.`;
+                            }
+                            showMessage(successMsg, 'success', 8000);
+                            
+                            // Trigger any validation or update events
+                            textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                            
+                            // Update character counter
+                            if (typeof updateCharCounter === 'function') {
+                                updateCharCounter();
+                            }
+                        } else {
+                            const errorMsg = '❌ Could not find text input area';
+                            console.error(errorMsg);
+                            showMessage(errorMsg, 'error', 8000);
+                        }
+                    } else {
+                        const errorMsg = `❌ ${data.error || 'Failed to process document'}`;
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                    }
+                })
+                .catch(error => {
+                    const errorMsg = `❌ Error uploading file: ${error.message}`;
+                    console.error(errorMsg, error);
+                    showMessage(errorMsg, 'error', 8000);
+                });
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('📁 File selected:', file.name, file.type, file.size);
+            
+            // Validate file type
+            const allowedExtensions = ['.txt', '.docx', '.pdf'];
+            const fileExtension = '.' + file.name.toLowerCase().split('.').pop();
+            
+            if (!allowedExtensions.includes(fileExtension)) {
+                const errorMsg = `❌ Unsupported file type. Please use: ${allowedExtensions.join(', ')}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                event.target.value = ''; // Clear the input
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                event.target.value = ''; // Clear the input
+                return;
+            }
+            
+            // Show loading message
+            showMessage('📄 Processing document...', 'info', 3000);
+            
+            // Create FormData and send to API
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/api/document-parser', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include' // Include cookies for authentication
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Set the content in the textarea
+                    const textArea = document.getElementById('textContent');
+                    if (textArea) {
+                        textArea.value = data.text;
+                        console.log('✅ Content set in textarea');
+                        
+                        let successMsg = `✅ File "${data.filename}" loaded successfully! (${data.final_length} characters)`;
+                        if (data.truncated) {
+                            successMsg += ` - Text was truncated from ${data.original_length} characters.`;
+                        }
+                        showMessage(successMsg, 'success', 8000);
+                        
+                        // Trigger any validation or update events
+                        textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Update character counter
+                        if (typeof updateCharCounter === 'function') {
+                            updateCharCounter();
+                        }
+                    } else {
+                        const errorMsg = '❌ Could not find text input area';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                    }
+                } else {
+                    const errorMsg = `❌ ${data.error || 'Failed to process document'}`;
+                    console.error(errorMsg);
+                    showMessage(errorMsg, 'error', 8000);
+                }
+            })
+            .catch(error => {
+                const errorMsg = `❌ Error uploading file: ${error.message}`;
+                console.error(errorMsg, error);
+                showMessage(errorMsg, 'error', 8000);
+            })
+            .finally(() => {
+                // Clear the file input so the same file can be selected again
+                event.target.value = '';
+            });
+        }
+
+        function processFile(file) {
+            console.log('Processing file:', file.name, file.type, file.size);
+            const allowedTypes = ['.txt', '.docx', '.pdf'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            console.log('File extension:', fileExtension);
+            
+            if (!allowedTypes.includes(fileExtension)) {
+                const errorMsg = `❌ Unsupported file type. Please use: ${allowedTypes.join(', ')}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                const errorMsg = '❌ File too large. Maximum size is 10MB.';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    let content = e.target.result;
+                    console.log(`✅ File read successfully. Content length: ${content.length} characters`);
+                    
+                    // Check if this is actually a Word document or other binary file
+                    if (content.includes('<?xml') || content.includes('<Content_Types>') || content.includes('PK\x03\x04') || content.includes('\x00')) {
+                        showMessage('❌ This appears to be a Word document or binary file. Please save as plain text (.txt) and try again.', 'error', 10000);
+                        return;
+                    }
+                    
+                    // Remove any BOM (Byte Order Mark) characters
+                    content = content.replace(/^\uFEFF/, '');
+                    
+                    // Clean up common encoding issues and normalize line breaks
+                    content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                    
+                    // Remove excessive whitespace but preserve paragraph breaks
+                    content = content.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+                    
+                    if (content.trim().length === 0) {
+                        const errorMsg = '❌ File is empty or contains no readable text. Please check your file.';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                        return;
+                    }
+                    
+                    // Limit to 1500 characters
+                    let truncated = false;
+                    if (content.length > 1500) {
+                        content = content.substring(0, 1500);
+                        truncated = true;
+                    }
+                    
+                    // Set the content in the textarea
+                    const textArea = document.getElementById('textContent');
+                    if (textArea) {
+                        textArea.value = content;
+                        console.log('✅ Content set in textarea');
+                        
+                        let successMsg = `✅ File "${file.name}" loaded successfully! (${content.length} characters)`;
+                        if (truncated) {
+                            successMsg += ` - Text was truncated to 1500 characters.`;
+                        }
+                        showMessage(successMsg, 'success', 8000);
+                        
+                        // Trigger any validation or update events
+                        textArea.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Update character counter
+                        if (typeof updateCharCounter === 'function') {
+                            updateCharCounter();
+                        }
+                    } else {
+                        const errorMsg = '❌ Could not find text input area';
+                        console.error(errorMsg);
+                        showMessage(errorMsg, 'error', 8000);
+                    }
+                } catch (error) {
+                    const errorMsg = `❌ Error processing file: ${error.message}`;
+                    console.error(errorMsg, error);
+                    showMessage(errorMsg, 'error', 8000);
+                }
+            };
+            
+            reader.onerror = function(error) {
+                const errorMsg = `❌ Error reading file: ${error.message || 'Unknown error'}`;
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error', 8000);
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function showMessage(message, type = 'info', duration = 4000) {
+            console.log(`🔔 ${type.toUpperCase()}: ${message}`);
+            
+            // Remove any existing messages
+            const existingMessages = document.querySelectorAll('.upload-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            // Create new message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `upload-message upload-message-${type}`;
+            messageDiv.innerHTML = message;
+            
+            // Style the message
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                z-index: 10000;
+                max-width: 400px;
+                word-wrap: break-word;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideIn 0.3s ease-out;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            `;
+            
+            // Add animation styles
+            if (!document.getElementById('messageStyles')) {
+                const style = document.createElement('style');
+                style.id = 'messageStyles';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOut {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(messageDiv);
+            
+            // Auto-remove after duration
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.style.animation = 'slideOut 0.3s ease-in';
+                    setTimeout(() => {
+                        if (messageDiv.parentNode) {
+                            messageDiv.remove();
+                        }
+                    }, 300);
+                }
+            }, duration);
+        }
+
+        // FIXED: Form submission with FormData (to match backend)
+        function submitVideo() {
+            // Validate required fields with specific alerts
+            const title = document.getElementById('videoTitle').value.trim();
+            const textContent = document.getElementById('textContent').value.trim();
+            const description = document.getElementById('videoDescription').value.trim();
+            
+            // Check for missing title specifically
+            if (!title) {
+                showMessage('Please enter a video title before proceeding!', 'error', 8000);
+                document.getElementById('videoTitle').focus();
+                return;
+            }
+            
+            // Check for missing avatar
+            if (!selectedAvatarId) {
+                showMessage('Please select an avatar before proceeding!', 'error', 8000);
+                return;
+            }
+            
+            // Check for missing format
+            if (!selectedFormat) {
+                showMessage('Please select a video format before proceeding!', 'error', 8000);
+                return;
+            }
+            
+            // Check for missing text
+            if (!textContent) {
+                showMessage('Please enter some text or upload a file before creating the video!', 'error', 8000);
+                document.getElementById('textContent').focus();
+                return;
+            }
+            
+            hideAlert(); // Hide any existing alerts
+            
+            // Show progress modal
+            document.getElementById('progressModal').classList.add('show');
+            
+            // FIXED: Prepare FormData for text-to-video API (to match backend)
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('avatar_id', selectedAvatarId);
+            formData.append('format', selectedFormat);
+            formData.append('text', textContent);
+            
+            // Only add description if it exists
+            if (description) {
+                formData.append('description', description);
+            }
+            
+            // Update progress modal
+            updateProgressModal('Submitting your video request...', 10);
+            
+            // FIXED: Submit to text-to-video API endpoint with FormData
+            fetch('/api/videos/create-from-text', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getCookie('access_token')}`
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success && result.video_id) {
+                    // Start polling for video status
+                    updateProgressModal('Request submitted! Now processing with HeyGen...', 20);
+                    pollVideoStatus(result.video_id);
+                } else {
+                    throw new Error(result.detail || result.error || 'Unknown error occurred');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating video:', error);
+                document.getElementById('progressModal').classList.remove('show');
+                showMessage(`Error creating video: ${error.message}`, 'error', 8000);
+            });
+        }
+        
+        // Update progress modal with message and percentage
+        function updateProgressModal(message, progress = null) {
+            const modalMessage = document.getElementById('modalMessage');
+            modalMessage.textContent = message;
+            
+            if (progress !== null) {
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                
+                progressFill.style.width = `${progress}%`;
+                progressText.textContent = `${progress}%`;
+            }
+        }
+        
+        // Poll video status
+        async function pollVideoStatus(videoId) {
+            const maxAttempts = 120; // 10 minutes max (at 5-second intervals)
+            let attempts = 0;
+            
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    const response = await fetch(`/api/video-status/${videoId}`);
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        console.error('Error from video status API:', result.error);
+                        updateProgressModal(`Error: ${result.error || 'Unknown error'}`, 50);
+                        return; // Continue polling despite errors
+                    }
+                    
+                    const videoStatus = result.status;
+                    console.log('Video status response:', result);
+                    
+                    if (result.processing) {
+                        const progress = Math.min(30 + (attempts * 2), 90);
+                        updateProgressModal(`Processing your video...`, progress);
+                        return; // Continue polling
+                    }
+                    
+                    if (videoStatus === 'completed') {
+                        updateProgressModal('Video completed successfully!', 100);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('Your AI video is ready! Redirecting to dashboard...');
+                            window.location.href = '/dashboard';
+                        }, 2000);
+                        
+                    } else if (videoStatus === 'failed') {
+                        updateProgressModal('Video creation failed', 0);
+                        clearInterval(pollInterval);
+                        
+                        setTimeout(() => {
+                            document.getElementById('progressModal').classList.remove('show');
+                            alert('Video creation failed. Please try again.');
+                        }, 2000);
+                        
+                    } else if (videoStatus === 'processing') {
+                        // Gradually increase progress as processing continues
+                        const progress = Math.min(30 + (attempts * 2), 90); // Gradual progress that stops at 90%
+                        updateProgressModal('HeyGen is creating your video...', progress);
+                        
+                    } else {
+                        // For pending or other statuses
+                        const progress = Math.min(30 + attempts, 70); // More conservative progress
+                        updateProgressModal('Processing your request...', progress);
+                    }
+                    
+                    // Log status for debugging
+                    console.log(`Video ${videoId} status (attempt ${attempts}):`, videoStatus);
+                    
+                } catch (error) {
+                    console.error('Error checking video status:', error);
+                    // Don't stop polling on network errors, just continue
+                }
+                
+                // Adjust polling interval based on attempts to reduce server load
+                if (attempts > 30) {
+                    clearInterval(pollInterval);
+                    setInterval(pollVideoStatus.bind(null, videoId), 10000); // Switch to 10-second intervals
+                }
+                
+                // Fallback: after max attempts, give user option to continue waiting or go to dashboard
+                if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    updateProgressModal('Processing is taking longer than expected', 90);
+                    
+                    if (confirm('Video processing is taking longer than expected. Would you like to continue to your dashboard? The video will appear there when ready.')) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        // If user wants to keep waiting, start a new polling cycle
+                        pollVideoStatus(videoId);
+                    }
+                }
+                
+            }, 5000); // Check every 5 seconds initially
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Video processing
+streamlit==1.47.1
+opencv-python==4.8.1.78
+imageio==2.25.0
+imageio-ffmpeg==0.4.8
+qtfaststart==1.8  # Pure Python moov atom fixer for web-compatible MP4s
+moviepy==1.0.3   # Video editing with audio support
+
+# Image processing 
+Pillow==10.0.1
+numpy==1.24.3
+mediapipe==0.10.7

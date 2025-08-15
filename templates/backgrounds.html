@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackGroundFX - Video & Image Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #8b5cf6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 2rem auto;
+            max-width: 1400px;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            text-align: center;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--dark-color);
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 10px 10px 0 0;
+            margin-right: 0.5rem;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .video-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+
+        .video-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+        }
+
+        .search-container {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: scale(1.05);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .copyright-notice {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-processing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-pending {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .ai-generate-section {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="header-section">
+                <h1><i class="fas fa-magic"></i> BackGroundFX Studio</h1>
+                <p class="mb-0">Manage your videos, search images, and create stunning backgrounds</p>
+            </div>
+
+            <div class="p-4">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="videos-tab" data-bs-toggle="tab" data-bs-target="#videos" type="button" role="tab">
+                            <i class="fas fa-video"></i> My Videos
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab">
+                            <i class="fas fa-search"></i> Image Search
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate" type="button" role="tab">
+                            <i class="fas fa-robot"></i> AI Generate
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="backgrounds-tab" data-bs-toggle="tab" data-bs-target="#backgrounds" type="button" role="tab">
+                            <i class="fas fa-images"></i> Backgrounds
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="mainTabContent">
+                    <!-- Videos Tab -->
+                    <div class="tab-pane fade show active" id="videos" role="tabpanel">
+                        <div class="row">
+                            <div class="col-12">
+                                <h3><i class="fas fa-video text-primary"></i> Your Created Videos</h3>
+                                <p class="text-muted">Videos created with MyAvatar that can be enhanced with BackGroundFX</p>
+                            </div>
+                        </div>
+
+                        <div class="row" id="videosContainer">
+                            <div class="col-12 text-center py-5">
+                                <div class="loading-spinner">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                                    <p class="mt-3">Loading your videos...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Search Tab -->
+                    <div class="tab-pane fade" id="search" role="tabpanel">
+                        <div class="search-container">
+                            <h3><i class="fas fa-search text-primary"></i> Search Images</h3>
+                            <p class="text-muted">Find the perfect background images for your videos</p>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control search-input" id="searchQuery" placeholder="Search for images (e.g., 'sunset beach', 'city skyline', 'forest')">
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="searchImages()">
+                                        <i class="fas fa-search"></i> Search Images
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Copyright Notice -->
+                            <div class="copyright-notice">
+                                <h5><i class="fas fa-exclamation-triangle text-warning"></i> Copyright Notice</h5>
+                                <p class="mb-2"><strong>Important:</strong> All images found through this search are subject to their respective copyright licenses.</p>
+                                <ul class="mb-0">
+                                    <li>Always check the license before using any image commercially</li>
+                                    <li>Some images may require attribution or payment</li>
+                                    <li>We are not responsible for copyright violations</li>
+                                    <li>Use at your own risk and responsibility</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="image-grid" id="searchResults">
+                            <!-- Search results will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- AI Generate Tab -->
+                    <div class="tab-pane fade" id="generate" role="tabpanel">
+                        <div class="ai-generate-section">
+                            <h3><i class="fas fa-robot text-primary"></i> AI Image Generation</h3>
+                            <p class="text-muted">Create custom background images using AI</p>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="aiPrompt" class="form-label">Describe your ideal background:</label>
+                                    <textarea class="form-control search-input" id="aiPrompt" rows="3" placeholder="Describe the background you want to create (e.g., 'A serene mountain landscape at sunset with purple clouds')"></textarea>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100" onclick="generateImage()">
+                                        <i class="fas fa-magic"></i> Generate Image
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Copyright Notice for AI -->
+                            <div class="copyright-notice">
+                                <h5><i class="fas fa-info-circle text-info"></i> AI Generated Content</h5>
+                                <p class="mb-2"><strong>Note:</strong> AI-generated images are created based on your prompts.</p>
+                                <ul class="mb-0">
+                                    <li>Generated images are typically free to use commercially</li>
+                                    <li>However, AI models may have been trained on copyrighted content</li>
+                                    <li>Always review your use case and local laws</li>
+                                    <li>Consider the ethical implications of AI-generated content</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="image-grid" id="generatedResults">
+                            <!-- Generated images will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Backgrounds Tab -->
+                    <div class="tab-pane fade" id="backgrounds" role="tabpanel">
+                        <div class="row">
+                            <div class="col-12">
+                                <h3><i class="fas fa-images text-primary"></i> Background Library</h3>
+                                <p class="text-muted">Your collection of background images ready for video enhancement</p>
+                                
+                                <div class="mb-3">
+                                    <button class="btn btn-primary" onclick="uploadBackground()">
+                                        <i class="fas fa-upload"></i> Upload Background
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="image-grid" id="backgroundsContainer">
+                            <div class="col-12 text-center py-5">
+                                <div class="loading-spinner">
+                                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                                    <p class="mt-3">Loading backgrounds...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for background upload -->
+    <input type="file" id="backgroundFileInput" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(event)">
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Global variables
+        let currentUser = null;
+        let userVideos = [];
+        let backgroundFXUrl = 'https://backgroundfx-production.up.railway.app'; // Update with actual BackgroundFX URL
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserVideos();
+            loadBackgrounds();
+        });
+
+        // Load user videos from MyAvatar
+        async function loadUserVideos() {
+            try {
+                const response = await fetch('/api/videos');
+                if (response.ok) {
+                    const videos = await response.json();
+                    displayVideos(videos);
+                } else {
+                    console.error('Failed to load videos');
+                    displayVideos([]);
+                }
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                displayVideos([]);
+            }
+        }
+
+        // Display videos in the UI
+        function displayVideos(videos) {
+            const container = document.getElementById('videosContainer');
+            
+            if (videos.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                        <h4>No Videos Found</h4>
+                        <p class="text-muted">Create your first video with MyAvatar to get started!</p>
+                        <a href="/dashboard" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Video
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = videos.map(video => `
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="video-card">
+                        <div class="video-thumbnail-container">
+                            ${video.video_path ? 
+                                `<video class="video-thumbnail" controls>
+                                    <source src="${video.video_path}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>` :
+                                `<div class="video-thumbnail d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-video fa-3x text-muted"></i>
+                                </div>`
+                            }
+                        </div>
+                        <div class="p-3">
+                            <h5 class="card-title">${video.title || 'Untitled Video'}</h5>
+                            <p class="card-text text-muted">${video.description || 'No description'}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="status-badge status-${video.status}">${video.status}</span>
+                                <small class="text-muted">${new Date(video.created_at).toLocaleDateString()}</small>
+                            </div>
+                            ${video.status === 'completed' ? `
+                                <div class="mt-3">
+                                    <button class="btn btn-primary btn-sm" onclick="enhanceVideo(${video.id})">
+                                        <i class="fas fa-magic"></i> Enhance Background
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search for images
+        async function searchImages() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                    <p class="mt-3">Searching for images...</p>
+                </div>
+            `;
+
+            try {
+                // Search Unsplash for free stock images
+                const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=12&client_id=your-unsplash-access-key`);
+                
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    resultsContainer.innerHTML = data.results.map(image => `
+                        <div class="col-md-4 col-sm-6 mb-4">
+                            <div class="card h-100 image-card">
+                                <div class="image-container">
+                                    <img src="${image.urls.small}" alt="${image.alt_description || query}" class="card-img-top">
+                                    <div class="image-overlay">
+                                        <button class="btn btn-primary btn-sm" onclick="addImageAsBackground('${image.urls.regular}', '${image.alt_description || query}', '${image.id}')">
+                                            <i class="fas fa-plus"></i> Add as Background
+                                        </button>
+                                        <a href="${image.urls.full}" target="_blank" class="btn btn-outline-light btn-sm">
+                                            <i class="fas fa-external-link-alt"></i> View Full
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="card-body p-2">
+                                    <small class="text-muted">
+                                        Photo by <a href="${image.user.links.html}?utm_source=MyAvatar&utm_medium=referral" target="_blank">${image.user.name}</a> on 
+                                        <a href="https://unsplash.com/?utm_source=MyAvatar&utm_medium=referral" target="_blank">Unsplash</a>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsContainer.innerHTML = `
+                        <div class="col-12 text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h4>No Images Found</h4>
+                            <p class="text-muted">Try a different search term for "${query}"</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error searching images:', error);
+                // Fallback to demo images for now
+                resultsContainer.innerHTML = `
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card h-100 image-card">
+                            <div class="image-container">
+                                <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400" alt="Mountain landscape" class="card-img-top">
+                                <div class="image-overlay">
+                                    <button class="btn btn-primary btn-sm" onclick="addImageAsBackground('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800', 'Mountain landscape', 'demo1')">
+                                        <i class="fas fa-plus"></i> Add as Background
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">Demo: Mountain landscape</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card h-100 image-card">
+                            <div class="image-container">
+                                <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400" alt="Forest path" class="card-img-top">
+                                <div class="image-overlay">
+                                    <button class="btn btn-primary btn-sm" onclick="addImageAsBackground('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800', 'Forest path', 'demo2')">
+                                        <i class="fas fa-plus"></i> Add as Background
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">Demo: Forest path</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card h-100 image-card">
+                            <div class="image-container">
+                                <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400" alt="Beach sunset" class="card-img-top">
+                                <div class="image-overlay">
+                                    <button class="btn btn-primary btn-sm" onclick="addImageAsBackground('https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800', 'Beach sunset', 'demo3')">
+                                        <i class="fas fa-plus"></i> Add as Background
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-2">
+                                <small class="text-muted">Demo: Beach sunset</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-center mt-3">
+                        <p class="text-muted"><small>Demo images shown. For full Unsplash integration, add your API key.</small></p>
+                    </div>
+                `;
+            }
+        }
+
+        // Add image as background from search results
+        async function addImageAsBackground(imageUrl, description, imageId) {
+            try {
+                // Show loading state
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+                button.disabled = true;
+
+                // Download and add image to backgrounds
+                const response = await fetch('/api/backgrounds/add-from-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getCookie('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        image_url: imageUrl,
+                        name: description || 'Background Image',
+                        source: 'search',
+                        source_id: imageId
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    button.innerHTML = '<i class="fas fa-check"></i> Added!';
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-success');
+                    
+                    // Refresh backgrounds list
+                    setTimeout(() => {
+                        loadBackgrounds();
+                    }, 1000);
+                    
+                    // Show success message
+                    showNotification('Background added successfully!', 'success');
+                } else {
+                    throw new Error('Failed to add background');
+                }
+            } catch (error) {
+                console.error('Error adding background:', error);
+                button.innerHTML = originalText;
+                button.disabled = false;
+                showNotification('Failed to add background. Please try again.', 'error');
+            }
+        }
+
+        // Generate AI image with OpenAI DALL-E
+        async function generateImage() {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            if (!prompt) {
+                alert('Please describe the image you want to generate');
+                return;
+            }
+
+            const resultsContainer = document.getElementById('generatedResults');
+            resultsContainer.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                    <p class="mt-3">Generating your image with AI...</p>
+                    <p class="text-muted">This may take 10-30 seconds</p>
+                </div>
+            `;
+
+            try {
+                // Call our backend API to generate image with OpenAI DALL-E
+                const response = await fetch('/api/backgrounds/generate-ai-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getCookie('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        size: '1024x1024', // Good for backgrounds
+                        quality: 'standard'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    if (result.success && result.image_url) {
+                        resultsContainer.innerHTML = `
+                            <div class="col-12">
+                                <div class="card h-100 image-card">
+                                    <div class="image-container">
+                                        <img src="${result.image_url}" alt="${prompt}" class="card-img-top">
+                                        <div class="image-overlay">
+                                            <button class="btn btn-primary btn-sm" onclick="addImageAsBackground('${result.image_url}', '${prompt}', 'ai-generated-${Date.now()}')">
+                                                <i class="fas fa-plus"></i> Add as Background
+                                            </button>
+                                            <a href="${result.image_url}" target="_blank" class="btn btn-outline-light btn-sm">
+                                                <i class="fas fa-external-link-alt"></i> View Full
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <h6 class="card-title">AI Generated Image</h6>
+                                        <p class="card-text text-muted">${prompt}</p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-robot"></i> Generated with OpenAI DALL-E
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        throw new Error(result.error || 'Failed to generate image');
+                    }
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate image');
+                }
+            } catch (error) {
+                console.error('Error generating image:', error);
+                resultsContainer.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <h4>Generation Failed</h4>
+                        <p class="text-muted">${error.message}</p>
+                        <button class="btn btn-primary" onclick="generateImage()">
+                            <i class="fas fa-retry"></i> Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Load backgrounds from BackgroundFX
+        async function loadBackgrounds() {
+            try {
+                const response = await fetch(`${backgroundFXUrl}/backgrounds`);
+                if (response.ok) {
+                    const backgrounds = await response.json();
+                    displayBackgrounds(backgrounds);
+                } else {
+                    console.error('Failed to load backgrounds');
+                    displayBackgrounds([]);
+                }
+            } catch (error) {
+                console.error('Error loading backgrounds:', error);
+                displayBackgrounds([]);
+            }
+        }
+
+        // Display backgrounds
+        function displayBackgrounds(backgrounds) {
+            const container = document.getElementById('backgroundsContainer');
+            
+            if (backgrounds.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <h4>No Backgrounds Found</h4>
+                        <p class="text-muted">Upload your first background image to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = backgrounds.map(bg => `
+                <div class="image-card">
+                    <img src="${bg.url}" alt="${bg.name}" loading="lazy">
+                    <div class="p-3">
+                        <h6>${bg.name}</h6>
+                        <button class="btn btn-sm btn-primary" onclick="useBackground('${bg.id}')">
+                            <i class="fas fa-check"></i> Use This
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Upload background
+        function uploadBackground() {
+            document.getElementById('backgroundFileInput').click();
+        }
+
+        // Handle background upload
+        async function handleBackgroundUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('background', file);
+
+            try {
+                const response = await fetch(`${backgroundFXUrl}/backgrounds/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    alert('Background uploaded successfully!');
+                    loadBackgrounds(); // Reload backgrounds
+                } else {
+                    alert('Failed to upload background');
+                }
+            } catch (error) {
+                console.error('Error uploading background:', error);
+                alert('Error uploading background');
+            }
+        }
+
+        // Enhance video with background
+        async function enhanceVideo(videoId) {
+            alert(`Video enhancement feature coming soon! Video ID: ${videoId}`);
+            // This would integrate with BackgroundFX to replace video backgrounds
+        }
+
+        // Use background
+        function useBackground(backgroundId) {
+            alert(`Background selection feature coming soon! Background ID: ${backgroundId}`);
+            // This would allow users to select backgrounds for their videos
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Utility function to get cookie value
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        // Handle Enter key in search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchImages();
+            }
+        });
+
+        document.getElementById('aiPrompt').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateImage();
+            }
+        });
+    </script>
+</body>
+</html>

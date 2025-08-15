@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Avatar Selection - MyAvatar{% endblock %}
+
+{% block head %}
+<style>
+    .avatar-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+    }
+    .avatar-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .avatar-image {
+        height: 180px;
+        object-fit: cover;
+    }
+    .selected-avatar {
+        border: 3px solid #4CAF50;
+    }
+    .avatar-group h4 {
+        color: #333;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+    }
+    #avatar-loading-spinner {
+        display: none;
+    }
+    .avatar-selection-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .avatar-type-tabs {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Avatar Selection</h2>
+            <p class="text-muted">Choose an avatar for your videos</p>
+            
+            <!-- Avatar Type Tabs -->
+            <ul class="nav nav-tabs avatar-type-tabs" id="avatarTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="demo-tab" data-bs-toggle="tab" data-bs-target="#demo-avatars" type="button" role="tab" aria-controls="demo-avatars" aria-selected="true">Demo Avatars</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="public-tab" data-bs-toggle="tab" data-bs-target="#public-avatars" type="button" role="tab" aria-controls="public-avatars" aria-selected="false">Public Avatars</button>
+                </li>
+                {% if user.account_type != "trial" %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom-avatars" type="button" role="tab" aria-controls="custom-avatars" aria-selected="false">Custom Avatars</button>
+                </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Tab Content -->
+            <div class="tab-content" id="avatarTabContent">
+                <!-- Demo Avatars Tab -->
+                <div class="tab-pane fade show active" id="demo-avatars" role="tabpanel" aria-labelledby="demo-tab">
+                    <div class="avatar-selection-header">
+                        <h4>Demo Avatars</h4>
+                    </div>
+                    
+                    <div id="demo-avatars-container" class="row row-cols-1 row-cols-md-2 g-4">
+                        <!-- Demo avatars will be loaded here -->
+                        <div class="col">
+                            <div class="card h-100 avatar-card" data-avatar-gender="male">
+                                <img src="{{ male_demo_avatar.image_url }}" class="card-img-top avatar-image" alt="Male Demo Avatar">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ male_demo_avatar.name }}</h5>
+                                    <button class="btn btn-primary btn-sm w-100 select-demo-avatar-btn" data-avatar-gender="male">Select</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 avatar-card" data-avatar-gender="female">
+                                <img src="{{ female_demo_avatar.image_url }}" class="card-img-top avatar-image" alt="Female Demo Avatar">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ female_demo_avatar.name }}</h5>
+                                    <button class="btn btn-primary btn-sm w-100 select-demo-avatar-btn" data-avatar-gender="female">Select</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Public Avatars Tab -->
+                <div class="tab-pane fade" id="public-avatars" role="tabpanel" aria-labelledby="public-tab">
+                    <div class="avatar-selection-header">
+                        <h4>Public Avatars</h4>
+                        <button id="fetch-avatars-btn" class="btn btn-primary">
+                            <i class="fas fa-sync-alt me-2"></i> Fetch from HeyGen
+                        </button>
+                    </div>
+                    
+                    <div id="avatar-loading-spinner" class="text-center my-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading avatars from HeyGen...</p>
+                    </div>
+                    
+                    <div id="public-avatars-container" class="mt-4" style="display: none;">
+                        <!-- Public avatars will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Custom Avatars Tab (Only for paid users) -->
+                {% if user.account_type != "trial" %}
+                <div class="tab-pane fade" id="custom-avatars" role="tabpanel" aria-labelledby="custom-tab">
+                    <div class="avatar-selection-header">
+                        <h4>Custom Avatars</h4>
+                        <button id="create-custom-avatar-btn" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i> Create New Avatar
+                        </button>
+                    </div>
+                    
+                    <div id="custom-avatars-container" class="row row-cols-1 row-cols-md-3 g-4">
+                        <!-- Custom avatars will be loaded here -->
+                        <div class="col text-center">
+                            <div class="card h-100 p-5 d-flex align-items-center justify-content-center">
+                                <p class="text-muted">No custom avatars yet</p>
+                                <p>Create your own avatar using your webcam</p>
+                                <button class="btn btn-outline-primary mt-3">
+                                    <i class="fas fa-camera me-2"></i> Start Webcam
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/avatar_selection.js"></script>
+<script>
+    // Demo avatar selection
+    document.querySelectorAll('.select-demo-avatar-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const gender = this.dataset.avatarGender;
+            try {
+                const response = await fetch('/trial/select-demo-avatar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ gender: gender })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Demo avatar selected successfully', 'success');
+                    
+                    // Update UI to show selected avatar
+                    document.querySelectorAll('.avatar-card').forEach(card => {
+                        card.classList.remove('selected-avatar');
+                    });
+                    
+                    const selectedCard = document.querySelector(`.avatar-card[data-avatar-gender="${gender}"]`);
+                    if (selectedCard) {
+                        selectedCard.classList.add('selected-avatar');
+                    }
+                    
+                    // Trigger avatar refresh event
+                    const event = new CustomEvent('avatar-updated');
+                    document.dispatchEvent(event);
+                } else {
+                    showNotification('Failed to select avatar', 'error');
+                }
+            } catch (error) {
+                console.error('Error selecting demo avatar:', error);
+                showNotification('Error selecting avatar', 'error');
+            }
+        });
+    });
+    
+    // Custom avatar creation (placeholder for future implementation)
+    const createCustomAvatarBtn = document.getElementById('create-custom-avatar-btn');
+    if (createCustomAvatarBtn) {
+        createCustomAvatarBtn.addEventListener('click', function() {
+            showNotification('Custom avatar creation coming soon!', 'info');
+        });
+    }
+</script>
+{% endblock %}

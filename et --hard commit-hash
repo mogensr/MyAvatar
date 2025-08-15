@@ -1,0 +1,10 @@
+[33m2891afb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m modular rollout
+[33m9327976[m Rollback admin routes to working version
+[33mb31c2b5[m last for today fix
+[33m18ba375[m avatar uploads
+[33mca252bd[m last fix
+[33m5c335cc[m template fixes
+[33mf6846ed[m fixes
+[33mee7464a[m admin_manage_avatars.html
+[33m49daca9[m basic reinstall
+[33m189d2fd[m new admin_routes

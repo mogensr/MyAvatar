@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title or 'Video Player' }} - MyAvatar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --background: #0f0f23;
+            --surface: #1a1a2e;
+            --surface-light: #16213e;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --border: #374151;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .video-player-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--background);
+        }
+
+        .player-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            color: var(--text-primary);
+            background: var(--surface-light);
+        }
+
+        .video-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .video-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: var(--surface-light);
+            color: var(--text-primary);
+            border-radius: 8px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+
+        .player-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .video-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+        }
+
+        .video-player {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .video-info {
+            padding: 1.5rem;
+            background: var(--surface);
+        }
+
+        .video-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .video-date {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .video-format {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .video-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 4rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 4rem;
+            color: var(--text-secondary);
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            color: #ef4444;
+        }
+
+        @media (max-width: 768px) {
+            .player-header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .video-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .video-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .action-btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="video-player-container">
+        <header class="player-header">
+            <a href="/dashboard" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+            
+            <h1 class="video-title">{{ video.title or 'Untitled Video' }}</h1>
+            
+            <div class="video-actions">
+                <a href="/api/videos/{{ video.heygen_video_id or video.id }}/download" class="action-btn" target="_blank">
+                    <i class="fas fa-download"></i>
+                    Download
+                </a>
+            </div>
+        </header>
+
+        <main class="player-main">
+            <div class="video-wrapper">
+                {% if video.video_url %}
+                <div class="video-container">
+                    <video class="video-player" controls autoplay>
+                        <source src="{{ video.video_url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                {% else %}
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Video is still processing...</p>
+                </div>
+                {% endif %}
+
+                <div class="video-info">
+                    <div class="video-meta">
+                        <span class="video-date">
+                            <i class="fas fa-calendar"></i>
+                            {{ video.created_at.strftime('%B %d, %Y') if video.created_at else 'Unknown date' }}
+                        </span>
+                        {% if video.format %}
+                        <span class="video-format">{{ video.format }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if video.description %}
+                    <div class="video-description">
+                        {{ video.description }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Auto-refresh if video is still processing
+        {% if not video.video_url %}
+        setTimeout(function() {
+            window.location.reload();
+        }, 5000);
+        {% endif %}
+
+        // Handle video load errors
+        const video = document.querySelector('.video-player');
+        if (video) {
+            video.addEventListener('error', function() {
+                const container = document.querySelector('.video-container');
+                container.innerHTML = 
+                    '<div class="error-state">' +
+                        '<i class="fas fa-exclamation-triangle error-icon"></i>' +
+                        '<p>Unable to load video</p>' +
+                        '<button onclick="window.location.reload()" class="action-btn">' +
+                            '<i class="fas fa-refresh"></i>' +
+                            'Retry' +
+                        '</button>' +
+                    '</div>';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!-- 
+Distribution Platform Widget for MyAvatar Dashboard
+This is the ONLY file that needs to be added to MyAvatar
+Simply include this in the dashboard template where you want the widget to appear
+-->
+
+<div id="distribution-widget" class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="card-title mb-2" style="color: white;">
+                    🚀 Distribution Platform
+                </h5>
+                <p class="card-text mb-0" style="opacity: 0.9; font-size: 14px;">
+                    Share your AI videos across social media platforms
+                </p>
+            </div>
+            <button id="launch-distribution-btn" 
+                    class="btn btn-light btn-sm"
+                    style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; font-weight: bold;">
+                Launch Platform
+            </button>
+        </div>
+        
+        <!-- Loading state -->
+        <div id="distribution-loading" class="text-center mt-3" style="display: none;">
+            <div class="spinner-border spinner-border-sm text-light" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+            <small class="d-block mt-2">Launching Distribution Platform...</small>
+        </div>
+        
+        <!-- Premium required message -->
+        <div id="premium-required" class="alert alert-warning mt-3" style="display: none; background: rgba(255,193,7,0.2); border: 1px solid rgba(255,193,7,0.3); color: #fff3cd;">
+            <small>
+                <strong>Premium Required:</strong> 
+                Distribution Platform access is included with MyAvatar Premium subscription.
+                <a href="/upgrade" style="color: #fff3cd; text-decoration: underline;">Upgrade now</a>
+            </small>
+        </div>
+    </div>
+</div>
+
+<script>
+// Distribution Platform Widget JavaScript
+(function() {
+    const launchBtn = document.getElementById('launch-distribution-btn');
+    const loading = document.getElementById('distribution-loading');
+    const premiumRequired = document.getElementById('premium-required');
+    
+    // Check if user has premium access on page load
+    checkPremiumAccess();
+    
+    async function checkPremiumAccess() {
+        try {
+            // Get current user from MyAvatar's global context
+            const currentUser = window.currentUser || getCurrentUserFromMyAvatar();
+            
+            if (!currentUser) {
+                console.warn('No user context found for distribution widget');
+                return;
+            }
+            
+            // Check premium access
+            const response = await fetch(`http://localhost:8000/api/v1/myavatar/auth/myavatar-check/${currentUser.id}`);
+            const result = await response.json();
+            
+            if (!result.has_access) {
+                launchBtn.style.display = 'none';
+                premiumRequired.style.display = 'block';
+            }
+            
+        } catch (error) {
+            console.error('Error checking premium access:', error);
+            // Fail silently - show button anyway
+        }
+    }
+    
+    function getCurrentUserFromMyAvatar() {
+        // This function should extract user info from MyAvatar's existing context
+        // You would adapt this based on how MyAvatar stores user session data
+        
+        // Example implementations:
+        
+        // Option 1: From a global variable
+        if (window.myAvatarUser) {
+            return window.myAvatarUser;
+        }
+        
+        // Option 2: From session storage
+        const userSession = sessionStorage.getItem('myavatar_user');
+        if (userSession) {
+            return JSON.parse(userSession);
+        }
+        
+        // Option 3: From a meta tag
+        const userMeta = document.querySelector('meta[name="current-user"]');
+        if (userMeta) {
+            return JSON.parse(userMeta.getAttribute('content'));
+        }
+        
+        // Option 4: From a hidden input (if user data is in a form)
+        const userInput = document.querySelector('input[name="user_id"]');
+        if (userInput) {
+            return {
+                id: parseInt(userInput.value),
+                // You'd need to get other user details from other sources
+            };
+        }
+        
+        // Fallback - return demo data for testing
+        return {
+            id: 1,
+            username: 'demo_user',
+            email: 'demo@example.com',
+            is_premium: true
+        };
+    }
+    
+    launchBtn.addEventListener('click', async function() {
+        try {
+            // Show loading state
+            launchBtn.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Get current user
+            const currentUser = getCurrentUserFromMyAvatar();
+            
+            if (!currentUser) {
+                throw new Error('User session not found');
+            }
+            
+            // Call distribution platform SSO endpoint
+            const response = await fetch('http://localhost:8000/api/v1/myavatar/auth/myavatar-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    myavatar_user_id: currentUser.id,
+                    username: currentUser.username,
+                    email: currentUser.email,
+                    is_premium: currentUser.is_premium || true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Store access token for the distribution platform
+                localStorage.setItem('distribution_access_token', result.access_token);
+                
+                // Open distribution platform in new tab
+                const distributionUrl = `http://localhost:8000${result.dashboard_url}&token=${result.access_token}`;
+                window.open(distributionUrl, '_blank', 'width=1200,height=800');
+                
+                // Show success message briefly
+                loading.innerHTML = '<div class="text-success"><small>✓ Distribution Platform launched!</small></div>';
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    launchBtn.style.display = 'block';
+                }, 2000);
+                
+            } else {
+                throw new Error(result.message || 'Authentication failed');
+            }
+            
+        } catch (error) {
+            console.error('Distribution launch error:', error);
+            
+            // Show error message
+            loading.innerHTML = '<div class="text-warning"><small>⚠ Launch failed. Please try again.</small></div>';
+            setTimeout(() => {
+                loading.style.display = 'none';
+                launchBtn.style.display = 'block';
+            }, 3000);
+            
+            // Also show browser alert for user feedback
+            alert('Failed to launch Distribution Platform. Please check your connection and try again.');
+        }
+    });
+})();
+</script>
+
+<!-- 
+INTEGRATION INSTRUCTIONS:
+========================
+
+To add this widget to MyAvatar dashboard:
+
+1. Include this file in your dashboard template:
+   {% include 'distribution_widget.html' %}
+
+2. Make sure the user context is available. The widget expects one of:
+   - window.currentUser object
+   - window.myAvatarUser object  
+   - sessionStorage item 'myavatar_user'
+   - meta tag with name="current-user"
+   - hidden input with name="user_id"
+
+3. Ensure the user object has these properties:
+   {
+     id: number,
+     username: string,
+     email: string,
+     is_premium: boolean
+   }
+
+4. The Distribution Platform should be running on localhost:8000
+   (or update the URLs in the script to match your setup)
+
+That's it! The widget will:
+- Check if user has premium access
+- Show/hide based on subscription status
+- Handle SSO authentication automatically
+- Open Distribution Platform in new tab
+
+-->

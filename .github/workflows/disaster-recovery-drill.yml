@@ -1,0 +1,164 @@
+name: 🧪 Disaster Recovery Drill
+on:
+  schedule:
+    # Monthly disaster recovery test - 1st of every month at 3 AM UTC
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Recovery test type'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+        - full
+        - partial
+        - emergency
+      target_commit:
+        description: 'Target commit to restore (optional)'
+        required: false
+        default: ''
+
+jobs:
+  disaster-recovery-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: 🔍 Checkout Current State
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 📊 Pre-Test Analysis
+        id: analysis
+        run: |
+          echo "CURRENT_COMMIT=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "CURRENT_SHORT=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "TEST_DATE=$(date -u +%Y%m%d_%H%M%S)" >> $GITHUB_OUTPUT
+          
+          # Find a commit from 7 days ago for testing
+          TARGET_COMMIT="${{ github.event.inputs.target_commit }}"
+          if [[ -z "$TARGET_COMMIT" ]]; then
+            TARGET_COMMIT=$(git log --since="7 days ago" --format="%H" | tail -1)
+            if [[ -z "$TARGET_COMMIT" ]]; then
+              TARGET_COMMIT=$(git log --format="%H" | tail -10 | head -1)
+            fi
+          fi
+          echo "TARGET_COMMIT=$TARGET_COMMIT" >> $GITHUB_OUTPUT
+          echo "TARGET_SHORT=$(git rev-parse --short $TARGET_COMMIT)" >> $GITHUB_OUTPUT
+          
+      - name: 🧪 Simulate Disaster Recovery
+        run: |
+          echo "🧪 DISASTER RECOVERY DRILL STARTED"
+          echo "=================================="
+          echo "Current Commit: ${{ steps.analysis.outputs.CURRENT_COMMIT }}"
+          echo "Target Commit:  ${{ steps.analysis.outputs.TARGET_COMMIT }}"
+          echo "Test Type:      ${{ github.event.inputs.test_type || 'scheduled' }}"
+          echo ""
+          
+          # Create backup of current state
+          mkdir -p drill_backup
+          cp -r . drill_backup/ 2>/dev/null || true
+          
+          echo "✅ Current state backed up"
+          
+          # Test 1: Git-based recovery
+          echo "🔄 Testing Git-based recovery..."
+          git checkout ${{ steps.analysis.outputs.TARGET_COMMIT }}
+          
+          if [[ $? -eq 0 ]]; then
+            echo "✅ Git checkout successful"
+          else
+            echo "❌ Git checkout failed"
+            exit 1
+          fi
+          
+          # Test 2: Verify critical files exist
+          echo "🔍 Verifying critical files..."
+          CRITICAL_FILES=(
+            "main.py"
+            "requirements.txt"
+            "app/"
+            "templates/"
+          )
+          
+          for file in "${CRITICAL_FILES[@]}"; do
+            if [[ -e "$file" ]]; then
+              echo "✅ $file exists"
+            else
+              echo "❌ $file missing"
+              exit 1
+            fi
+          done
+          
+          # Test 3: Syntax validation
+          echo "🔍 Testing Python syntax..."
+          python -m py_compile main.py 2>/dev/null
+          if [[ $? -eq 0 ]]; then
+            echo "✅ main.py syntax valid"
+          else
+            echo "❌ main.py syntax error"
+            exit 1
+          fi
+          
+          # Test 4: Requirements validation
+          echo "🔍 Testing requirements.txt..."
+          if [[ -f "requirements.txt" ]] && [[ -s "requirements.txt" ]]; then
+            echo "✅ requirements.txt exists and not empty"
+          else
+            echo "❌ requirements.txt missing or empty"
+            exit 1
+          fi
+          
+          # Restore to current state
+          echo "🔄 Restoring to current state..."
+          git checkout ${{ steps.analysis.outputs.CURRENT_COMMIT }}
+          
+          if [[ $? -eq 0 ]]; then
+            echo "✅ Restoration to current state successful"
+          else
+            echo "❌ Failed to restore current state"
+            exit 1
+          fi
+          
+      - name: 📊 Recovery Test Report
+        run: |
+          echo "## 🧪 Disaster Recovery Drill Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📅 Test Date | ${{ steps.analysis.outputs.TEST_DATE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎯 Current Commit | \`${{ steps.analysis.outputs.CURRENT_SHORT }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔄 Target Commit | \`${{ steps.analysis.outputs.TARGET_SHORT }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Test Type | ${{ github.event.inputs.test_type || 'scheduled' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Status | SUCCESS |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Tests Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Git-based recovery" >> $GITHUB_STEP_SUMMARY
+          echo "- Critical files verification" >> $GITHUB_STEP_SUMMARY
+          echo "- Python syntax validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Requirements.txt validation" >> $GITHUB_STEP_SUMMARY
+          echo "- State restoration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **Recovery system is operational and ready for real disasters!**" >> $GITHUB_STEP_SUMMARY
+
+  drill-failure-alert:
+    needs: disaster-recovery-test
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: 🚨 Recovery Drill Failure Alert
+        run: |
+          echo "🚨 CRITICAL: Disaster Recovery Drill FAILED!"
+          echo "This means your backup/recovery system may not work in a real disaster!"
+          echo ""
+          echo "Repository: ${{ github.repository }}"
+          echo "Workflow: ${{ github.run_id }}"
+          echo ""
+          echo "⚠️ IMMEDIATE ACTION REQUIRED:"
+          echo "1. Review drill logs immediately"
+          echo "2. Fix any identified issues"
+          echo "3. Re-run drill manually"
+          echo "4. Do NOT rely on current backup system until fixed"
+          exit 1

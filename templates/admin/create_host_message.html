@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Host Message - MyAvatar Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header-subtitle {
+            color: #666;
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+            color: #666;
+        }
+        
+        .breadcrumb a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .form-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .form-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-header p {
+            opacity: 0.9;
+        }
+        
+        .form-content {
+            padding: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 2rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .required {
+            color: #ef4444;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .video-options {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            background: #f9fafb;
+        }
+        
+        .radio-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .radio-option:hover {
+            border-color: #6366f1;
+            background: #f8faff;
+        }
+        
+        .radio-option.selected {
+            border-color: #6366f1;
+            background: #f0f4ff;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+        
+        .radio-label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .radio-description {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        .video-section {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .video-section.active {
+            display: block;
+        }
+        
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+        
+        .video-item {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .video-item:hover {
+            border-color: #6366f1;
+            transform: translateY(-2px);
+        }
+        
+        .video-item.selected {
+            border-color: #6366f1;
+            background: #f0f4ff;
+        }
+        
+        .video-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .video-meta {
+            font-size: 0.875rem;
+            color: #666;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .priority-select {
+            position: relative;
+        }
+        
+        .priority-option {
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .priority-1 { color: #6b7280; }
+        .priority-2 { color: #f59e0b; font-weight: 600; }
+        .priority-3 { color: #ef4444; font-weight: 700; }
+        
+        .form-help {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .character-count {
+            text-align: right;
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        
+        .character-count.warning {
+            color: #f59e0b;
+        }
+        
+        .character-count.danger {
+            color: #ef4444;
+        }
+        
+        .preview-section {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+        
+        .preview-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .preview-content {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            <a href="/admin"><i class="fas fa-home"></i> Admin</a>
+            <i class="fas fa-chevron-right"></i>
+            <a href="/admin/host-messages">Host Messages</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Create Message</span>
+        </div>
+        
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1><i class="fas fa-plus-circle"></i> Create Host Message</h1>
+                <p class="header-subtitle">Broadcast a message to all users in their dashboard</p>
+            </div>
+            <a href="/admin/host-messages" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Messages
+            </a>
+        </div>
+        
+        <!-- Form -->
+        <div class="form-card">
+            <div class="form-header">
+                <h2><i class="fas fa-bullhorn"></i> New Host Message</h2>
+                <p>Create a message that will appear in all users' dashboard widgets</p>
+            </div>
+            
+            <div class="form-content">
+                <form method="POST" onsubmit="return validateForm()">
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label class="form-label" for="title">
+                            Message Title <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               id="title" 
+                               name="title" 
+                               class="form-input" 
+                               required 
+                               placeholder="e.g., Welcome to MyAvatar 2.0!"
+                               maxlength="100"
+                               oninput="updatePreview()">
+                        <div class="form-help">
+                            <i class="fas fa-info-circle"></i>
+                            This will be the headline users see in their dashboard widget
+                        </div>
+                    </div>
+                    
+                    <!-- Message Text -->
+                    <div class="form-group">
+                        <label class="form-label" for="message_text">
+                            Message Text <span class="required">*</span>
+                        </label>
+                        <textarea id="message_text" 
+                                  name="message_text" 
+                                  class="form-input form-textarea" 
+                                  required
+                                  placeholder="Write your message to users here..."
+                                  maxlength="1000"
+                                  oninput="updateCharacterCount(); updatePreview()"></textarea>
+                        <div class="character-count" id="charCount">0 / 1000 characters</div>
+                        <div class="form-help">
+                            <i class="fas fa-info-circle"></i>
+                            Keep it concise and engaging. Users will see this in their dashboard.
+                        </div>
+                    </div>
+                    
+                    <!-- Video Options -->
+                    <div class="form-group">
+                        <label class="form-label">Video (Optional)</label>
+                        <div class="video-options">
+                            <div class="radio-group">
+                                <div class="radio-option selected" onclick="selectVideoOption('none')">
+                                    <input type="radio" id="no_video" name="video_choice" value="none" checked>
+                                    <div>
+                                        <div class="radio-label">No video</div>
+                                        <div class="radio-description">Text-only message</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="radio-option" onclick="selectVideoOption('existing')">
+                                    <input type="radio" id="existing_video" name="video_choice" value="existing">
+                                    <div>
+                                        <div class="radio-label">Use your avatar video</div>
+                                        <div class="radio-description">Select from your completed videos</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="radio-option" onclick="selectVideoOption('url')">
+                                    <input type="radio" id="custom_url" name="video_choice" value="url">
+                                    <div>
+                                        <div class="radio-label">Custom video URL</div>
+                                        <div class="radio-description">Link to an external video</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Existing Videos Section -->
+                            <div id="existing_video_section" class="video-section">
+                                <label class="form-label">Select Your Video</label>
+                                {% if videos and videos|length > 0 %}
+                                    <div class="video-grid">
+                                        {% for video in videos %}
+                                        <div class="video-item" onclick="selectVideo('{{ video.id }}', '{{ video.title }}', '{{ video.duration or "" }}')">
+                                            <div class="video-title">{{ video.title or 'Untitled Video' }}</div>
+                                            <div class="video-meta">
+                                                <div>{{ video.created_at.strftime('%B %d, %Y') if video.created_at else 'Unknown date' }}</div>
+                                                <div>{{ video.duration or 'Unknown duration' }}</div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <input type="hidden" name="video_id" id="selected_video_id">
+                                {% else %}
+                                    <div style="text-align: center; padding: 2rem; color: #666;">
+                                        <i class="fas fa-video" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                        <p>No completed videos found.</p>
+                                        <p><a href="/text-to-video" style="color: #6366f1;">Create a video first</a>, then come back to use it in host messages.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Custom URL Section -->
+                            <div id="custom_url_section" class="video-section">
+                                <label class="form-label">Video URL</label>
+                                <input type="url" 
+                                       name="video_url" 
+                                       id="video_url"
+                                       class="form-input" 
+                                       placeholder="https://example.com/video.mp4"
+                                       oninput="updatePreview()">
+                                <div class="form-help">
+                                    <i class="fas fa-info-circle"></i>
+                                    Direct link to MP4 video file (must be publicly accessible)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Duration (for custom videos) -->
+                    <div class="form-group">
+                        <label class="form-label" for="duration">Video Duration (Optional)</label>
+                        <input type="text" 
+                               id="duration" 
+                               name="duration" 
+                               class="form-input" 
+                               placeholder="e.g., 2:30"
+                               pattern="[0-9]+:[0-9]{2}"
+                               oninput="updatePreview()">
+                        <div class="form-help">
+                            <i class="fas fa-info-circle"></i>
+                            Format: MM:SS (e.g., 2:30 for 2 minutes 30 seconds)
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Options -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="priority">Priority</label>
+                            <select id="priority" name="priority" class="form-select" onchange="updatePreview()">
+                                <option value="1" class="priority-1">Normal (1)</option>
+                                <option value="2" class="priority-2">High (2)</option>
+                                <option value="3" class="priority-3">Urgent (3)</option>
+                            </select>
+                            <div class="form-help">
+                                <i class="fas fa-info-circle"></i>
+                                Higher priority messages appear first
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="expires_at">Expires At (Optional)</label>
+                            <input type="datetime-local" 
+                                   id="expires_at" 
+                                   name="expires_at" 
+                                   class="form-input"
+                                   onchange="updatePreview()">
+                            <div class="form-help">
+                                <i class="fas fa-info-circle"></i>
+                                Message will automatically hide after this date
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview -->
+                    <div class="preview-section">
+                        <div class="preview-title">
+                            <i class="fas fa-eye"></i> Widget Preview
+                        </div>
+                        <div class="preview-content" id="messagePreview">
+                            <div style="color: #666; font-style: italic;">Fill out the form above to see a preview</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="form-actions">
+                        <a href="/admin/host-messages" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Create & Broadcast Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let selectedVideoData = {};
+        
+        function selectVideoOption(option) {
+            // Update radio selection visual
+            document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`input[value="${option}"]`).closest('.radio-option').classList.add('selected');
+            
+            // Update radio input
+            document.querySelector(`input[value="${option}"]`).checked = true;
+            
+            // Show/hide sections
+            document.querySelectorAll('.video-section').forEach(section => section.classList.remove('active'));
+            
+            if (option === 'existing') {
+                document.getElementById('existing_video_section').classList.add('active');
+            } else if (option === 'url') {
+                document.getElementById('custom_url_section').classList.add('active');
+            }
+            
+            updatePreview();
+        }
+        
+        function selectVideo(videoId, title, duration) {
+            // Visual selection
+            document.querySelectorAll('.video-item').forEach(item => item.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            
+            // Store selection
+            document.getElementById('selected_video_id').value = videoId;
+            selectedVideoData = { id: videoId, title, duration };
+            
+            // Update duration field
+            if (duration) {
+                document.getElementById('duration').value = duration;
+            }
+            
+            updatePreview();
+        }
+        
+        function updateCharacterCount() {
+            const textarea = document.getElementById('message_text');
+            const counter = document.getElementById('charCount');
+            const length = textarea.value.length;
+            const maxLength = 1000;
+            
+            counter.textContent = `${length} / ${maxLength} characters`;
+            
+            counter.classList.remove('warning', 'danger');
+            if (length > maxLength * 0.9) {
+                counter.classList.add('danger');
+            } else if (length > maxLength * 0.75) {
+                counter.classList.add('warning');
+            }
+        }
+        
+        function updatePreview() {
+            const title = document.getElementById('title').value;
+            const message = document.getElementById('message_text').value;
+            const videoChoice = document.querySelector('input[name="video_choice"]:checked').value;
+            const videoUrl = document.getElementById('video_url').value;
+            const duration = document.getElementById('duration').value;
+            const priority = document.getElementById('priority').value;
+            const expiresAt = document.getElementById('expires_at').value;
+            
+            const preview = document.getElementById('messagePreview');
+            
+            if (!title && !message) {
+                preview.innerHTML = '<div style="color: #666; font-style: italic;">Fill out the form above to see a preview</div>';
+                return;
+            }
+            
+            let previewHTML = `
+                <div style="margin-bottom: 0.5rem; font-size: 0.875rem; color: #666;">
+                    ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </div>
+            `;
+            
+            if (videoChoice !== 'none') {
+                let videoTitle = 'Video Message';
+                let videoDuration = duration || 'Unknown duration';
+                
+                if (videoChoice === 'existing' && selectedVideoData.title) {
+                    videoTitle = selectedVideoData.title;
+                    videoDuration = selectedVideoData.duration || duration || 'Unknown duration';
+                } else if (videoChoice === 'url' && videoUrl) {
+                    videoTitle = title || 'Custom Video';
+                }
+                
+                previewHTML += `
+                    <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 8px; padding: 1.5rem; text-align: center; color: white; cursor: pointer; margin-bottom: 1rem;">
+                        <i class="fas fa-play-circle" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;">${videoTitle}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">${videoDuration}</div>
+                    </div>
+                `;
+            }
+            
+            if (message) {
+                previewHTML += `
+                    <div style="color: #333; line-height: 1.5;">
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+            
+            if (priority > 1 || expiresAt) {
+                previewHTML += '<div style="margin-top: 1rem; font-size: 0.75rem; color: #666;">';
+                if (priority > 1) {
+                    const priorityText = priority === '2' ? 'High Priority' : 'Urgent';
+                    previewHTML += `<span style="color: ${priority === '2' ? '#f59e0b' : '#ef4444'}; font-weight: 600;">⚡ ${priorityText}</span>`;
+                }
+                if (expiresAt) {
+                    if (priority > 1) previewHTML += ' • ';
+                    const expireDate = new Date(expiresAt).toLocaleDateString();
+                    previewHTML += `<span>Expires ${expireDate}</span>`;
+                }
+                previewHTML += '</div>';
+            }
+            
+            preview.innerHTML = previewHTML;
+        }
+        
+        function validateForm() {
+            const title = document.getElementById('title').value.trim();
+            const message = document.getElementById('message_text').value.trim();
+            
+            if (!title) {
+                alert('Please enter a message title');
+                return false;
+            }
+            
+            if (!message) {
+                alert('Please enter message text');
+                return false;
+            }
+            
+            const videoChoice = document.querySelector('input[name="video_choice"]:checked').value;
+            if (videoChoice === 'existing') {
+                const videoId = document.getElementById('selected_video_id').value;
+                if (!videoId) {
+                    alert('Please select a video or choose "No video"');
+                    return false;
+                }
+            }
+            
+            return confirm('Are you sure you want to broadcast this message to all users?');
+        }
+        
+        // Initialize
+        updateCharacterCount();
+        updatePreview();
+        
+        // Auto-save draft every 30 seconds (could be enhanced)
+        setInterval(() => {
+            const title = document.getElementById('title').value;
+            const message = document.getElementById('message_text').value;
+            if (title || message) {
+                localStorage.setItem('hostMessageDraft', JSON.stringify({
+                    title, message, timestamp: Date.now()
+                }));
+            }
+        }, 30000);
+        
+        // Load draft on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const draft = localStorage.getItem('hostMessageDraft');
+            if (draft) {
+                const { title, message, timestamp } = JSON.parse(draft);
+                // Only load draft if less than 24 hours old
+                if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+                    if (confirm('You have an unsaved draft. Would you like to restore it?')) {
+                        document.getElementById('title').value = title;
+                        document.getElementById('message_text').value = message;
+                        updateCharacterCount();
+                        updatePreview();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

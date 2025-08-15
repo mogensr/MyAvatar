@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trial Management - MyAvatar Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .stats-card.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stats-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stats-card.info {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .trial-user-card {
+            border-left: 4px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        .trial-user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .trial-user-card.expiring {
+            border-left-color: #ffc107;
+        }
+        .trial-user-card.expired {
+            border-left-color: #dc3545;
+        }
+        .action-btn {
+            margin: 0.2rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+        }
+        .refresh-indicator {
+            display: none;
+            color: #007bff;
+        }
+        .refresh-indicator.active {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="bi bi-shield-check"></i> MyAvatar Admin
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/admin">Dashboard</a>
+                <a class="nav-link active" href="/admin/trials">Trials</a>
+                <a class="nav-link" href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-clock-history"></i> Trial Management</h1>
+            <div>
+                <button class="btn btn-outline-primary" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise refresh-indicator" id="refreshIcon"></i>
+                    Refresh
+                </button>
+                <button class="btn btn-warning" onclick="runMaintenance()">
+                    <i class="bi bi-tools"></i> Run Maintenance
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card success">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ stats.active_trials }}</h3>
+                            <p class="mb-0">Active Trials</p>
+                        </div>
+                        <i class="bi bi-people-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ stats.expiring_week }}</h3>
+                            <p class="mb-0">Expiring This Week</p>
+                        </div>
+                        <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ stats.new_today }}</h3>
+                            <p class="mb-0">New Today</p>
+                        </div>
+                        <i class="bi bi-person-plus-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ stats.conversion_rate }}%</h3>
+                            <p class="mb-0">Conversion Rate</p>
+                        </div>
+                        <i class="bi bi-graph-up-arrow fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-bar-chart"></i> Trial Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h4 class="text-success">{{ stats.active_trials }}</h4>
+                                <small class="text-muted">Active</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-danger">{{ stats.expired_trials }}</h4>
+                                <small class="text-muted">Expired</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-info">{{ stats.total_trials }}</h4>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h5 class="text-warning">{{ stats.expiring_today }}</h5>
+                                <small class="text-muted">Expiring Today</small>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="text-primary">{{ stats.converted_users }}</h5>
+                                <small class="text-muted">Converted</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-clock"></i> Expiring Soon</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if expiring_soon %}
+                            {% for user in expiring_soon %}
+                                <div class="trial-user-card card mb-2 expiring">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ user.username or user.email }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    Expires: {{ user.trial_end_date.strftime('%Y-%m-%d') }}
+                                                    ({{ (user.trial_end_date - user.trial_start_date).days if user.trial_start_date else 'N/A' }} days left)
+                                                </small>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-sm btn-warning action-btn" onclick="sendReminder({{ user.id }})">
+                                                    <i class="bi bi-envelope"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-success action-btn" onclick="extendTrial({{ user.id }})">
+                                                    <i class="bi bi-plus-circle"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No trials expiring soon</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trial Users -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-person-lines-fill"></i> Recent Trial Users</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_trials %}
+                    {% for user in recent_trials %}
+                        <div class="trial-user-card card mb-3 {% if user.trial_expired %}expired{% elif user.trial_end_date and (user.trial_end_date - user.trial_start_date).days <= 2 %}expiring{% endif %}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <h6 class="mb-1">{{ user.username or 'No Username' }}</h6>
+                                        <p class="mb-0 text-muted">{{ user.email }}</p>
+                                        <small class="text-muted">ID: {{ user.id }}</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Trial Period</small>
+                                        <p class="mb-0">
+                                            {{ user.trial_start_date.strftime('%Y-%m-%d') if user.trial_start_date else 'N/A' }}
+                                            <br>
+                                            <i class="bi bi-arrow-down"></i>
+                                            <br>
+                                            {{ user.trial_end_date.strftime('%Y-%m-%d') if user.trial_end_date else 'N/A' }}
+                                        </p>
+                                    </div>
+                                    <div class="col-md-2 text-center">
+                                        {% if user.trial_expired %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% elif user.trial_end_date and (user.trial_end_date - user.trial_start_date).days <= 0 %}
+                                            <span class="badge bg-warning">Expiring</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">
+                                            {% if user.trial_end_date and not user.trial_expired %}
+                                                {{ (user.trial_end_date - user.trial_start_date).days if user.trial_start_date else 'N/A' }} days left
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <button class="btn btn-sm btn-outline-primary action-btn" onclick="sendReminder({{ user.id }})">
+                                            <i class="bi bi-envelope"></i> Reminder
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-success action-btn" onclick="extendTrial({{ user.id }})">
+                                            <i class="bi bi-plus-circle"></i> Extend
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger action-btn" onclick="expireTrial({{ user.id }})">
+                                            <i class="bi bi-x-circle"></i> Expire
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">No recent trial users</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        function refreshData() {
+            const icon = document.getElementById('refreshIcon');
+            icon.classList.add('active');
+            
+            // Refresh the page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+
+        async function sendReminder(userId) {
+            try {
+                const response = await fetch(`/admin/trials/api/send-reminder/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Reminder email sent successfully!');
+                } else {
+                    alert('❌ Failed to send reminder: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Error sending reminder: ' + error.message);
+            }
+        }
+
+        async function extendTrial(userId) {
+            const days = prompt('How many days to extend the trial?', '7');
+            if (!days || isNaN(days) || days <= 0) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/trials/api/extend-trial/${userId}?days=${days}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Trial extended by ${days} days! New end date: ${result.new_end_date}`);
+                    refreshData();
+                } else {
+                    alert('❌ Failed to extend trial: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Error extending trial: ' + error.message);
+            }
+        }
+
+        async function expireTrial(userId) {
+            if (!confirm('Are you sure you want to expire this trial immediately?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/trials/api/expire-trial/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Trial expired successfully!');
+                    refreshData();
+                } else {
+                    alert('❌ Failed to expire trial: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Error expiring trial: ' + error.message);
+            }
+        }
+
+        async function runMaintenance() {
+            if (!confirm('Run trial maintenance jobs now?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/trials/api/run-maintenance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Maintenance completed!\n\nExpired: ${result.expired_count} users\nReminders needed: ${result.reminders_needed}\nActive trials: ${result.active_trials}`);
+                    refreshData();
+                } else {
+                    alert('❌ Maintenance failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Error running maintenance: ' + error.message);
+            }
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(refreshData, 300000);
+    </script>
+</body>
+</html>

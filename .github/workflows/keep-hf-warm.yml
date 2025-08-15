@@ -1,0 +1,76 @@
+name: Keep HF Space Warm
+on:
+  # schedule:
+    # Run every hour on the hour (UTC time) - DISABLED due to gradio schema bug
+    # - cron: '0 * * * *'
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      space_url:
+        description: 'HF Space URL to ping (optional override)'
+        required: false
+        default: ''
+
+jobs:
+  ping-hf-space:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Set HF Space URL
+        id: set-url
+        run: |
+          # Use input URL if provided, otherwise use default
+          if [ -n "${{ github.event.inputs.space_url }}" ]; then
+            echo "HF_URL=${{ github.event.inputs.space_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "HF_URL=https://mogensr-backgroundfx-gpu.hf.space" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Ping HF Space
+        run: |
+          echo "🔥 Pinging HF Space to keep it warm..."
+          echo "Target: ${{ steps.set-url.outputs.HF_URL }}"
+          echo "Time: $(date -u)"
+          
+          # Ping the HF Space with proper headers and timeout
+          response=$(curl -s -w "%{http_code}" \
+            -H "User-Agent: HF-Space-Warmer/1.0" \
+            -H "Accept: text/html,application/xhtml+xml" \
+            --connect-timeout 30 \
+            --max-time 120 \
+            --retry 2 \
+            --retry-delay 10 \
+            "${{ steps.set-url.outputs.HF_URL }}/" \
+            -o /dev/null)
+          
+          echo "Response code: $response"
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ HF Space is warm and responsive!"
+          elif [ "$response" = "503" ] || [ "$response" = "502" ]; then
+            echo "🔄 HF Space is starting up (expected for sleeping space)"
+          elif [ "$response" = "000" ]; then
+            echo "🔄 HF Space connection timeout (likely sleeping, now warming up)"
+          else
+            echo "⚠️ HF Space returned code $response (may be starting up)"
+          fi
+          
+          echo "🎯 Ping completed at $(date -u)"
+      
+      - name: Ping Health Check Endpoint
+        run: |
+          echo "🏥 Checking HF Space health endpoint..."
+          
+          # Also ping the health/status endpoint if it exists
+          health_response=$(curl -s -w "%{http_code}" \
+            -H "User-Agent: HF-Space-Warmer/1.0" \
+            --connect-timeout 15 \
+            --max-time 30 \
+            "${{ steps.set-url.outputs.HF_URL }}/health" \
+            -o /dev/null 2>/dev/null || echo "000")
+          
+          if [ "$health_response" = "200" ]; then
+            echo "✅ Health endpoint responsive"
+          else
+            echo "ℹ️ Health endpoint not available (code: $health_response)"
+          fi

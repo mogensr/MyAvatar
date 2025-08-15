@@ -1,0 +1,1907 @@
+2025-07-20 16:11:39,713 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-20 16:11:40,091 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-20 16:11:40,271 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-20 16:11:40,272 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-20 16:11:40,272 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-20 16:11:41,744 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-20 16:11:41,744 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-20 16:11:41,744 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:43,378 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:43,566 - MyAvatar - INFO - [Database] Query executed successfully in 0.188s
+2025-07-20 16:11:43,566 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:43,567 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:43,567 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-20 16:11:43,567 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-20 16:11:43,568 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:44,956 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:45,147 - MyAvatar - INFO - [Database] Query executed successfully in 0.191s
+2025-07-20 16:11:45,148 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:45,148 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:45,149 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-20 16:11:45,150 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-20 16:11:45,150 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:46,480 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:46,670 - MyAvatar - INFO - [Database] Query executed successfully in 0.189s
+2025-07-20 16:11:46,670 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:46,671 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:46,671 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:46,672 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-20 16:11:46,673 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:48,064 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:48,255 - MyAvatar - INFO - [Database] Query executed successfully in 0.190s
+2025-07-20 16:11:48,255 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:48,256 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:48,256 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:48,257 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-20 16:11:48,257 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:49,580 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:49,770 - MyAvatar - INFO - [Database] Query executed successfully in 0.189s
+2025-07-20 16:11:49,771 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:49,771 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:49,771 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:49,772 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-20 16:11:49,772 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:51,171 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:51,363 - MyAvatar - INFO - [Database] Query executed successfully in 0.191s
+2025-07-20 16:11:51,364 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:51,364 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:51,365 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:51,365 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-20 16:11:51,365 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:52,742 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:52,934 - MyAvatar - INFO - [Database] Query executed successfully in 0.192s
+2025-07-20 16:11:52,935 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:52,935 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:52,936 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:52,936 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-20 16:11:52,936 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:54,261 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:54,456 - MyAvatar - INFO - [Database] Query executed successfully in 0.194s
+2025-07-20 16:11:54,458 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:54,459 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:54,460 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-20 16:11:54,461 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-20 16:11:54,462 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-20 16:11:55,861 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-20 16:11:56,054 - MyAvatar - INFO - [Database] Query executed successfully in 0.193s
+2025-07-20 16:11:56,055 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-20 16:11:56,056 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-20 16:11:56,056 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-07-21 12:05:13,087 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-21 12:05:13,443 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-21 12:05:13,484 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-21 12:05:13,484 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-21 12:05:13,484 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-21 12:05:14,868 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-21 12:05:14,868 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 12:05:14,868 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:16,498 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:16,686 - MyAvatar - INFO - [Database] Query executed successfully in 0.187s
+2025-07-21 12:05:16,686 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:16,687 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:16,687 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-21 12:05:16,687 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 12:05:16,687 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:18,075 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:18,269 - MyAvatar - INFO - [Database] Query executed successfully in 0.191s
+2025-07-21 12:05:18,269 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:18,270 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:18,270 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-21 12:05:18,270 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 12:05:18,271 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:19,625 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:19,819 - MyAvatar - INFO - [Database] Query executed successfully in 0.192s
+2025-07-21 12:05:19,819 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:19,820 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:19,820 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:19,820 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-21 12:05:19,820 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:21,325 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:21,518 - MyAvatar - INFO - [Database] Query executed successfully in 0.192s
+2025-07-21 12:05:21,518 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:21,519 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:21,519 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:21,519 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-21 12:05:21,520 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:22,910 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:23,118 - MyAvatar - INFO - [Database] Query executed successfully in 0.208s
+2025-07-21 12:05:23,118 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:23,119 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:23,119 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:23,119 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-21 12:05:23,119 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:24,454 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:24,649 - MyAvatar - INFO - [Database] Query executed successfully in 0.194s
+2025-07-21 12:05:24,649 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:24,649 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:24,650 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:24,650 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-21 12:05:24,650 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:26,032 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:26,489 - MyAvatar - INFO - [Database] Query executed successfully in 0.457s
+2025-07-21 12:05:26,489 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:26,490 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:26,490 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:26,490 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-21 12:05:26,491 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:28,376 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:28,587 - MyAvatar - INFO - [Database] Query executed successfully in 0.212s
+2025-07-21 12:05:28,588 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:28,588 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:28,589 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-21 12:05:28,589 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-21 12:05:28,589 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 12:05:29,912 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 12:05:30,111 - MyAvatar - INFO - [Database] Query executed successfully in 0.198s
+2025-07-21 12:05:30,111 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-21 12:05:30,112 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 12:05:30,112 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-07-21 12:05:30,394 - MyAvatar - INFO - [Storage] Cloudinary storage is configured
+2025-07-21 12:05:30,496 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-07-21 12:05:30,541 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-07-21 12:05:31,334 - MyAvatar - WARNING -    - app.routes.api_routes -> /api (app.routes.api_routes)
+2025-07-21 12:05:31,334 - MyAvatar - WARNING -    - app.routes.backgroundfx_routes (app.routes.backgroundfx_routes)
+2025-07-21 12:05:31,334 - MyAvatar - WARNING -    - app.routes.video_processing_routes -> /video-processing (app.routes.video_processing_routes)
+2025-07-21 12:05:31,334 - MyAvatar - WARNING -    - app.routes.video_processing_routes (app.routes.video_processing_routes)
+2025-07-21 12:05:31,335 - MyAvatar - WARNING -    - background_routes -> /background (background_routes)
+2025-07-21 16:13:14,319 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-07-21 16:13:14,325 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 16:13:14,326 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 16:13:14,722 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 16:13:14,750 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-21 16:13:14,751 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-07-21 16:13:14,752 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 16:13:14,753 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-07-21 16:13:14,753 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 7, 21),)
+2025-07-21 16:13:14,753 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 16:13:15,135 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 16:13:15,205 - MyAvatar - INFO - [Database] Query executed successfully in 0.069s
+2025-07-21 16:13:15,205 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-07-21 16:13:15,206 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 16:13:15,207 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-07-21 16:13:15,207 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 16:13:15,207 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 16:13:15,546 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 16:13:15,572 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-21 16:13:15,573 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-07-21 16:13:15,573 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 16:13:15,574 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM videos
+2025-07-21 16:13:15,574 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-21 16:13:15,574 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 16:13:15,909 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 16:13:15,937 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-07-21 16:13:15,937 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-07-21 16:13:15,938 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-21 16:13:15,939 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-07-21 16:13:15,939 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 7, 21),)
+2025-07-21 16:13:15,940 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-21 16:13:16,265 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-21 16:13:16,296 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-21 16:13:16,296 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-07-21 16:13:16,296 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:48,189 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 12:47:48,367 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-26 12:47:48,413 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-26 12:47:48,413 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-26 12:47:48,413 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-26 12:47:49,877 - MyAvatar - INFO - [Storage] Cloudinary storage is configured
+2025-07-26 12:47:49,925 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-26 12:47:49,925 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:47:49,925 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:50,338 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:50,366 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-07-26 12:47:50,367 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:50,368 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:50,369 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-26 12:47:50,369 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:47:50,370 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:50,711 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:50,743 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-07-26 12:47:50,744 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:50,745 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:50,746 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-26 12:47:50,747 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:47:50,747 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:50,953 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:50,984 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-07-26 12:47:50,985 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:50,986 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:50,986 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:50,987 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-26 12:47:50,987 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:51,195 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:51,226 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-07-26 12:47:51,228 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:51,229 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:51,230 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:51,230 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-26 12:47:51,230 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:51,563 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:51,603 - MyAvatar - INFO - [Database] Query executed successfully in 0.037s
+2025-07-26 12:47:51,603 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:51,604 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:51,604 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:51,605 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-26 12:47:51,605 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:51,940 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:51,972 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-07-26 12:47:51,972 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:51,972 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:51,973 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:51,973 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-26 12:47:51,973 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:52,172 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:52,202 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-26 12:47:52,203 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:52,203 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:52,204 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:52,204 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-26 12:47:52,204 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:52,405 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:52,434 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-07-26 12:47:52,435 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:52,435 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:52,436 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:47:52,436 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-26 12:47:52,436 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:47:52,768 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:47:52,804 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-07-26 12:47:52,805 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:47:52,805 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:47:52,806 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-07-26 12:47:53,020 - app.services.backgroundfx_client_v2 - WARNING - libraryFX not found, using legacy implementation
+2025-07-26 12:47:53,235 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX service health: {'status': 'ok', 'version': '1.0.0', 'gpu_available': False}
+2025-07-26 12:47:53,235 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX client initialized with service at https://backgroundfx-production.up.railway.app
+2025-07-26 12:47:58,396 - app.routes.background_routes - INFO - Cloudinary configured for video processing
+2025-07-26 12:48:06,488 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-07-26 12:48:06,489 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-07-26 12:48:06,492 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-07-26 12:48:06,492 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:06,492 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:06,675 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:06,701 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-26 12:48:06,701 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:06,701 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:06,701 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-07-26 12:48:06,702 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:06,702 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:06,894 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:06,922 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-07-26 12:48:06,922 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:06,923 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:06,923 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-07-26 12:48:06,924 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:06,924 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:07,255 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:07,280 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-07-26 12:48:07,281 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:07,281 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:07,281 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-07-26 12:48:07,400 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-07-26 12:48:07,448 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 12:48:48,743 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 12:48:48,831 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-26 12:48:48,850 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-26 12:48:48,851 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-26 12:48:48,851 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-26 12:48:49,539 - MyAvatar - INFO - [Storage] Cloudinary storage is configured
+2025-07-26 12:48:49,572 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-26 12:48:49,572 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:49,572 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:49,797 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:49,832 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-07-26 12:48:49,833 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:49,833 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:49,834 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-26 12:48:49,834 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:49,835 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:50,031 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:50,060 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-07-26 12:48:50,060 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:50,061 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:50,061 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-26 12:48:50,062 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:50,062 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:50,247 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:50,273 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-26 12:48:50,274 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:50,276 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:50,276 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:50,277 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-26 12:48:50,277 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:50,487 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:50,518 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-26 12:48:50,518 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:50,519 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:50,519 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:50,519 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-26 12:48:50,519 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:50,839 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:50,869 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-07-26 12:48:50,870 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:50,870 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:50,870 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:50,871 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-26 12:48:50,871 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:51,219 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:51,249 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-26 12:48:51,250 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:51,251 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:51,251 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:51,252 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-26 12:48:51,252 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:51,456 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:51,487 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-26 12:48:51,487 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:51,488 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:51,489 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:51,489 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-26 12:48:51,489 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:51,687 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:51,720 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-07-26 12:48:51,720 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:51,721 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:51,721 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 12:48:51,722 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-26 12:48:51,722 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:51,928 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:51,959 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-26 12:48:51,959 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:51,960 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:51,961 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-07-26 12:48:52,147 - app.services.backgroundfx_client_v2 - WARNING - libraryFX not found, using legacy implementation
+2025-07-26 12:48:52,405 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX service health: {'status': 'ok', 'version': '1.0.0', 'gpu_available': False}
+2025-07-26 12:48:52,406 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX client initialized with service at https://backgroundfx-production.up.railway.app
+2025-07-26 12:48:54,202 - app.routes.background_routes - INFO - Cloudinary configured for video processing
+2025-07-26 12:48:55,910 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-07-26 12:48:55,911 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-07-26 12:48:55,915 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-07-26 12:48:55,915 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:55,916 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:56,116 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:56,144 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-26 12:48:56,144 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:56,145 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:56,145 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-07-26 12:48:56,146 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:56,146 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:56,348 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:56,375 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-07-26 12:48:56,376 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:56,377 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:56,377 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-07-26 12:48:56,378 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 12:48:56,378 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 12:48:56,603 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 12:48:56,630 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-26 12:48:56,631 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 12:48:56,631 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 12:48:56,632 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-07-26 12:48:56,683 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-07-26 12:48:56,690 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 12:48:57,373 - MyAvatar - WARNING -    - app.routes.backgroundfx_routes (AI-Enhanced) (app.routes.backgroundfx_routes)
+2025-07-26 12:48:57,374 - MyAvatar - WARNING -    - app.routes.backgroundfx_hf_integration (HF Space SAM2 + MatAnyone) (app.routes.backgroundfx_hf_integration)
+2025-07-26 12:48:57,374 - MyAvatar - WARNING -    - backend.api.video_endpoints (Flask Backend) (backend.api.video_endpoints)
+2025-07-26 13:00:30,424 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 13:00:30,551 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-26 13:00:30,584 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-26 13:00:30,584 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-26 13:00:30,585 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-26 13:00:31,425 - MyAvatar - INFO - [Storage] Cloudinary storage is configured
+2025-07-26 13:00:31,462 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-26 13:00:31,462 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:31,462 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:31,750 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:31,776 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-07-26 13:00:31,777 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:31,778 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:31,781 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-26 13:00:31,782 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:31,783 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:31,990 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:32,023 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-07-26 13:00:32,024 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:32,024 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:32,025 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-26 13:00:32,025 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:32,025 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:32,277 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:32,303 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-07-26 13:00:32,303 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:32,304 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:32,304 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:32,304 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-26 13:00:32,304 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:32,504 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:32,533 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-07-26 13:00:32,533 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:32,534 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:32,534 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:32,534 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-26 13:00:32,534 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:32,724 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:32,758 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-07-26 13:00:32,759 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:32,760 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:32,761 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:32,762 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-26 13:00:32,762 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:32,968 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:33,007 - MyAvatar - INFO - [Database] Query executed successfully in 0.039s
+2025-07-26 13:00:33,008 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:33,009 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:33,009 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:33,010 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-26 13:00:33,010 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:33,203 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:33,237 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-07-26 13:00:33,237 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:33,238 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:33,238 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:33,239 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-26 13:00:33,239 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:33,447 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:33,477 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-07-26 13:00:33,477 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:33,478 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:33,479 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-26 13:00:33,480 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-26 13:00:33,480 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:33,682 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:33,717 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-07-26 13:00:33,718 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:33,722 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:33,723 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-07-26 13:00:33,966 - app.services.backgroundfx_client_v2 - WARNING - libraryFX not found, using legacy implementation
+2025-07-26 13:00:34,236 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX service health: {'status': 'ok', 'version': '1.0.0', 'gpu_available': False}
+2025-07-26 13:00:34,237 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX client initialized with service at https://backgroundfx-production.up.railway.app
+2025-07-26 13:00:36,440 - app.routes.background_routes - INFO - Cloudinary configured for video processing
+2025-07-26 13:00:38,609 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-07-26 13:00:38,610 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-07-26 13:00:38,613 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-07-26 13:00:38,614 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:38,614 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:38,822 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:38,848 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-07-26 13:00:38,849 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:38,849 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:38,852 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-07-26 13:00:38,852 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:38,853 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:39,075 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:39,109 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-07-26 13:00:39,110 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:39,110 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:39,111 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-07-26 13:00:39,112 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-26 13:00:39,113 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-26 13:00:39,327 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-26 13:00:39,354 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-26 13:00:39,355 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-26 13:00:39,356 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-26 13:00:39,357 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-07-26 13:00:39,422 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-07-26 13:00:39,428 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-07-26 13:00:39,841 - MyAvatar - WARNING -    - app.routes.backgroundfx_routes (AI-Enhanced) (app.routes.backgroundfx_routes)
+2025-07-26 13:00:39,841 - MyAvatar - WARNING -    - app.routes.backgroundfx_hf_integration (HF Space SAM2 + MatAnyone) (app.routes.backgroundfx_hf_integration)
+2025-07-26 13:00:39,841 - MyAvatar - WARNING -    - backend.api.video_endpoints (Flask Backend) (backend.api.video_endpoints)
+2025-07-29 16:07:17,002 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-07-29 16:07:17,373 - app.services.auth_service - INFO - Using jose library for JWT
+2025-07-29 16:07:17,523 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-07-29 16:07:17,524 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-07-29 16:07:17,524 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-07-29 16:07:19,139 - MyAvatar - INFO - [Storage] Cloudinary storage is configured
+2025-07-29 16:07:19,198 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-07-29 16:07:19,199 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-29 16:07:19,199 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:19,611 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:19,638 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-07-29 16:07:19,639 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:19,639 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:19,640 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-07-29 16:07:19,640 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-29 16:07:19,640 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:19,966 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:19,999 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-07-29 16:07:19,999 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:20,000 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:20,000 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-07-29 16:07:20,000 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-07-29 16:07:20,001 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:20,184 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:20,209 - MyAvatar - INFO - [Database] Query executed successfully in 0.024s
+2025-07-29 16:07:20,209 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:20,210 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:20,210 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:20,211 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-07-29 16:07:20,212 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:20,404 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:20,436 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-07-29 16:07:20,437 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:20,438 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:20,439 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:20,439 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-07-29 16:07:20,440 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:20,797 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:20,831 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-07-29 16:07:20,831 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:20,832 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:20,832 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:20,832 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-07-29 16:07:20,833 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:21,153 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:21,180 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-07-29 16:07:21,180 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:21,181 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:21,181 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:21,181 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-07-29 16:07:21,181 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:21,452 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:21,482 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-07-29 16:07:21,483 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:21,483 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:21,484 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:21,484 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-07-29 16:07:21,484 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:21,820 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:21,867 - MyAvatar - INFO - [Database] Query executed successfully in 0.046s
+2025-07-29 16:07:21,867 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:21,868 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:21,868 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-07-29 16:07:21,868 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-07-29 16:07:21,869 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-07-29 16:07:22,067 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-07-29 16:07:22,097 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-07-29 16:07:22,099 - MyAvatar - INFO - [Database] Query committed successfully
+2025-07-29 16:07:22,099 - MyAvatar - INFO - [Database] Database connection closed
+2025-07-29 16:07:22,100 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 12:47:58,971 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 12:47:58,971 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 12:47:58,971 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 12:47:59,038 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 12:47:59,085 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 12:48:00,236 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 12:48:00,278 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 12:48:00,278 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:00,279 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:00,629 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:00,656 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 12:48:00,656 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:00,657 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:00,657 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 12:48:00,657 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:00,658 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:00,874 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:00,910 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-08-01 12:48:00,910 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:00,911 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:00,911 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 12:48:00,911 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:00,912 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:01,239 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:01,266 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 12:48:01,266 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:01,267 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:01,268 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:01,268 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 12:48:01,268 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:01,467 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:01,501 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-01 12:48:01,502 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:01,502 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:01,503 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:01,503 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 12:48:01,504 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:01,715 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:01,750 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-01 12:48:01,751 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:01,751 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:01,752 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:01,752 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 12:48:01,752 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:01,947 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:01,977 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 12:48:01,978 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:01,979 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:01,979 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:01,980 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 12:48:01,981 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:02,176 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:02,206 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 12:48:02,206 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:02,207 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:02,207 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:02,208 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 12:48:02,208 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:02,546 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:02,586 - MyAvatar - INFO - [Database] Query executed successfully in 0.039s
+2025-08-01 12:48:02,586 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:02,587 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:02,587 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 12:48:02,587 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 12:48:02,588 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:02,786 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:02,828 - MyAvatar - INFO - [Database] Query executed successfully in 0.042s
+2025-08-01 12:48:02,828 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:02,829 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:02,829 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 12:48:04,622 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS distribution_sessions (
+                id SERIAL PRIMARY KE...
+2025-08-01 12:48:04,623 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:04,623 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:04,961 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:05,024 - MyAvatar - INFO - [Database] Query executed successfully in 0.062s
+2025-08-01 12:48:05,024 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:05,025 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:05,025 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_user_id 
+            ON distributi...
+2025-08-01 12:48:05,025 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:05,025 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:05,220 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:05,263 - MyAvatar - INFO - [Database] Query executed successfully in 0.042s
+2025-08-01 12:48:05,263 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:05,264 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 12:48:05,265 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_status 
+            ON distributio...
+2025-08-01 12:48:05,265 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 12:48:05,265 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 12:48:05,475 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 12:48:05,530 - MyAvatar - INFO - [Database] Query executed successfully in 0.054s
+2025-08-01 12:48:05,530 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 12:48:05,531 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:48,353 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 13:54:48,353 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 13:54:48,353 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 13:54:48,430 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 13:54:48,470 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 13:54:49,312 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 13:54:49,353 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 13:54:49,353 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:49,354 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:50,075 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:50,101 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 13:54:50,102 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:50,102 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:50,103 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 13:54:50,103 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:50,103 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:50,454 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:50,483 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 13:54:50,484 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:50,484 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:50,485 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 13:54:50,485 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:50,485 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:50,818 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:50,849 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 13:54:50,849 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:50,850 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:50,850 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:50,850 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 13:54:50,850 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:51,216 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:51,248 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-01 13:54:51,248 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:51,249 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:51,249 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:51,249 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 13:54:51,250 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:51,453 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:51,485 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-01 13:54:51,485 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:51,486 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:51,486 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:51,486 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 13:54:51,487 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:51,698 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:51,729 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 13:54:51,729 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:51,730 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:51,730 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:51,730 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 13:54:51,730 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:52,063 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:52,092 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 13:54:52,093 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:52,093 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:52,094 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:52,094 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 13:54:52,094 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:52,437 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:52,467 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 13:54:52,468 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:52,469 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:52,469 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 13:54:52,470 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 13:54:52,470 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:52,806 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:52,840 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-01 13:54:52,844 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:52,845 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:52,845 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 13:54:54,727 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS distribution_sessions (
+                id SERIAL PRIMARY KE...
+2025-08-01 13:54:54,728 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:54,728 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:54,931 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:54,965 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-01 13:54:54,966 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:54,966 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:54,966 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_user_id 
+            ON distributi...
+2025-08-01 13:54:54,967 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:54,967 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:55,158 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:55,188 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 13:54:55,189 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:55,189 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:54:55,190 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_status 
+            ON distributio...
+2025-08-01 13:54:55,190 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:54:55,190 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:54:55,416 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:54:55,447 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 13:54:55,447 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:54:55,447 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:55:09,047 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-01 13:55:09,048 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-01 13:55:09,051 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-01 13:55:09,052 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:55:09,052 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:55:09,245 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:55:09,270 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 13:55:09,271 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:55:09,271 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:55:09,271 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-01 13:55:09,271 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:55:09,272 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:55:09,605 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:55:09,630 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 13:55:09,630 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:55:09,631 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:55:09,631 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-01 13:55:09,631 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 13:55:09,631 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 13:55:09,834 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 13:55:09,864 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 13:55:09,865 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 13:55:09,866 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 13:55:09,866 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-01 13:55:09,980 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-08-01 13:55:09,988 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 13:55:10,081 - app.services.backgroundfx_client_v2 - WARNING - libraryFX not found, using legacy implementation
+2025-08-01 13:55:10,212 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX service health: {'status': 'ok', 'version': '1.0.0', 'gpu_available': False}
+2025-08-01 13:55:10,212 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX client initialized with service at https://backgroundfx-production.up.railway.app
+2025-08-01 13:55:10,214 - app.routes.background_routes - INFO - Cloudinary configured for video processing
+2025-08-01 14:06:27,759 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 14:06:27,760 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 14:06:27,760 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 14:06:27,863 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 14:06:27,895 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 14:06:28,711 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 14:06:28,738 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 14:06:28,739 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:28,739 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:28,997 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:29,028 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-01 14:06:29,029 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:29,030 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:29,032 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 14:06:29,033 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:29,033 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:29,301 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:29,331 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 14:06:29,331 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:29,332 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:29,332 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 14:06:29,332 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:29,332 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:29,552 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:29,577 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 14:06:29,577 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:29,578 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:29,578 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:29,578 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 14:06:29,578 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:29,767 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:29,802 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-01 14:06:29,803 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:29,804 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:29,804 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:29,804 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 14:06:29,805 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:30,017 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:30,052 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-01 14:06:30,053 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:30,053 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:30,054 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:30,054 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 14:06:30,054 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:30,250 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:30,286 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-08-01 14:06:30,286 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:30,286 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:30,288 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:30,288 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 14:06:30,288 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:30,480 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:30,522 - MyAvatar - INFO - [Database] Query executed successfully in 0.041s
+2025-08-01 14:06:30,522 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:30,523 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:30,523 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:30,524 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 14:06:30,524 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:30,737 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:30,781 - MyAvatar - INFO - [Database] Query executed successfully in 0.044s
+2025-08-01 14:06:30,782 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:30,782 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:30,782 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:06:30,783 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 14:06:30,783 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:31,011 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:31,044 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-08-01 14:06:31,044 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:31,045 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:31,045 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 14:06:31,515 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS distribution_sessions (
+                id SERIAL PRIMARY KE...
+2025-08-01 14:06:31,515 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:31,515 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:31,701 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:31,726 - MyAvatar - INFO - [Database] Query executed successfully in 0.024s
+2025-08-01 14:06:31,726 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:31,727 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:31,727 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_user_id 
+            ON distributi...
+2025-08-01 14:06:31,728 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:31,728 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:31,937 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:31,964 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 14:06:31,965 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:31,965 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:31,966 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE INDEX IF NOT EXISTS idx_distribution_sessions_status 
+            ON distributio...
+2025-08-01 14:06:31,966 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:31,967 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:32,178 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:32,206 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 14:06:32,206 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:32,207 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:36,418 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-01 14:06:36,419 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-01 14:06:36,423 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-01 14:06:36,423 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:36,423 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:36,655 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:36,690 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-01 14:06:36,690 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:36,690 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:36,691 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-01 14:06:36,691 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:36,691 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:36,921 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:36,952 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 14:06:36,954 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:36,955 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:36,956 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-01 14:06:36,957 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:36,957 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:37,182 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:37,213 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 14:06:37,213 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:37,214 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:37,214 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-01 14:06:37,277 - MyAvatar - INFO - [HostRoutes] Host message routes loaded successfully
+2025-08-01 14:06:37,319 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 14:06:37,355 - app.services.backgroundfx_client_v2 - WARNING - libraryFX not found, using legacy implementation
+2025-08-01 14:06:37,738 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX service health: {'status': 'ok', 'version': '1.0.0', 'gpu_available': False}
+2025-08-01 14:06:37,738 - app.services.backgroundfx_client_v2 - INFO - BackgroundFX client initialized with service at https://backgroundfx-production.up.railway.app
+2025-08-01 14:06:37,740 - app.routes.background_routes - INFO - Cloudinary configured for video processing
+2025-08-01 14:06:38,528 - MyAvatar - INFO - [Startup]    - Refresh interval: 60.0 minutes
+2025-08-01 14:06:38,528 - MyAvatar - INFO - [Startup]    - Batch size: 10 avatars
+2025-08-01 14:06:38,528 - MyAvatar - INFO - [Startup]    - API configured: True
+2025-08-01 14:06:38,593 - MyAvatar - INFO - [Database] Executing query: SELECT DISTINCT avatar_id, COUNT(*) as usage_count FROM user_avatars GROUP BY avatar_id ORDER BY usa...
+2025-08-01 14:06:38,593 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:06:38,593 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:38,816 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:38,846 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 14:06:38,847 - MyAvatar - INFO - [Database] Fetched 9 records
+2025-08-01 14:06:38,848 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:46,493 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:06:46,493 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/117bbac8c77b46f0b329fe958a57ec75/full/2.2/preview_target.webp', '117bbac8c77b46f0b329fe958a57ec75')
+2025-08-01 14:06:46,493 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:47,133 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:47,182 - MyAvatar - INFO - [Database] Query executed successfully in 0.048s
+2025-08-01 14:06:47,182 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:47,183 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:47,617 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:06:47,617 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/talking_photo/26a1eb9b09584909a7725ddb86496f84/b9a701afb5e24e89b70123d0990d5929.WEBP?Expires=1754646394&Signature=UlhAPgkEU6IJ5IQy5y8oWpAM1ljVusgapk4Y7aDyqw4sDHkxxsmyfAmh5Ft-7O7~y-6vq~ntjI48iWM1KFOd1qGi4plq64moRznPD1OrQk17fLUbAXhO5VQY-MtC15nzJeNGAmKoomDdwFyI0iGQ9LxG-XTMwuFWHvOCD7zxHoc18hUqjDzIr-U57P3pyumQrbhQnBIeoaTZNZfrF-RiEvanuV4Zboxl~LWoZ3H874AOM9fbmn2aJivs7uS7CiAQAV~GlMM6CGrRdz8XuX5f0zDPjLY9q9fam-MGND6efzklMi5R0DXDSVGJKAZQII1ti2fFjo~NqIOBBFDkF6WnZw__&Key-Pair-Id=K38HBHX5LX3X2H', '26a1eb9b09584909a7725ddb86496f84')
+2025-08-01 14:06:47,617 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:47,829 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:47,867 - MyAvatar - INFO - [Database] Query executed successfully in 0.037s
+2025-08-01 14:06:47,867 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:47,868 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:06:57,547 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:06:57,547 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/2cb81aff2ffc4438b9f14a4ccf9b61bc/full/2.2/preview_target.webp', '2cb81aff2ffc4438b9f14a4ccf9b61bc')
+2025-08-01 14:06:57,547 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:06:57,768 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:06:57,928 - MyAvatar - INFO - [Database] Query executed successfully in 0.159s
+2025-08-01 14:06:57,928 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:06:57,929 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:05,169 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:05,170 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/6ef17fb1237644d5bf0e0cecad883b51/full/2.2/preview_target.webp', '6ef17fb1237644d5bf0e0cecad883b51')
+2025-08-01 14:07:05,170 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:05,556 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:05,590 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-01 14:07:05,591 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:05,591 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:06,006 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:06,006 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/8a6bac0a93d84c4c94b4d6275d41ffd6/full/2.2/raw_preview_image.webp', '8a6bac0a93d84c4c94b4d6275d41ffd6')
+2025-08-01 14:07:06,007 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:06,210 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:06,251 - MyAvatar - INFO - [Database] Query executed successfully in 0.040s
+2025-08-01 14:07:06,252 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:06,253 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:14,851 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:14,851 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/25ef6c86b1e946969d9a684870c47dfe_14947/preview_talk_1.webp', 'Adrian_public_2_20240312')
+2025-08-01 14:07:14,851 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:15,064 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:15,098 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-01 14:07:15,099 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:15,099 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:15,541 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:15,542 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/talking_photo/d4bd85b709cd44e1b5d386d75eaeedaf/43fe5ae3125549a887a733de7bda360a.WEBP?Expires=1754646394&Signature=dyUnNWjChSO~zfNG4NsyC96t0-BlokR1APaNIGZJvgs6TAeJWPOLAvgLiBITBnWrh7emptUvhk6DRty47R8t1dQ4nD1yI--R9kj4mCdSRKGulgA7QeunAz-dhW7JXFLeMVSDwU1bEev64smQX723tBgupLfMHAz0US6jRTgBh4XwIAw2GwX4Z1ZX3o1UYCUasKmGqEbjKFQ-i~F30fK7Dv6Vk2s3zaylAwQVaTSmCmdfUe6XqsobWFTSUO9jN9yw9rAuuLtG~bWLWh7w8ylK3b2~x4UBqlzUHoIJOJf40s1~tn6snpdDjCrt0oPxXVRjMK2q~~Kw2AdVnkW459b9tw__&Key-Pair-Id=K38HBHX5LX3X2H', 'd4bd85b709cd44e1b5d386d75eaeedaf')
+2025-08-01 14:07:15,542 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:15,789 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:15,835 - MyAvatar - INFO - [Database] Query executed successfully in 0.046s
+2025-08-01 14:07:15,836 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:15,836 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:22,589 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:22,589 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/f1d5b3cfd8a64605ac960dd8862a9b85/full/2.2/preview_target.webp', 'f1d5b3cfd8a64605ac960dd8862a9b85')
+2025-08-01 14:07:22,589 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:22,802 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:22,834 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-08-01 14:07:22,835 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:22,837 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:07:29,968 - MyAvatar - INFO - [Database] Executing query: UPDATE user_avatars SET avatar_image_url = %s WHERE avatar_id = %s
+2025-08-01 14:07:29,969 - MyAvatar - INFO - [Database] Query parameters: ('https://files2.heygen.ai/avatar/v3/fae52d8e0ae34113aa92969a8fa82111/full/2.2/preview_target.webp', 'fae52d8e0ae34113aa92969a8fa82111')
+2025-08-01 14:07:29,969 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:07:30,164 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:07:30,193 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-01 14:07:30,194 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:07:30,194 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:43,329 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 14:24:43,329 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 14:24:43,329 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 14:24:43,415 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 14:24:43,444 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 14:24:44,078 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 14:24:44,102 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 14:24:44,102 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:44,102 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:44,364 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:44,391 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 14:24:44,392 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:44,392 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:44,393 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 14:24:44,393 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:44,393 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:44,598 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:44,707 - MyAvatar - INFO - [Database] Query executed successfully in 0.109s
+2025-08-01 14:24:44,707 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:44,708 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:44,708 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 14:24:44,708 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:44,708 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:44,936 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:44,974 - MyAvatar - INFO - [Database] Query executed successfully in 0.039s
+2025-08-01 14:24:44,981 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:44,982 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:45,011 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:45,011 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 14:24:45,011 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:45,240 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:45,382 - MyAvatar - INFO - [Database] Query executed successfully in 0.141s
+2025-08-01 14:24:45,382 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:45,382 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:45,382 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:45,383 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 14:24:45,383 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:45,607 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:45,744 - MyAvatar - INFO - [Database] Query executed successfully in 0.136s
+2025-08-01 14:24:45,745 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:45,745 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:45,746 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:45,746 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 14:24:45,746 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:45,976 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:46,055 - MyAvatar - INFO - [Database] Query executed successfully in 0.078s
+2025-08-01 14:24:46,056 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:46,056 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:46,057 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:46,057 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 14:24:46,057 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:46,252 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:46,299 - MyAvatar - INFO - [Database] Query executed successfully in 0.046s
+2025-08-01 14:24:46,299 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:46,300 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:46,301 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:46,301 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 14:24:46,302 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:46,537 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:46,586 - MyAvatar - INFO - [Database] Query executed successfully in 0.048s
+2025-08-01 14:24:46,586 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:46,586 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:46,587 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 14:24:46,587 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 14:24:46,587 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:46,777 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:46,827 - MyAvatar - INFO - [Database] Query executed successfully in 0.049s
+2025-08-01 14:24:46,827 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:46,828 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:46,829 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 14:24:51,673 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-01 14:24:51,674 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-01 14:24:51,677 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-01 14:24:51,677 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:51,677 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:51,874 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:51,906 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-08-01 14:24:51,906 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:51,907 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:51,907 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-01 14:24:51,908 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:51,908 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:52,136 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:52,167 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-01 14:24:52,168 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:52,169 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:52,171 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-01 14:24:52,171 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 14:24:52,172 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 14:24:52,387 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 14:24:52,414 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 14:24:52,415 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 14:24:52,415 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 14:24:52,415 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-01 14:24:52,427 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 15:26:16,777 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 15:26:16,778 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 15:26:16,778 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 15:26:17,302 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 15:26:17,340 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 15:26:18,110 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 15:26:18,134 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 15:26:18,134 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:18,135 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:18,784 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:18,812 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 15:26:18,812 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:18,812 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:18,813 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 15:26:18,813 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:18,813 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:19,186 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:19,223 - MyAvatar - INFO - [Database] Query executed successfully in 0.038s
+2025-08-01 15:26:19,224 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:19,224 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:19,224 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 15:26:19,224 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:19,225 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:19,551 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:19,577 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 15:26:19,577 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:19,578 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:19,578 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:19,578 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 15:26:19,578 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:19,913 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:19,955 - MyAvatar - INFO - [Database] Query executed successfully in 0.042s
+2025-08-01 15:26:19,957 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:19,959 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:19,959 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:19,959 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 15:26:19,960 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:20,213 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:20,254 - MyAvatar - INFO - [Database] Query executed successfully in 0.041s
+2025-08-01 15:26:20,254 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:20,255 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:20,255 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:20,255 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 15:26:20,256 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:20,462 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:20,493 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 15:26:20,493 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:20,494 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:20,494 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:20,494 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 15:26:20,494 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:20,834 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:20,864 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 15:26:20,865 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:20,865 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:20,865 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:20,866 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 15:26:20,866 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:21,173 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:21,224 - MyAvatar - INFO - [Database] Query executed successfully in 0.051s
+2025-08-01 15:26:21,225 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:21,225 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:21,225 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 15:26:21,225 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 15:26:21,226 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:22,454 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:22,497 - MyAvatar - INFO - [Database] Query executed successfully in 0.043s
+2025-08-01 15:26:22,498 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:22,498 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:22,499 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 15:26:28,133 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-01 15:26:28,133 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-01 15:26:28,137 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-01 15:26:28,138 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:28,138 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:30,072 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:30,098 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 15:26:30,098 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:30,098 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:30,099 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-01 15:26:30,099 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:30,099 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:30,290 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:30,315 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 15:26:30,315 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:30,316 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:30,316 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-01 15:26:30,316 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 15:26:30,316 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 15:26:30,555 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 15:26:30,586 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 15:26:30,586 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 15:26:30,586 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 15:26:30,586 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-01 15:26:30,598 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 17:42:16,359 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-01 17:42:16,365 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:42:16,365 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:42:16,790 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:42:16,818 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 17:42:16,819 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-01 17:42:16,820 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:42:16,821 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-01 17:42:16,822 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 1),)
+2025-08-01 17:42:16,822 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:42:17,158 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:42:17,186 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 17:42:17,187 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-01 17:42:17,188 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:42:17,189 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-01 17:42:17,189 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:42:17,190 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:42:17,412 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:42:17,440 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-08-01 17:42:17,441 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-01 17:42:17,441 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:42:17,442 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM videos
+2025-08-01 17:42:17,442 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:42:17,442 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:42:17,641 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:42:17,668 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 17:42:17,670 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-01 17:42:17,670 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:42:17,672 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-01 17:42:17,672 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 1),)
+2025-08-01 17:42:17,673 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:42:17,877 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:42:17,903 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-01 17:42:17,904 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-01 17:42:17,904 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:16,952 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-01 17:45:16,952 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-01 17:45:16,952 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-01 17:45:17,482 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-01 17:45:17,540 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-01 17:45:17,911 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-01 17:45:17,938 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-01 17:45:17,939 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:17,939 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:18,186 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:18,214 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 17:45:18,214 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:18,215 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:18,215 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-01 17:45:18,215 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:18,215 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:18,458 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:20,193 - MyAvatar - INFO - [Database] Query executed successfully in 1.735s
+2025-08-01 17:45:20,193 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:20,193 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:20,194 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-01 17:45:20,194 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:20,194 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:20,394 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:20,421 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-01 17:45:20,422 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:20,422 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:20,422 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:20,423 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-01 17:45:20,423 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:20,617 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:22,720 - MyAvatar - INFO - [Database] Query executed successfully in 2.102s
+2025-08-01 17:45:22,722 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:22,723 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:22,723 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:22,723 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-01 17:45:22,724 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:22,992 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:24,096 - MyAvatar - INFO - [Database] Query executed successfully in 1.103s
+2025-08-01 17:45:24,097 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:24,097 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:24,098 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:24,098 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-01 17:45:24,098 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:24,706 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:25,474 - MyAvatar - INFO - [Database] Query executed successfully in 0.767s
+2025-08-01 17:45:25,475 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:25,476 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:25,477 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:25,477 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-01 17:45:25,477 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:25,863 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:26,010 - MyAvatar - INFO - [Database] Query executed successfully in 0.145s
+2025-08-01 17:45:26,011 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:26,011 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:26,012 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:26,012 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-01 17:45:26,012 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:26,246 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:26,409 - MyAvatar - INFO - [Database] Query executed successfully in 0.163s
+2025-08-01 17:45:26,410 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:26,410 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:26,411 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-01 17:45:26,411 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-01 17:45:26,412 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:26,624 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:26,660 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-08-01 17:45:26,661 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:26,661 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:26,662 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-01 17:45:31,937 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-01 17:45:31,937 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-01 17:45:31,941 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-01 17:45:31,941 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:31,941 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:32,144 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:32,170 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-01 17:45:32,171 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:32,171 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:32,171 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-01 17:45:32,171 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:32,171 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:32,375 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:32,406 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-01 17:45:32,407 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:32,407 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:32,407 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-01 17:45:32,407 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-01 17:45:32,408 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-01 17:45:32,604 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-01 17:45:32,633 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-08-01 17:45:32,634 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-01 17:45:32,634 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-01 17:45:32,635 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-01 17:45:32,656 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-02 17:52:18,401 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-02 17:52:18,404 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-02 17:52:18,404 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-02 17:52:18,836 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-02 17:52:18,867 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-08-02 17:52:18,869 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-02 17:52:18,870 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-02 17:52:18,871 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-02 17:52:18,871 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 2),)
+2025-08-02 17:52:18,872 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-02 17:52:19,070 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-02 17:52:19,105 - MyAvatar - INFO - [Database] Query executed successfully in 0.035s
+2025-08-02 17:52:19,106 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-02 17:52:19,106 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-02 17:52:19,107 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-02 17:52:19,107 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-02 17:52:19,107 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-02 17:52:19,446 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-02 17:52:19,473 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-02 17:52:19,474 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-02 17:52:19,475 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-02 17:52:19,476 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM videos
+2025-08-02 17:52:19,476 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-02 17:52:19,477 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-02 17:52:19,686 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-02 17:52:19,715 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-08-02 17:52:19,716 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-02 17:52:19,717 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-02 17:52:19,718 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-02 17:52:19,718 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 2),)
+2025-08-02 17:52:19,718 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-02 17:52:20,056 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-02 17:52:20,112 - MyAvatar - INFO - [Database] Query executed successfully in 0.055s
+2025-08-02 17:52:20,113 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-02 17:52:20,113 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:37,411 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-03 11:02:37,411 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-03 11:02:37,411 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-03 11:02:38,771 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-03 11:02:38,799 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-03 11:02:39,405 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-03 11:02:39,445 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-03 11:02:39,446 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:39,446 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:39,855 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:39,880 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-03 11:02:39,880 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:39,881 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:39,881 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-03 11:02:39,881 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:39,881 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:40,207 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:40,237 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-03 11:02:40,238 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:40,238 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:40,239 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-03 11:02:40,239 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:40,239 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:40,565 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:40,592 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-03 11:02:40,593 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:40,593 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:40,594 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:40,594 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-03 11:02:40,594 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:40,925 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:40,965 - MyAvatar - INFO - [Database] Query executed successfully in 0.039s
+2025-08-03 11:02:40,965 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:40,966 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:40,966 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:40,966 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-03 11:02:40,966 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:41,283 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:41,313 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-03 11:02:41,314 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:41,315 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:41,316 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:41,316 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-03 11:02:41,316 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:41,646 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:41,686 - MyAvatar - INFO - [Database] Query executed successfully in 0.040s
+2025-08-03 11:02:41,687 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:41,687 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:41,688 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:41,689 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-03 11:02:41,689 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:41,879 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:41,911 - MyAvatar - INFO - [Database] Query executed successfully in 0.032s
+2025-08-03 11:02:41,912 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:41,912 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:41,913 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:41,914 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-03 11:02:41,914 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:42,113 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:42,147 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-03 11:02:42,147 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:42,148 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:42,148 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-03 11:02:42,150 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-03 11:02:42,150 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:42,354 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:42,384 - MyAvatar - INFO - [Database] Query executed successfully in 0.029s
+2025-08-03 11:02:42,385 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:42,385 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:42,386 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-03 11:02:55,943 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-03 11:02:55,944 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-03 11:02:55,947 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-03 11:02:55,947 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:55,947 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:56,150 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:56,182 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-03 11:02:56,182 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:56,183 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:56,184 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-03 11:02:56,184 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:56,185 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:56,511 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:56,537 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-03 11:02:56,538 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:56,538 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:56,539 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-03 11:02:56,539 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:02:56,539 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:02:56,767 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:02:56,801 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-03 11:02:56,805 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-03 11:02:56,806 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:02:56,806 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-03 11:02:56,861 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET
+2025-08-03 11:03:44,936 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-03 11:03:44,941 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:03:44,941 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:03:45,201 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:03:45,228 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-03 11:03:45,229 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-03 11:03:45,229 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:03:45,229 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-03 11:03:45,229 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 3),)
+2025-08-03 11:03:45,230 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:03:45,484 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:03:45,512 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-03 11:03:45,513 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-03 11:03:45,513 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:03:45,514 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users
+2025-08-03 11:03:45,514 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:03:45,514 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:03:45,717 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:03:45,743 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-03 11:03:45,743 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-03 11:03:45,743 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:03:45,744 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM videos
+2025-08-03 11:03:45,744 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-03 11:03:45,744 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:03:45,953 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:03:45,982 - MyAvatar - INFO - [Database] Query executed successfully in 0.028s
+2025-08-03 11:03:45,983 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-03 11:03:45,983 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-03 11:03:45,984 - MyAvatar - INFO - [Database] Executing query: SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = %s
+2025-08-03 11:03:45,985 - MyAvatar - INFO - [Database] Query parameters: (datetime.date(2025, 8, 3),)
+2025-08-03 11:03:45,985 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-03 11:03:46,183 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-03 11:03:46,210 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-03 11:03:46,211 - MyAvatar - INFO - [Database] Fetched one record: Found
+2025-08-03 11:03:46,211 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:03,991 - MyAvatar - INFO - [Database] PostgreSQL support is available
+2025-08-05 09:16:03,992 - MyAvatar - INFO - [Database] Database configuration - USE_POSTGRES: True, POSTGRESQL_AVAILABLE: True
+2025-08-05 09:16:03,992 - MyAvatar - INFO - [Database] DATABASE_URL detected: YES
+2025-08-05 09:16:05,435 - app.config.settings - WARNING - Using fallback value for JWT_SECRET
+2025-08-05 09:16:05,463 - app.services.auth_service - INFO - Using jose library for JWT
+2025-08-05 09:16:06,305 - app.storage.file_storage - INFO - Cloudinary storage is configured
+2025-08-05 09:16:06,355 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_subscriptions (
+                id SERIAL PRIMARY KE...
+2025-08-05 09:16:06,355 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:06,355 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:06,775 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:06,803 - MyAvatar - INFO - [Database] Query executed successfully in 0.027s
+2025-08-05 09:16:06,805 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:06,806 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:06,808 - MyAvatar - INFO - [Database] Executing query: 
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS trial_used BOOLEAN DEFAULT fals...
+2025-08-05 09:16:06,808 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:06,808 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:07,138 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:07,170 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-05 09:16:07,171 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:07,172 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:07,173 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS premium_features (
+                id SERIAL PRIMARY KEY,
+  ...
+2025-08-05 09:16:07,173 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:07,174 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:07,373 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:07,399 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-05 09:16:07,400 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:07,402 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:07,402 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:07,403 - MyAvatar - INFO - [Database] Query parameters: ('backgroundfx', 'BackgroundFX Studio', 'AI-powered background replacement with HeyGen WebM integration', True)
+2025-08-05 09:16:07,403 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:07,729 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:07,761 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-05 09:16:07,761 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:07,762 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:07,763 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:07,763 - MyAvatar - INFO - [Database] Query parameters: ('video_processing', 'Advanced Video Processing', 'Professional background replacement with multiple AI models', True)
+2025-08-05 09:16:07,764 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:07,991 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:08,025 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-05 09:16:08,025 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:08,026 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:08,027 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:08,027 - MyAvatar - INFO - [Database] Query parameters: ('unlimited_videos', 'Unlimited Video Generation', 'Generate unlimited videos without monthly limits', True)
+2025-08-05 09:16:08,027 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:08,365 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:08,397 - MyAvatar - INFO - [Database] Query executed successfully in 0.031s
+2025-08-05 09:16:08,398 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:08,399 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:08,401 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:08,401 - MyAvatar - INFO - [Database] Query parameters: ('priority_processing', 'Priority Processing', 'Faster video processing with priority queue', True)
+2025-08-05 09:16:08,402 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:08,606 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:08,641 - MyAvatar - INFO - [Database] Query executed successfully in 0.034s
+2025-08-05 09:16:08,641 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:08,642 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:08,643 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:08,643 - MyAvatar - INFO - [Database] Query parameters: ('advanced_avatars', 'Advanced Avatar Library', 'Access to premium avatar collection', True)
+2025-08-05 09:16:08,644 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:08,851 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:08,889 - MyAvatar - INFO - [Database] Query executed successfully in 0.037s
+2025-08-05 09:16:08,890 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:08,891 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:08,891 - MyAvatar - INFO - [Database] Executing query: 
+                INSERT INTO premium_features (feature_key, name, description, premium_required)
+   ...
+2025-08-05 09:16:08,891 - MyAvatar - INFO - [Database] Query parameters: ('api_access', 'API Access', 'Full API access for integrations', True)
+2025-08-05 09:16:08,891 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:09,203 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:09,237 - MyAvatar - INFO - [Database] Query executed successfully in 0.033s
+2025-08-05 09:16:09,238 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:09,239 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:09,239 - MyAvatar - INFO - [PremiumRoutes] Premium database schema initialized successfully
+2025-08-05 09:16:29,347 - MyAvatar - INFO - [SegmentationModels] PyTorch available for RVM segmentation
+2025-08-05 09:16:29,348 - MyAvatar - INFO - [VideoProcessingRoutes] Cloudinary configured for video processing
+2025-08-05 09:16:29,352 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS video_processing_jobs (
+                id SERIAL PRIMARY KE...
+2025-08-05 09:16:29,352 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:29,354 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:29,564 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:29,595 - MyAvatar - INFO - [Database] Query executed successfully in 0.030s
+2025-08-05 09:16:29,596 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:29,596 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:29,596 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS uploaded_videos (
+                id SERIAL PRIMARY KEY,
+   ...
+2025-08-05 09:16:29,597 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:29,598 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:29,927 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:29,953 - MyAvatar - INFO - [Database] Query executed successfully in 0.026s
+2025-08-05 09:16:29,954 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:29,954 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:29,955 - MyAvatar - INFO - [Database] Executing query: 
+            CREATE TABLE IF NOT EXISTS background_images (
+                id SERIAL PRIMARY KEY,
+ ...
+2025-08-05 09:16:29,955 - MyAvatar - INFO - [Database] Query parameters: ()
+2025-08-05 09:16:29,955 - MyAvatar - INFO - [Database] Attempting PostgreSQL database connection
+2025-08-05 09:16:30,277 - MyAvatar - INFO - [Database] PostgreSQL database connection successful
+2025-08-05 09:16:30,303 - MyAvatar - INFO - [Database] Query executed successfully in 0.025s
+2025-08-05 09:16:30,303 - MyAvatar - INFO - [Database] Query committed successfully
+2025-08-05 09:16:30,304 - MyAvatar - INFO - [Database] Database connection closed
+2025-08-05 09:16:30,305 - MyAvatar - INFO - [VideoProcessingRoutes] Database tables created/verified successfully
+2025-08-05 09:16:30,360 - app.routes.web_routes - WARNING - Using fallback value for JWT_SECRET

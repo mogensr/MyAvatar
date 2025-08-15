@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - MyAvatar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 0;
+        }
+        
+        .register-container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 450px;
+            margin: auto;
+        }
+        
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .register-header h2 {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .register-header p {
+            color: #666;
+            margin: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .required {
+            color: #ef4444;
+        }
+        
+        .form-control {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .username-rules {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .username-rules h6 {
+            margin: 0 0 0.5rem 0;
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        .username-rules ul {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: #6b7280;
+        }
+        
+        .username-rules li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .username-check {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .username-available {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .username-taken {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .username-checking {
+            background: #fefce8;
+            color: #ca8a04;
+            border: 1px solid #fef08a;
+        }
+        
+        .username-invalid {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .username-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        
+        .password-rules {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+        }
+        
+        .password-rules h6 {
+            margin: 0 0 0.5rem 0;
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        .password-rules ul {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: #6b7280;
+        }
+        
+        .password-rules li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.875rem 1.5rem;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .alert-danger {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .footer-links {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer-links a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .footer-links a:hover {
+            color: #1d4ed8;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #ca8a04;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .checkmark {
+            color: #16a34a;
+            font-weight: bold;
+        }
+        
+        .crossmark {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        
+        .warning-icon {
+            color: #92400e;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h2>🎭 Create Your Account</h2>
+            <p>Join MyAvatar and start creating amazing videos</p>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/register" id="registrationForm">
+            <!-- USERNAME FIELD -->
+            <div class="form-group">
+                <label for="username" class="form-label">
+                    Username <span class="required">*</span>
+                </label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter your unique username"
+                    required
+                    autocomplete="username"
+                >
+                
+                <!-- USERNAME RULES -->
+                <div class="username-rules">
+                    <h6>📝 Username Requirements:</h6>
+                    <ul>
+                        <li><strong>3-50 characters</strong> long</li>
+                        <li>Only <strong>letters, numbers, hyphens (-), and underscores (_)</strong></li>
+                        <li>Must be <strong>unique</strong> (no one else can have it)</li>
+                        <li>Cannot start or end with hyphen or underscore</li>
+                    </ul>
+                </div>
+                
+                <!-- USERNAME AVAILABILITY CHECK -->
+                <div id="usernameCheck" class="username-check hidden">
+                    <span id="usernameIcon"></span>
+                    <span id="usernameCheckMessage"></span>
+                </div>
+            </div>
+            
+            <!-- EMAIL FIELD -->
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    Email Address <span class="required">*</span>
+                </label>
+                <input 
+                    type="email" 
+                    class="form-control" 
+                    id="email" 
+                    name="email" 
+                    placeholder="Enter your email address"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+            
+            <!-- PASSWORD FIELD -->
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    Password <span class="required">*</span>
+                </label>
+                <input 
+                    type="password" 
+                    class="form-control" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Create a secure password"
+                    required
+                    autocomplete="new-password"
+                >
+                
+                <!-- PASSWORD RULES -->
+                <div class="password-rules">
+                    <h6>🔒 Password Requirements:</h6>
+                    <ul>
+                        <li><strong>At least 8 characters</strong> long</li>
+                        <li>At least <strong>2 digits</strong> (0-9)</li>
+                        <li>At least <strong>1 uppercase letter</strong> (A-Z)</li>
+                        <li>At least <strong>1 lowercase letter</strong> (a-z)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- CONFIRM PASSWORD FIELD -->
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">
+                    Confirm Password <span class="required">*</span>
+                </label>
+                <input 
+                    type="password" 
+                    class="form-control" 
+                    id="confirm_password" 
+                    name="confirm_password" 
+                    placeholder="Re-enter your password"
+                    required
+                    autocomplete="new-password"
+                >
+            </div>
+            
+            <!-- SUBMIT BUTTON -->
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <span id="submitText">Create Account</span>
+            </button>
+        </form>
+        
+        <!-- FOOTER LINKS -->
+        <div class="footer-links">
+            <p>Already have an account? <a href="/login">Sign in here</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Username validation and availability checking
+        const usernameInput = document.getElementById('username');
+        const usernameCheck = document.getElementById('usernameCheck');
+        const usernameCheckMessage = document.getElementById('usernameCheckMessage');
+        const usernameIcon = document.getElementById('usernameIcon');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        
+        let checkTimeout;
+        let isUsernameValid = false;
+        let isUsernameAvailable = false;
+        let apiCheckFailed = false;
+        
+        // Real-time username validation
+        usernameInput.addEventListener('input', function() {
+            const username = this.value.trim();
+            
+            // Clear previous timeout
+            clearTimeout(checkTimeout);
+            
+            // Reset states
+            isUsernameValid = false;
+            isUsernameAvailable = false;
+            apiCheckFailed = false;
+            
+            // Hide check message if empty
+            if (!username) {
+                usernameCheck.classList.add('hidden');
+                updateSubmitButton();
+                return;
+            }
+            
+            // Validate format first
+            const formatValidation = validateUsernameFormat(username);
+            if (!formatValidation.valid) {
+                showUsernameMessage(formatValidation.message, 'invalid');
+                updateSubmitButton();
+                return;
+            }
+            
+            // Format is valid
+            isUsernameValid = true;
+            
+            // Show checking message
+            showUsernameMessage('Checking availability...', 'checking');
+            
+            // Check availability after 500ms delay
+            checkTimeout = setTimeout(() => {
+                checkUsernameAvailability(username);
+            }, 500);
+        });
+        
+        function validateUsernameFormat(username) {
+            // Check length
+            if (username.length < 3) {
+                return { valid: false, message: 'Username must be at least 3 characters long' };
+            }
+            if (username.length > 50) {
+                return { valid: false, message: 'Username must be no more than 50 characters long' };
+            }
+            
+            // Check characters (only letters, numbers, hyphens, underscores)
+            if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+                return { valid: false, message: 'Username can only contain letters, numbers, hyphens, and underscores' };
+            }
+            
+            // Check doesn't start or end with hyphen or underscore
+            if (/^[-_]|[-_]$/.test(username)) {
+                return { valid: false, message: 'Username cannot start or end with hyphen or underscore' };
+            }
+            
+            return { valid: true, message: 'Username format is valid' };
+        }
+        
+        async function checkUsernameAvailability(username) {
+            try {
+                console.log('Checking username availability for:', username);
+                
+                const response = await fetch('/api/check-username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+                
+                console.log('API Response status:', response.status);
+                
+                // Handle HTTP errors
+                if (!response.ok) {
+                    console.error('API Error:', response.status, response.statusText);
+                    
+                    // If API fails, allow registration but show warning
+                    apiCheckFailed = true;
+                    showUsernameMessage('⚠️ Cannot verify availability - proceeding anyway', 'warning');
+                    isUsernameAvailable = true; // Allow submission
+                    updateSubmitButton();
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('API Response data:', data);
+                
+                if (data.available) {
+                    showUsernameMessage('✓ Username is available!', 'available');
+                    isUsernameAvailable = true;
+                } else {
+                    showUsernameMessage('✗ Username is already taken', 'taken');
+                    isUsernameAvailable = false;
+                }
+                
+            } catch (error) {
+                console.error('Network error checking username:', error);
+                
+                // If network fails, allow registration but show warning
+                apiCheckFailed = true;
+                showUsernameMessage('⚠️ Cannot verify availability - proceeding anyway', 'warning');
+                isUsernameAvailable = true; // Allow submission
+            }
+            
+            updateSubmitButton();
+        }
+        
+        function showUsernameMessage(message, type) {
+            usernameCheckMessage.textContent = message;
+            
+            // Set icon and styling based on type
+            if (type === 'available') {
+                usernameIcon.innerHTML = '<span class="checkmark">✓</span>';
+                usernameCheck.className = 'username-check username-available';
+            } else if (type === 'taken') {
+                usernameIcon.innerHTML = '<span class="crossmark">✗</span>';
+                usernameCheck.className = 'username-check username-taken';
+            } else if (type === 'checking') {
+                usernameIcon.innerHTML = '<div class="spinner"></div>';
+                usernameCheck.className = 'username-check username-checking';
+            } else if (type === 'invalid') {
+                usernameIcon.innerHTML = '<span class="crossmark">✗</span>';
+                usernameCheck.className = 'username-check username-invalid';
+            } else if (type === 'warning') {
+                usernameIcon.innerHTML = '<span class="warning-icon">⚠️</span>';
+                usernameCheck.className = 'username-check username-warning';
+            }
+            
+            usernameCheck.classList.remove('hidden');
+        }
+        
+        function updateSubmitButton() {
+            const username = usernameInput.value.trim();
+            const hasValidUsername = username && isUsernameValid && isUsernameAvailable;
+            
+            if (hasValidUsername) {
+                submitBtn.disabled = false;
+                if (apiCheckFailed) {
+                    submitText.textContent = 'Create Account (Unverified)';
+                } else {
+                    submitText.textContent = 'Create Account';
+                }
+            } else {
+                submitBtn.disabled = true;
+                if (username && isUsernameValid && !isUsernameAvailable) {
+                    submitText.textContent = 'Username Not Available';
+                } else if (username && !isUsernameValid) {
+                    submitText.textContent = 'Invalid Username';
+                } else {
+                    submitText.textContent = 'Create Account';
+                }
+            }
+        }
+        
+        // Form submission validation - RELAXED for API failures
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            const username = usernameInput.value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            
+            // Final username validation
+            const formatValidation = validateUsernameFormat(username);
+            if (!formatValidation.valid) {
+                e.preventDefault();
+                alert('Please enter a valid username: ' + formatValidation.message);
+                return;
+            }
+            
+            // Only block if we successfully checked and username is taken
+            if (!apiCheckFailed && !isUsernameAvailable) {
+                e.preventDefault();
+                alert('Please choose an available username.');
+                return;
+            }
+            
+            // Password validation
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match.');
+                return;
+            }
+            
+            // Password strength validation
+            if (password.length < 8) {
+                e.preventDefault();
+                alert('Password must be at least 8 characters long.');
+                return;
+            }
+            
+            const digitCount = (password.match(/\d/g) || []).length;
+            if (digitCount < 2) {
+                e.preventDefault();
+                alert('Password must contain at least 2 digits.');
+                return;
+            }
+            
+            if (!/[A-Z]/.test(password)) {
+                e.preventDefault();
+                alert('Password must contain at least one uppercase letter.');
+                return;
+            }
+            
+            if (!/[a-z]/.test(password)) {
+                e.preventDefault();
+                alert('Password must contain at least one lowercase letter.');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.textContent = 'Creating Account...';
+            
+            // If API failed, show confirmation
+            if (apiCheckFailed) {
+                const proceed = confirm('Username availability could not be verified. Continue with registration?');
+                if (!proceed) {
+                    e.preventDefault();
+                    submitBtn.disabled = false;
+                    submitText.textContent = 'Create Account (Unverified)';
+                    return;
+                }
+            }
+        });
+        
+        // Initialize submit button state
+        updateSubmitButton();
+    </script>
+</body>
+</html>

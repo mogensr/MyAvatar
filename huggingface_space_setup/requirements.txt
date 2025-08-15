@@ -1,0 +1,35 @@
+# Video processing
+streamlit==1.47.1
+opencv-python==4.8.1.78
+imageio==2.25.0
+imageio-ffmpeg==0.4.8
+qtfaststart==1.8  # Pure Python moov atom fixer for web-compatible MP4s
+moviepy==1.0.3   # Video editing with audio support
+
+# Image processing 
+Pillow==10.0.1
+numpy<2.0.0
+
+# AI Models
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+
+# MatAnyone and dependencies
+git+https://github.com/pq-yang/MatAnyone.git
+git+https://github.com/facebookresearch/segment-anything-2.git
+
+# Additional dependencies for MatAnyone
+scipy>=1.7.0
+matplotlib>=3.5.0
+einops>=0.6.0
+safetensors>=0.3.0
+
+# Utilities
+tqdm>=4.64.0
+
+# MediaPipe for better segmentation
+mediapipe==0.10.7
+
+# MyAvatar API integration
+requests>=2.31.0

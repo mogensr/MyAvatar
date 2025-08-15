@@ -1,0 +1,396 @@
+<!-- templates/portal/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAvatar - AI-Powered Avatar Creation Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .landing-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .hero-section {
+            color: white;
+            padding: 3rem 2rem;
+        }
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+        .hero-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 2rem 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .feature-icon {
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 420px;
+            margin: 2rem;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header h3 {
+            color: #333;
+            font-weight: 600;
+        }
+        .login-header .icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: #667eea;
+            border: none;
+            padding: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        .password-container {
+            position: relative;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 1.2rem;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover {
+            color: #667eea;
+        }
+        .form-links {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .form-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .form-links a:hover {
+            color: #5a67d8;
+            text-decoration: underline;
+        }
+        .divider {
+            text-align: center;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+            position: relative;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .brand-logo {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            z-index: 1000;
+            display: block;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .brand-logo:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+        .brand-logo-img {
+            height: 60px;
+            width: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        .brand-logo:hover .brand-logo-img {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        /* Video Demo Button Styling */
+        .video-demo-button:hover {
+            background: rgba(255,255,255,0.1) !important;
+            border-radius: 8px;
+            transform: translateY(-2px);
+        }
+        .video-demo-button:hover .feature-icon {
+            color: #ffc107;
+            transform: scale(1.1);
+        }
+        
+        /* Video Modal Styling */
+        .video-modal {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        .video-modal-content {
+            position: relative;
+            margin: 5% auto;
+            width: 80%;
+            max-width: 800px;
+        }
+        .video-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- MyAvatars.dk Logo -->
+    <a href="/" class="brand-logo">
+        <img src="/static/images/myavatar_logo.png" alt="MyAvatars.dk" class="brand-logo-img">
+    </a>
+    
+<div class="container-fluid landing-container">
+    <div class="row h-100">
+        <!-- Hero Marketing Section -->
+        <div class="col-lg-7 hero-section d-flex align-items-center">
+            <div>
+                <h1 class="hero-title">Transform Your Content with AI-Powered Avatars</h1>
+                <p class="hero-subtitle">Create professional videos with realistic AI avatars, then distribute them across all your social platforms automatically.</p>
+                
+                <ul class="feature-list">
+                    <li class="feature-item video-demo-button" onclick="openDemoVideo()" style="cursor: pointer; transition: all 0.3s ease;">
+                        <div class="feature-icon"><i class="bi bi-play-circle-fill"></i></div>
+                        <span>Create AI Avatar Videos in Minutes <small class="text-light opacity-75">(Click to Watch Demo)</small></span>
+                    </li>
+                    <li class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-share"></i></div>
+                        <span>Auto-Distribute to All Social Platforms</span>
+                    </li>
+                    <li class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-graph-up"></i></div>
+                        <span>Track Performance & Analytics</span>
+                    </li>
+                    <li class="feature-item">
+                        <div class="feature-icon"><i class="bi bi-lightning"></i></div>
+                        <span>AI-Powered Content Optimization</span>
+                    </li>
+                </ul>
+                
+                <div class="mt-4">
+                    <p class="mb-2"><strong>🎁 7-Day Free Trial Includes:</strong></p>
+                    <p class="mb-1">✅ Test Avatar & Video Creation</p>
+                    <p class="mb-1">✅ Full Distribution Platform Access</p>
+                    <p class="mb-3">✅ No Credit Card Required</p>
+                </div>
+                
+                <div class="mt-4 p-3" style="background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <p class="mb-2"><strong>🚀 Unlock with Upgrade:</strong></p>
+                    <p class="mb-1">⭐ Create Your Own Custom Avatar</p>
+                    <p class="mb-1">⭐ Unlimited Video Generation</p>
+                    <p class="mb-1">⭐ Advanced AI Content Tools</p>
+                    <p class="mb-1">⭐ Priority Support & Analytics</p>
+                    <small class="text-light opacity-75">Starting from Basic → Premium → Premium+</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Login Form Section -->
+        <div class="col-lg-5 d-flex justify-content-center align-items-center">
+            <div class="login-box">
+                <div class="login-header">
+                    <i class="bi bi-person-circle icon"></i>
+                    <h3>Login to MyAvatar</h3>
+                </div>
+    
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    
+    <form method="post" action="/login">
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input type="text" class="form-control" id="username" name="username" 
+                       placeholder="Enter your username" required autofocus>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <label for="password" class="form-label">Password</label>
+            <div class="password-container">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="Enter your password" required>
+                    <span class="toggle-password" onclick="togglePasswordVisibility()">
+                        <i class="bi bi-eye" id="toggleIcon"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="remember">
+                <label class="form-check-label" for="remember">Remember me</label>
+            </div>
+            <a href="#" class="text-muted small">Forgot password?</a>
+        </div>
+        
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-box-arrow-in-right"></i> Login
+        </button>
+    </form>
+    
+    <div class="divider">
+        <span>or</span>
+    </div>
+    
+    <div class="form-links">
+        <p class="mb-0">Don't have an account?</p>
+        <a href="/register" class="btn btn-success w-100 mt-2 mb-2 fw-bold">
+            <i class="bi bi-gift"></i> Start 7-Day Free Trial
+        </a>
+        <small class="text-muted">Already have an account? Use the form above to login</small>
+    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Video Demo Modal -->
+<div id="videoModal" class="video-modal">
+    <div class="video-modal-content">
+        <span class="video-close" onclick="closeDemoVideo()">&times;</span>
+        <video id="demoVideo" width="100%" height="auto" controls>
+            <source src="/static/videos/myavatar-demo.mp4" type="video/mp4">
+            <source src="/static/videos/myavatar-demo.webm" type="video/webm">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function togglePasswordVisibility() {
+    const passwordField = document.getElementById('password');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleIcon.classList.remove('bi-eye');
+        toggleIcon.classList.add('bi-eye-slash');
+    } else {
+        passwordField.type = 'password';
+        toggleIcon.classList.remove('bi-eye-slash');
+        toggleIcon.classList.add('bi-eye');
+    }
+}
+
+// Auto-focus on username field when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('username').focus();
+});
+
+// Video Demo Modal Functions
+function openDemoVideo() {
+    const modal = document.getElementById('videoModal');
+    const video = document.getElementById('demoVideo');
+    modal.style.display = 'block';
+    video.play();
+}
+
+function closeDemoVideo() {
+    const modal = document.getElementById('videoModal');
+    const video = document.getElementById('demoVideo');
+    modal.style.display = 'none';
+    video.pause();
+    video.currentTime = 0;
+}
+
+// Close modal when clicking outside the video
+window.onclick = function(event) {
+    const modal = document.getElementById('videoModal');
+    if (event.target == modal) {
+        closeDemoVideo();
+    }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeDemoVideo();
+    }
+});
+</script>
+</body>
+</html>

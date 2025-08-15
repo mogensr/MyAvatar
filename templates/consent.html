@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy & Consent - MyAvatar.dk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .consent-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 2rem auto;
+            max-width: 800px;
+            overflow: hidden;
+        }
+        .consent-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .consent-content {
+            padding: 2rem;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            background: #f8f9fa;
+        }
+        .consent-form {
+            padding: 2rem;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .liability-disclaimer {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-weight: bold;
+        }
+        .btn-accept {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .btn-accept:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="consent-container">
+            <div class="consent-header">
+                <h1>🔒 Privacy Policy & Consent</h1>
+                <p class="mb-0">Welcome to MyAvatar.dk - Please review and accept our privacy policy</p>
+            </div>
+            
+            <div class="consent-form">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <strong>⚠️ Error:</strong> {{ error }}
+                </div>
+                {% endif %}
+                
+                <div class="warning-box">
+                    <h5>📋 Before You Continue</h5>
+                    <p class="mb-0">You must read and accept our privacy policy and terms to use MyAvatar.dk. This includes important information about content liability and data processing.</p>
+                </div>
+                
+                <div class="consent-content">
+                    <div style="white-space: pre-line; line-height: 1.6;">{{ consent_text }}</div>
+                </div>
+                
+                <div class="liability-disclaimer">
+                    <h6>⚠️ IMPORTANT CONTENT LIABILITY DISCLAIMER</h6>
+                    <p class="mb-0">NO ENTITY OF RYE OUTSOURCING, INCLUDING MYAVATAR.DK, ACCEPTS ANY RESPONSIBILITY FOR CONTENT BEING PRODUCED. You are solely responsible for all content you create.</p>
+                </div>
+                
+                <form method="post" action="/gdpr/consent">
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="consent_checkbox" name="consent_given" value="true" required>
+                        <label class="form-check-label fw-bold" for="consent_checkbox">
+                            ✅ I have read and understood the privacy policy and content liability disclaimer above. 
+                            I consent to the processing of my personal data as described and acknowledge that 
+                            I am solely responsible for any content I create using MyAvatar.dk.
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-accept btn-lg text-white">
+                            🚀 I Accept and Consent - Continue to MyAvatar.dk
+                        </button>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            If you do not accept these terms, please 
+                            <a href="/logout" class="text-decoration-none">return to login page</a>
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,1360 @@
+<!--
+FILE: templates/backgroundfx_enhanced.html
+PURPOSE: BackgroundFX Studio - Enhanced AI background replacement interface with Job ID Display
+UPDATED: 2025-07-25 - ENHANCED: Added job tracking, recovery tools, and logs integration
+CACHE_BUST_ID: 20250725_ENHANCED_WITH_JOB_TRACKING
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackgroundFX Studio - Enhanced</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .workflow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .step-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .step-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #5b5bd6;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        .btn-error { background: var(--error); }
+
+        .background-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .bg-option {
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-option:hover {
+            transform: scale(1.05);
+        }
+
+        .bg-option.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .bg-color {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .bg-gradient-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .bg-gradient-purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .bg-solid-green { background: #00FF00; color: #000; }
+        .bg-solid-white { background: #ffffff; color: #333; }
+        .bg-solid-black { background: #000000; }
+
+        .progress-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, var(--success), #4ade80);
+            width: 0%;
+            transition: width 0.8s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Enhanced progress bar with shimmer effect */
+        .progress-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success { background: rgba(16, 185, 129, 0.2); border-left: 4px solid var(--success); }
+        .alert-error { background: rgba(239, 68, 68, 0.2); border-left: 4px solid var(--error); }
+        .alert-warning { background: rgba(245, 158, 11, 0.2); border-left: 4px solid var(--warning); }
+
+        .file-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .quality-selector {
+            margin-bottom: 1rem;
+        }
+
+        .quality-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .quality-option {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quality-option.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* === APPLE-INSPIRED INTERFACE STYLES === */
+        .video-processor {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .upload-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        /* Apple-style Source Tabs */
+        .source-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 2px;
+            margin-bottom: 1rem;
+        }
+
+        .source-tab {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .source-tab.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .source-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .source-content {
+            display: none;
+        }
+
+        .source-content.active {
+            display: block;
+        }
+
+        /* Enhanced Upload Areas */
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 2rem 1rem;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+
+        /* VIDEO PREVIEW STYLES */
+        .video-preview {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-top: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .background-preview {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-top: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .upload-success {
+            border-color: var(--success) !important;
+            background: rgba(16, 185, 129, 0.1) !important;
+        }
+
+        /* Enhanced progress indicators */
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .processing-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--success);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* =============================================================================== */
+        /* ENHANCED PROCESSING UI WITH JOB ID DISPLAY */
+        /* =============================================================================== */
+
+        .processing-status {
+            background: linear-gradient(135deg, #2d2d2d, #1e1e1e);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .processing-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .processing-header h3 {
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .processing-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .job-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .job-label {
+            color: #888;
+            font-weight: bold;
+        }
+
+        .job-id {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            user-select: all;
+            cursor: pointer;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: #4CAF50;
+        }
+
+        .processing-time {
+            color: #888;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .processing-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .cancel-btn, .logs-btn, .refresh-btn, .recovery-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .cancel-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .cancel-btn:hover {
+            background: #d32f2f;
+        }
+
+        .logs-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .logs-btn:hover {
+            background: #1976D2;
+        }
+
+        .refresh-btn {
+            background: #FF9800;
+            color: white;
+        }
+
+        .refresh-btn:hover {
+            background: #F57C00;
+        }
+
+        .recovery-btn {
+            background: #9C27B0;
+            color: white;
+            font-size: 0.9em;
+        }
+
+        .recovery-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .diagnostic-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            border-left: 4px solid #FF9800;
+        }
+
+        .diagnostic-info h4 {
+            margin: 0 0 10px 0;
+            color: #FF9800;
+        }
+
+        .diagnostic-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        .metric-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .recovery-actions {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 152, 0, 0.1);
+            border-radius: 6px;
+        }
+
+        .recovery-actions p {
+            margin: 0 0 10px 0;
+            color: #FF9800;
+            font-weight: bold;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .workflow {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+            .processing-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .processing-info {
+                align-items: flex-start;
+            }
+            
+            .processing-actions {
+                justify-content: center;
+            }
+            
+            .diagnostic-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 BackgroundFX Studio</h1>
+            <p>Professional AI-powered background replacement for your videos</p>
+        </div>
+
+        <!-- === SINGLE CLEAN VIDEO BACKGROUND REPLACER === -->
+        <div class="video-processor">
+            <div class="upload-grid">
+                    <!-- Apple-style Source Tabs -->
+                    <div class="source-tabs">
+                        <button class="source-tab active" onclick="switchVideoSource('upload')">
+                            📤 Upload New
+                        </button>
+                        <button class="source-tab" onclick="switchVideoSource('library')">
+                            📁 My Videos
+                        </button>
+                    </div>
+
+                    <!-- Upload New Video -->
+                    <div class="source-content active" id="video-upload-content">
+                        <div class="upload-area" onclick="document.getElementById('videoFile').click()">
+                            <div class="upload-icon">📹</div>
+                            <div style="font-weight: 600; margin-bottom: 0.25rem;">Choose a video file</div>
+                            <div style="opacity: 0.7; margin-bottom: 0.5rem;">Drag and drop file here</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6;">MP4, AVI, MOV, MPEG4 • Max 200MB</div>
+                        </div>
+                        <input type="file" id="videoFile" class="file-input" accept=".mp4,.mov,.avi,.mkv,.webm" onchange="handleVideoUpload(this)">
+                        <button class="btn btn-secondary" onclick="document.getElementById('videoFile').click()" style="margin-top: 0.5rem;">
+                            📁 Browse Files
+                        </button>
+                    </div>
+
+                    <!-- From My Videos -->
+                    <div class="source-content" id="video-library-content">
+                        <select class="video-selector" id="my-videos-select" onchange="handleVideoSelection(this)" style="width: 100%; padding: 0.75rem; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: white; margin-bottom: 0.5rem;">
+                            <option value="">Select from My Videos...</option>
+                            <option value="video1">🎬 My Latest Creation</option>
+                            <option value="video2">🎭 Avatar Demo Video</option>
+                            <option value="video3">🚀 Product Showcase</option>
+                            <option value="video4">📱 Social Media Content</option>
+                        </select>
+                        <div style="padding: 0.75rem; background: rgba(0, 122, 255, 0.1); border-radius: 8px; font-size: 0.9rem; color: #60A5FA;">
+                            💡 Select a video from your saved collection
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Background Image Section -->
+                <div class="upload-section">
+                    <div class="section-header">
+                        <div class="section-icon">🖼️</div>
+                        <div class="section-title">Upload Background Image</div>
+                    </div>
+
+                    <!-- Background Source Tabs -->
+                    <div class="source-tabs">
+                        <button class="source-tab active" onclick="switchBackgroundSource('upload')">
+                            📤 Upload New
+                        </button>
+                        <button class="source-tab" onclick="switchBackgroundSource('gallery')">
+                            🖼️ Gallery
+                        </button>
+                    </div>
+
+                    <!-- Upload New Background -->
+                    <div class="source-content active" id="background-upload-content">
+                        <div class="upload-area" onclick="document.getElementById('backgroundFile').click()">
+                            <div class="upload-icon">🖼️</div>
+                            <div style="font-weight: 600; margin-bottom: 0.25rem;">Choose a background image</div>
+                            <div style="opacity: 0.7; margin-bottom: 0.5rem;">Drag and drop file here</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6;">PNG, JPG, JPEG • Max 200MB</div>
+                        </div>
+                        <input type="file" id="backgroundFile" class="file-input" accept="image/*" onchange="handleBackgroundUpload(this)">
+                        <button class="btn btn-secondary" onclick="document.getElementById('backgroundFile').click()" style="margin-top: 0.5rem;">
+                            📁 Browse Files
+                        </button>
+                    </div>
+
+                    <!-- From Image Gallery -->
+                    <div class="source-content" id="background-gallery-content">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 0.5rem;">
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;" onclick="selectGalleryImage('beach', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🏖️ Beach</div>
+                            </div>
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); position: relative;" onclick="selectGalleryImage('city', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🏙️ City</div>
+                            </div>
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); position: relative;" onclick="selectGalleryImage('nature', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🌲 Nature</div>
+                            </div>
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); position: relative;" onclick="selectGalleryImage('office', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🏢 Office</div>
+                            </div>
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); position: relative;" onclick="selectGalleryImage('studio', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🎬 Studio</div>
+                            </div>
+                            <div class="gallery-item" style="aspect-ratio: 16/9; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); position: relative;" onclick="selectGalleryImage('abstract', this)">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); color: white; padding: 0.25rem; font-size: 0.7rem; text-align: center;">🎨 Abstract</div>
+                            </div>
+                        </div>
+                        <div style="padding: 0.75rem; background: rgba(0, 122, 255, 0.1); border-radius: 8px; font-size: 0.9rem; color: #60A5FA;">
+                            💡 Click on an image to select it as your background
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Button -->
+            <button class="btn btn-success" id="process-btn" onclick="startProcessing()" disabled style="width: 100%; padding: 1rem; font-size: 1rem; margin-top: 1rem; background: var(--warning);">
+                ⚡ Upload both a video and background image to start processing!
+            </button>
+        </div>
+
+
+                <!-- ENHANCED PROCESSING STATUS WITH JOB ID -->
+                <div id="processingStatus" class="processing-status" style="display: none;">
+                    <div class="processing-header">
+                        <h3>🎬 Processing Video</h3>
+                        <div class="processing-info">
+                            <div class="job-info">
+                                <span class="job-label">Job ID:</span>
+                                <code id="currentJobId" class="job-id">Loading...</code>
+                                <button onclick="copyJobId()" class="copy-btn" title="Copy Job ID">📋</button>
+                            </div>
+                            <div class="processing-time">
+                                <span id="processingTimer">00:00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progressPercent">0%</span>
+                            <span id="progressMessage">Initializing...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="processing-actions">
+                        <button onclick="cancelProcessing()" class="cancel-btn">❌ Cancel Processing</button>
+                        <button onclick="viewLogs()" class="logs-btn">📊 View Logs</button>
+                        <button onclick="checkStatus()" class="refresh-btn">🔄 Refresh Status</button>
+                    </div>
+                    
+                    <div class="diagnostic-info" id="diagnosticInfo" style="display: none;">
+                        <h4>🔧 Diagnostic Information</h4>
+                        <div class="diagnostic-content">
+                            <div class="metric">
+                                <span class="metric-label">Elapsed Time:</span>
+                                <span id="elapsedTime">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Status:</span>
+                                <span id="trackingStatus">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Storage:</span>
+                                <span id="storageStatus">--</span>
+                            </div>
+                        </div>
+                        <div class="recovery-actions" id="recoveryActions" style="display: none;">
+                            <p>⚠️ Job is taking longer than expected. Recovery options:</p>
+                            <button onclick="forceCheck()" class="recovery-btn">🔧 Force Check</button>
+                            <button onclick="viewStuckJobs()" class="recovery-btn">📋 View Stuck Jobs</button>
+                        </div>
+                    </div>
+
+                    <!-- Video Preview Container -->
+                    <div id="videoPlayerContainer" style="display: block; margin-top: 1rem; border-radius: 8px; overflow: hidden; background: #000;">
+                        <img id="processingPreviewFrame" src="" alt="Preview Frame" style="width: 100%; display: block; max-height: 220px; object-fit: contain; border-radius: 8px;" />
+                        <video id="resultVideo" controls style="width: 100%; display: none;">
+                            <source src="" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 400px;"></div>
+    </div>
+
+    <script>
+        // Global state
+        let uploadedVideoId = null;
+        let uploadedBackgroundPath = null;
+        let selectedBackgroundType = 'color';
+        let selectedBackgroundValue = '#667eea';
+        let selectedQuality = 'medium';
+        let currentJobId = null;
+        let progressInterval = null;
+        let uploadedVideoFile = null;
+        let uploadedBackgroundFile = null;
+        let processingStartTime = null;
+        let statusCheckInterval = null;
+
+        // ===============================================================================
+        // ENHANCED PROCESSING UI FUNCTIONS
+        // ===============================================================================
+
+        function startProcessingUI(jobId, cloudinaryStatus) {
+            currentJobId = jobId;
+            processingStartTime = Date.now();
+            
+            // Show processing UI
+            document.getElementById('processingControls').style.display = 'none';
+            document.getElementById('processingStatus').style.display = 'block';
+            document.getElementById('currentJobId').textContent = jobId;
+            
+            // Update storage status
+            const storageStatus = cloudinaryStatus === 'verified' ? '☁️ Cloudinary' : '💾 Fallback';
+            document.getElementById('storageStatus').textContent = storageStatus;
+            
+            // Start timer
+            startProcessingTimer();
+            
+            // Start status checking
+            statusCheckInterval = setInterval(() => checkStatus(), 3000);
+            
+            // Show initial progress
+            updateProgressEnhanced(15, 'Initializing HF Space processing...');
+            
+            console.log(`🎬 Processing started - Job ID: ${jobId}`);
+        }
+
+        function startProcessingTimer() {
+            const timerInterval = setInterval(() => {
+                if (!processingStartTime) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                const elapsed = Math.floor((Date.now() - processingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                
+                document.getElementById('processingTimer').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                // Show diagnostic info if taking too long
+                if (elapsed > 120) { // 2 minutes
+                    showDiagnosticInfo(elapsed);
+                }
+            }, 1000);
+        }
+
+        function updateProgressEnhanced(percent, message) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressMessage').textContent = message;
+        }
+
+        function showDiagnosticInfo(elapsed) {
+            const diagnosticDiv = document.getElementById('diagnosticInfo');
+            const recoveryDiv = document.getElementById('recoveryActions');
+            
+            diagnosticDiv.style.display = 'block';
+            
+            document.getElementById('elapsedTime').textContent = `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+            
+            if (elapsed > 180) { // 3 minutes - show recovery options
+                recoveryDiv.style.display = 'block';
+            }
+        }
+
+        async function checkStatus() {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`/api/backgroundfx/status/${currentJobId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.status === 'completed') {
+                        // Processing completed!
+                        clearInterval(statusCheckInterval);
+                        showCompletedUI(data);
+                    } else {
+                        // Update progress
+                        updateProgressEnhanced(data.progress || 0, data.message || 'Processing...');
+                        
+                        // Update tracking status
+                        document.getElementById('trackingStatus').textContent = 
+                            data.tracked ? `✅ ${data.tracking_status}` : '❌ Not tracked';
+                        
+                        // Update elapsed time from server
+                        if (data.elapsed_seconds) {
+                            const elapsed = data.elapsed_seconds;
+                            document.getElementById('elapsedTime').textContent = 
+                                `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+                                
+                            if (elapsed > 120) {
+                                showDiagnosticInfo(elapsed);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Status check failed:', error);
+                document.getElementById('trackingStatus').textContent = '❌ Check failed';
+            }
+        }
+
+        function showCompletedUI(data) {
+            updateProgressEnhanced(100, 'Processing completed successfully! 🎉');
+            
+            // Hide cancel button, show download
+            document.querySelector('.processing-actions').innerHTML = `
+                <a href="${data.output_url}" target="_blank" class="logs-btn">📥 Download Video</a>
+                <button onclick="viewLogs()" class="logs-btn">📊 View Logs</button>
+                <button onclick="hideProcessingUI()" class="refresh-btn">✅ Done</button>
+            `;
+            
+            // Show video player
+            const resultVideo = document.getElementById('resultVideo');
+            resultVideo.src = data.output_url;
+            resultVideo.style.display = 'block';
+            document.getElementById('processingPreviewFrame').style.display = 'none';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                hideProcessingUI();
+            }, 10000);
+        }
+
+        function copyJobId() {
+            const jobId = document.getElementById('currentJobId').textContent;
+            navigator.clipboard.writeText(jobId).then(() => {
+                // Show feedback
+                const btn = document.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✅';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 1000);
+                showAlert('📋 Job ID copied to clipboard!', 'success');
+            });
+        }
+
+        function viewLogs() {
+            const jobId = currentJobId;
+            const logsUrl = `/backgroundfx/logs?filter_job_id=${jobId}`;
+            window.open(logsUrl, '_blank');
+        }
+
+        async function forceCheck() {
+            if (!currentJobId) return;
+            
+            try {
+                const response = await fetch(`/api/backgroundfx/force-check/${currentJobId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.status === 'recovered') {
+                        showCompletedUI({output_url: data.output_url});
+                        showAlert('✅ Job recovered successfully!', 'success');
+                    } else {
+                        showAlert(`ℹ️ ${data.message}`, 'warning');
+                    }
+                } else {
+                    showAlert(`❌ Recovery failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Recovery error: ${error.message}`, 'error');
+            }
+        }
+
+        function viewStuckJobs() {
+            window.open('/api/backgroundfx/stuck-jobs', '_blank');
+        }
+
+        function hideProcessingUI() {
+            document.getElementById('processingStatus').style.display = 'none';
+            document.getElementById('processingControls').style.display = 'block';
+            currentJobId = null;
+            processingStartTime = null;
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        }
+
+        // ===============================================================================
+        // ORIGINAL UPLOAD AND PROCESSING FUNCTIONS (UPDATED)
+        // ===============================================================================
+
+        // SIMPLIFIED: Video upload - store locally, show immediately
+        async function handleVideoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            console.log('📹 Handling video upload locally...');
+
+            // Store globally for processing later
+            uploadedVideoFile = file;
+            uploadedVideoId = 'local_video_' + Date.now();
+
+            // Show immediate file info
+            const videoInfo = document.getElementById('videoInfo');
+            videoInfo.innerHTML = `
+                <strong>📁 ${file.name}</strong><br>
+                Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                Type: ${file.type}<br>
+                Status: ✅ <strong>Video saved to browser storage</strong><br>
+                Ready for processing!
+            `;
+            videoInfo.style.display = 'block';
+
+            // Show video preview immediately
+            const videoPreview = document.createElement('video');
+            videoPreview.controls = true;
+            videoPreview.className = 'video-preview';
+            videoPreview.style.maxHeight = '200px';
+            
+            // Create local preview URL
+            const videoUrl = URL.createObjectURL(file);
+            videoPreview.src = videoUrl;
+            
+            // Add to preview container
+            const previewContainer = document.getElementById('videoPreviewContainer');
+            previewContainer.innerHTML = '';
+            previewContainer.appendChild(videoPreview);
+
+            // Show success styling
+            const uploadArea = document.getElementById('videoUploadArea');
+            uploadArea.classList.add('upload-success');
+
+            // Show success alert
+            showAlert('✅ Video ready for processing! (Stored locally)', 'success');
+            
+            updateProcessButton();
+        }
+
+        // SIMPLIFIED: Background image upload - store locally, show immediately  
+        async function handleBackgroundUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            console.log('🖼️ Handling background upload locally...');
+
+            // Store globally for processing later
+            uploadedBackgroundFile = file;
+            selectedBackgroundType = 'image';
+            selectedBackgroundValue = 'local_background_' + Date.now();
+
+            // Show immediate file info
+            const backgroundInfo = document.getElementById('backgroundInfo');
+            backgroundInfo.innerHTML = `
+                <strong>🖼️ ${file.name}</strong><br>
+                Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                Type: ${file.type}<br>
+                Status: ✅ <strong>Background saved to browser storage</strong><br>
+                Ready for processing!
+            `;
+            backgroundInfo.style.display = 'block';
+
+            // Show background preview immediately
+            const backgroundPreview = document.createElement('img');
+            backgroundPreview.className = 'background-preview';
+            backgroundPreview.style.maxHeight = '150px';
+            backgroundPreview.style.maxWidth = '100%';
+            backgroundPreview.style.borderRadius = '8px';
+            
+            // Create local preview URL
+            const imageUrl = URL.createObjectURL(file);
+            backgroundPreview.src = imageUrl;
+            
+            // Add to preview container
+            const previewContainer = document.getElementById('backgroundPreviewContainer');
+            previewContainer.innerHTML = '';
+            previewContainer.appendChild(backgroundPreview);
+
+            // Show success styling
+            const uploadArea = document.getElementById('backgroundUploadArea');
+            uploadArea.classList.add('upload-success');
+
+            // Clear other background selections
+            document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+
+            // Show success alert
+            showAlert('✅ Background ready for processing! (Stored locally)', 'success');
+            
+            updateProcessButton();
+        }
+
+        // Background selection with enhanced two-stage workflow support
+        function selectBackground(type, value) {
+            selectedBackgroundType = type;
+            selectedBackgroundValue = value;
+
+            // Update UI
+            document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.closest('.bg-option').classList.add('selected');
+
+            // Clear uploaded background info if selecting preset
+            if (type === 'color' || type === 'green') {
+                uploadedBackgroundFile = null;
+                document.getElementById('backgroundInfo').style.display = 'none';
+                document.getElementById('backgroundPreviewContainer').innerHTML = '';
+                document.getElementById('backgroundUploadArea').classList.remove('upload-success');
+            }
+
+            // Show appropriate alert for green screen selection
+            if (type === 'green') {
+                showAlert('✅ Green screen selected - perfect for external editing!', 'success');
+            }
+
+            updateProcessButton();
+        }
+
+        // Quality selection
+        function selectQuality(quality) {
+            selectedQuality = quality;
+            document.querySelectorAll('.quality-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        // Update process button state
+        function updateProcessButton() {
+            const btn = document.getElementById('processBtn');
+            const hasVideo = uploadedVideoFile !== null;
+            const hasBackground = (selectedBackgroundType && selectedBackgroundValue) || uploadedBackgroundFile;
+
+            btn.disabled = !(hasVideo && hasBackground);
+            
+            if (!hasVideo && !hasBackground) {
+                btn.innerHTML = '<span>⏳</span> Upload video and select background';
+            } else if (!hasVideo) {
+                btn.innerHTML = '<span>⏳</span> Upload video first';
+            } else if (!hasBackground) {
+                btn.innerHTML = '<span>⏳</span> Select background';
+            } else {
+                btn.innerHTML = '<span>🚀</span> Start Processing';
+            }
+        }
+
+        // UPDATED: Process video with enhanced UI
+        async function startProcessing() {
+            if (!uploadedVideoFile) {
+                showAlert('❌ Please upload a video first', 'error');
+                return;
+            }
+
+            if (!selectedBackgroundValue && !uploadedBackgroundFile) {
+                showAlert('❌ Please select a background', 'error');
+                return;
+            }
+
+            console.log('🚀 Starting processing with local files...');
+            
+            try {
+                // Prepare files for upload (HF Space API format)
+                const formData = new FormData();
+                formData.append('video', uploadedVideoFile);
+                
+                // Add background if it's a custom image
+                if (uploadedBackgroundFile) {
+                    formData.append('background', uploadedBackgroundFile);
+                }
+
+                // Prepare enhanced background config for two-stage workflow
+                const backgroundConfig = {
+                    type: selectedBackgroundType,
+                    workflow: 'enhanced', // Enable enhanced two-stage processing
+                    [selectedBackgroundType === 'color' ? 'color' : 
+                     selectedBackgroundType === 'green' ? 'color' : 'path']: 
+                     selectedBackgroundType === 'green' ? '#00FF00' : selectedBackgroundValue
+                };
+
+                formData.append('background_config', JSON.stringify(backgroundConfig));
+                formData.append('quality', selectedQuality);
+                formData.append('segmentation_model', 'auto');
+                formData.append('preserve_audio', 'true');
+
+                // Send to HF Space for cinema-quality processing
+                const response = await fetch('/api/backgroundfx/process-video-hf', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.job_id) {
+                    // Start enhanced processing UI
+                    startProcessingUI(result.job_id, result.cloudinary_status);
+                    showAlert('🚀 Processing started! Your video will be saved to Recent Videos when complete.', 'success');
+                } else {
+                    showAlert('❌ Failed to start processing: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Processing error:', error);
+                showAlert('❌ Processing failed: ' + error.message, 'error');
+            }
+        }
+
+        // Cancel processing - updated to use enhanced UI
+        function cancelProcessing() {
+            if (confirm(`Cancel processing for job ${currentJobId}?`)) {
+                if (statusCheckInterval) {
+                    clearInterval(statusCheckInterval);
+                    statusCheckInterval = null;
+                }
+                hideProcessingUI();
+                showAlert('⏹️ Processing cancelled', 'warning');
+                console.log(`🎬 Processing cancelled - Job ID: ${currentJobId}`);
+            }
+        }
+
+        // UTILITY FUNCTIONS
+
+        // Drag and drop functionality
+        function setupDragAndDrop(areaId, fileInputId) {
+            const area = document.getElementById(areaId);
+            const input = document.getElementById(fileInputId);
+
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    input.files = files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        // Show alert messages
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 5000);
+        }
+
+        // Initialize drag and drop
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop('videoUploadArea', 'videoFile');
+            setupDragAndDrop('backgroundUploadArea', 'backgroundFile');
+            updateProcessButton();
+        });
+
+        // Log that the enhanced version is loaded
+        console.log('🎬 BackgroundFX Studio Enhanced with Job Tracking - Ready!');
+    </script>
+</body>
+</html>

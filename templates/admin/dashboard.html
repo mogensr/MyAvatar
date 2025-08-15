@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MyAvatar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container { 
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .user-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8f9fa;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+        }
+        
+        .vacation-controls { 
+            background: rgba(255, 243, 205, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            border-left: 6px solid #ffc107;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .vacation-controls h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .control-buttons { 
+            display: flex;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn { 
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        
+        .status-badge { 
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-active { 
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-inactive { 
+            background: #6c757d;
+            color: white;
+        }
+        
+        .stats { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .stat-card { 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .stat-number { 
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .admin-links { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .admin-link { 
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            color: #333;
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .admin-link:hover { 
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .admin-link.premium { 
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+        
+        .admin-link.premium:hover {
+            background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+        }
+        
+        .admin-link.host-messages {
+            background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%);
+            color: white;
+        }
+        
+        .admin-link.host-messages:hover {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6f42c1 100%);
+        }
+        
+        .admin-link i {
+            font-size: 1.5rem;
+            width: 2rem;
+            text-align: center;
+        }
+        
+        .limits-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: #555;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+        }
+        
+        .footer a {
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            margin: 0 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .footer .btn-dashboard {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .footer .btn-logout {
+            background: rgba(220, 53, 69, 0.8);
+            border: 2px solid rgba(220, 53, 69, 0.3);
+        }
+        
+        .footer a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            margin: 3rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .control-buttons {
+                justify-content: center;
+            }
+            
+            .status-row {
+                justify-content: center;
+            }
+            
+            .admin-links {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer a {
+                display: flex;
+                margin: 0.5rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+            <p class="header-subtitle">Complete control center for MyAvatar platform</p>
+            <div class="user-info">
+                <i class="fas fa-user-shield"></i>
+                <span>Welcome, {{ admin_user.get('username', 'Admin') }}!</span>
+            </div>
+        </div>
+        
+        <!-- Vacation Mode Controls -->
+        <div class="vacation-controls">
+            <h3><i class="fas fa-umbrella-beach"></i> System Controls</h3>
+            
+            <div class="status-row">
+                <div class="status-item">
+                    <strong>Vacation Mode:</strong>
+                    <span class="status-badge {% if settings['vacation_mode_enabled'] %}status-active{% else %}status-inactive{% endif %}">
+                        {% if settings['vacation_mode_enabled'] %}ENABLED{% else %}DISABLED{% endif %}
+                    </span>
+                </div>
+                
+                <div class="status-item">
+                    <strong>Emergency Stop:</strong>
+                    <span class="status-badge {% if settings['emergency_stop'] %}status-active{% else %}status-inactive{% endif %}">
+                        {% if settings['emergency_stop'] %}ACTIVE{% else %}INACTIVE{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="control-buttons">
+                <a href="/admin/vacation-mode/enable" class="btn btn-success">
+                    <i class="fas fa-play"></i> Enable Vacation Mode
+                </a>
+                <a href="/admin/vacation-mode/disable" class="btn btn-danger">
+                    <i class="fas fa-stop"></i> Disable Vacation Mode
+                </a>
+                <a href="/admin/emergency-stop/enable" class="btn btn-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Emergency Stop
+                </a>
+                <a href="/admin/emergency-stop/disable" class="btn btn-info">
+                    <i class="fas fa-check-circle"></i> Clear Emergency
+                </a>
+            </div>
+            
+            <div class="limits-info">
+                <strong><i class="fas fa-cogs"></i> Current Limits:</strong>
+                Max Users: {{ settings['limits']['max_total_users'] }}, 
+                Daily Registrations: {{ settings['limits']['max_daily_registrations'] }}, 
+                Videos per User: {{ settings['limits']['max_videos_per_user'] }}
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ stats['total_users'] }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-users"></i> Total Users
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 0.25rem;">
+                        {{ stats['users_percentage'] }}% of limit
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">{{ stats['total_videos'] }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-video"></i> Total Videos
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">{{ stats['daily_registrations'] }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-user-plus"></i> Today's Registrations
+                    <div style="font-size: 0.8rem; color: #999; margin-top: 0.25rem;">
+                        {{ stats['daily_percentage'] }}% of daily limit
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">${{ settings['budget']['total_budget'] }}</div>
+                <div class="stat-label">
+                    <i class="fas fa-dollar-sign"></i> Budget
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-divider"></div>
+        
+        <!-- Admin Actions -->
+        <div class="admin-links">
+            <a href="/admin/users" class="admin-link">
+                <i class="fas fa-users"></i>
+                <div>
+                    <div>Manage Users</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">View, edit, and manage user accounts</div>
+                </div>
+            </a>
+            
+            <a href="/admin/create-user" class="admin-link">
+                <i class="fas fa-user-plus"></i>
+                <div>
+                    <div>Create New User</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">Add new users to the platform</div>
+                </div>
+            </a>
+            
+            <a href="/admin/premium-management" class="admin-link premium">
+                <i class="fas fa-crown"></i>
+                <div>
+                    <div>Premium Management</div>
+                    <div style="font-size: 0.8rem; opacity: 0.9;">Manage premium subscriptions</div>
+                </div>
+            </a>
+            
+            <a href="/admin/host-messages" class="admin-link host-messages">
+                <i class="fas fa-bullhorn"></i>
+                <div>
+                    <div>Host Messages</div>
+                    <div style="font-size: 0.8rem; opacity: 0.9;">Broadcast messages to users</div>
+                </div>
+            </a>
+            
+            <a href="/admin/vacation-settings" class="admin-link">
+                <i class="fas fa-umbrella-beach"></i>
+                <div>
+                    <div>System Settings</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">Configure vacation mode limits</div>
+                </div>
+            </a>
+            
+            <a href="/admin/debug-database" class="admin-link">
+                <i class="fas fa-database"></i>
+                <div>
+                    <div>Database Info</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">View database statistics</div>
+                </div>
+            </a>
+            
+            <a href="/admin/vacation-stats" class="admin-link">
+                <i class="fas fa-chart-line"></i>
+                <div>
+                    <div>Detailed Analytics</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">Comprehensive platform statistics</div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <a href="/dashboard" class="btn-dashboard">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="/logout" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </div>
+</body>
+</html>

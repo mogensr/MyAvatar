@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAvatar Studio - Professional AI Video Platform</title>
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Dashboard CSS -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- Status Indicator -->
+    <div id="statusIndicator" class="status-indicator">
+        <div id="statusContent"></div>
+    </div>
+
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🎬</span>
+                    <span>MyAvatar</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <div class="nav-item">
+                        <a href="#dashboard" class="nav-link active">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#create" class="nav-link">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>Create Video</span>
+                            <span class="nav-badge">New</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/videos" class="nav-link">
+                            <i class="fas fa-video"></i>
+                            <span>My Videos</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#templates" class="nav-link">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Templates</span>
+                            <span class="premium-badge">Premium</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Advanced</div>
+                    <div class="nav-item">
+                        <a href="#interactive" class="nav-link">
+                            <i class="fas fa-users"></i>
+                            <span>Interactive Avatars</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/backgroundfx" class="nav-link">
+                            <i class="fas fa-image"></i>
+                            <span>Backgrounds</span>
+                            <span class="premium-badge">Premium</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/backgroundfx" class="nav-link">
+                            <i class="fas fa-magic"></i>
+                            <span>BackGroundFX</span>
+                            <span class="premium-badge">New</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#distribution" class="nav-link">
+                            <i class="fas fa-share-alt"></i>
+                            <span>Distribution</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#analytics" class="nav-link">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Analytics</span>
+                            <span class="soon-badge">Soon</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Account</div>
+                    <div class="nav-item">
+                        <a href="#subscription" class="nav-link">
+                            <i class="fas fa-crown"></i>
+                            <span>Subscription</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#settings" class="nav-link">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Interactive Support Avatar -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Support</div>
+                    <div class="support-avatar-widget" id="supportWidget">
+                        <div class="support-avatar-header" onclick="toggleSupportChat()">
+                            <div class="support-avatar-icon">
+                                <div class="avatar-pulse"></div>
+                                🤖
+                            </div>
+                            <div class="support-avatar-info">
+                                <div class="support-avatar-name">AI Assistant</div>
+                                <div class="support-avatar-status" id="supportStatus">Ready to help</div>
+                            </div>
+                            <i class="fas fa-chevron-up support-toggle-icon" id="supportToggleIcon"></i>
+                        </div>
+                        
+                        <div class="support-chat-container" id="supportChatContainer">
+                            <div class="support-chat-messages" id="supportMessages">
+                                <div class="support-message bot-message">
+                                    <div class="message-avatar">🤖</div>
+                                    <div class="message-content">
+                                        <p>Hi! I'm your AI assistant. I can help you with:</p>
+                                        <ul>
+                                            <li>Creating better videos</li>
+                                            <li>Troubleshooting issues</li>
+                                            <li>Feature suggestions</li>
+                                            <li>General questions</li>
+                                        </ul>
+                                        <p>How can I assist you today?</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="support-chat-input">
+                                <input type="text" 
+                                       id="supportInput" 
+                                       placeholder="Type your message..." 
+                                       onkeypress="handleSupportKeyPress(event)">
+                                <button onclick="sendSupportMessage()" class="support-send-btn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="support-quick-actions">
+                                <button onclick="sendQuickMessage('I need help with video creation')" class="quick-action-btn">
+                                    📹 Video Help
+                                </button>
+                                <button onclick="sendQuickMessage('I found a bug')" class="quick-action-btn">
+                                    🐛 Report Bug
+                                </button>
+                                <button onclick="sendQuickMessage('I have a feature idea')" class="quick-action-btn">
+                                    💡 Feature Idea
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <div class="search-bar">
+                        <input type="text" class="search-input" placeholder="Search videos, templates...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <button class="header-btn" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <button class="header-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    
+                    <!-- Updated User Menu with Dropdown -->
+                    <div class="user-menu" onclick="toggleUserDropdown()">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">{{ username or 'User' }}</div>
+                            <div class="user-role">Pro Member</div>
+                        </div>
+                        <i class="fas fa-chevron-down" style="margin-left: 0.5rem; color: var(--gray-500);" id="dropdownIcon"></i>
+                        
+                        <!-- Dropdown Menu -->
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="#profile" class="dropdown-item">
+                                <i class="fas fa-user"></i>
+                                <span>Profile</span>
+                            </a>
+                            <a href="#settings" class="dropdown-item">
+                                <i class="fas fa-cog"></i>
+                                <span>Settings</span>
+                            </a>
+                            <a href="#subscription" class="dropdown-item">
+                                <i class="fas fa-crown"></i>
+                                <span>Subscription</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <button onclick="logout()" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Welcome Header -->
+                <div class="welcome-header">
+                    <div class="welcome-content">
+                        <h1 class="welcome-title">Welcome back, {{ username or 'User' }}! 👋</h1>
+                        <p class="welcome-subtitle">Ready to create amazing AI videos today?</p>
+                    </div>
+                    <div class="avatar-carousel-container">
+                        <div class="avatar-carousel-label">Your Avatars</div>
+                        {% if user_avatars and user_avatars|length > 0 %}
+                            <div class="avatar-carousel" id="avatarCarousel">
+                                {% for avatar in user_avatars %}
+                                    <img src="{{ avatar.image_url }}" 
+                                         alt="{{ avatar.name }}" 
+                                         class="carousel-avatar"
+                                         title="{{ avatar.name }}"
+                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
+                                {% endfor %}
+                                <!-- Duplicate avatars for seamless loop -->
+                                {% for avatar in user_avatars %}
+                                    <img src="{{ avatar.image_url }}" 
+                                         alt="{{ avatar.name }}" 
+                                         class="carousel-avatar"
+                                         title="{{ avatar.name }}"
+                                         onclick="selectAvatar('{{ avatar.id }}', '{{ avatar.name }}')">
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="no-avatars-message">
+                                <div>
+                                    <i class="fas fa-user-plus" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></i>
+                                    <br>
+                                    No avatars yet. <a href="/interactive-avatars" style="color: rgba(255,255,255,0.9); text-decoration: underline;">Create your first avatar!</a>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Stats Overview - REAL DATA -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="stat-value">{{ total_videos or '0' }}</div>
+                        <div class="stat-label">Total Videos</div>
+                        <span class="stat-change">+12%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--gradient-premium);">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-value">{{ total_duration or '0h 0m' }}</div>
+                        <div class="stat-label">Total Duration</div>
+                        <span class="stat-change">+8%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--gradient-success);">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-value">{{ total_views or '0' }}</div>
+                        <div class="stat-label">Total Views</div>
+                        <span class="stat-change">+24%</span>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: var(--gradient-warning);">
+                            <i class="fas fa-share"></i>
+                        </div>
+                        <div class="stat-value">{{ total_shares or '0' }}</div>
+                        <div class="stat-label">Shares</div>
+                        <span class="stat-change negative">-5%</span>
+                    </div>
+                </div>
+                
+                <!-- Feature Grid -->
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-magic"></i>
+                        Choose Your Creation Method
+                    </h2>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card" onclick="startCreation('voice')">
+                        <div class="feature-icon">
+                            <i class="fas fa-microphone"></i>
+                        </div>
+                        <h3 class="feature-title">Voice Recording</h3>
+                        <p class="feature-description">Record your voice and let our AI avatars speak for you. Perfect for personalized messages and authentic content.</p>
+                        <div class="feature-tags">
+                            <span class="tag">Popular</span>
+                            <span class="tag">Easy</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card" onclick="startCreation('text')">
+                        <div class="feature-icon">
+                            <i class="fas fa-keyboard"></i>
+                        </div>
+                        <h3 class="feature-title">Text to Speech</h3>
+                        <p class="feature-description">Type your script and choose from multiple AI voices in different languages and accents.</p>
+                        <div class="feature-tags">
+                            <span class="tag">Multiple Voices</span>
+                            <span class="tag new">New</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="window.location.href='/backgroundfx'">
+                        <div class="feature-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Backgrounds
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Choose from professional backgrounds and environments for your avatar videos.</p>
+                        <div class="feature-tags">
+                            <span class="tag available">Available</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-magic"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Templates
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Use pre-made templates for common scenarios like sales pitches, tutorials, and presentations.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            Interactive Avatars
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Create avatars that can interact with viewers in real-time conversations.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-card premium" onclick="showPremiumModal()">
+                        <div class="feature-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3 class="feature-title">
+                            AI Script Generator
+                            <span class="premium-badge">Premium</span>
+                        </h3>
+                        <p class="feature-description">Let AI write compelling scripts for your videos based on your topic and goals.</p>
+                        <div class="feature-tags">
+                            <span class="tag coming-soon">Coming Soon</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Videos (Only 3 videos, rest goes to separate page) -->
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-history"></i>
+                        Recent Videos
+                    </h2>
+                    <a href="/videos" class="section-action">View All Videos</a>
+                </div>
+                
+                <div class="videos-grid">
+                    {% if videos %}
+                        {% for video in videos[:3] %}
+                        <div class="video-card" data-video-id="{{ video.id }}" data-status="{{ video.status }}">
+                            
+                            <div class="video-thumbnail">
+                                {% if video.status == 'completed' and video.video_path %}
+                                    <video controls preload="metadata" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <source src="{{ video.video_path }}" type="video/mp4">
+                                        <img src="{{ video.thumbnail_url or 'https://via.placeholder.com/320x180/6366f1/ffffff?text=Video+Thumbnail' }}" alt="{{ video.title }}">
+                                    </video>
+                                {% else %}
+                                    <div class="video-placeholder">
+                                        <i class="fas fa-video" style="font-size: 3rem;"></i>
+                                        <div style="font-size: 0.8rem; margin-top: 10px; color: #666;">Status: {{ video.status }}<br>URL: {{ 'Yes' if video.video_path else 'No' }}</div>
+                                    </div>
+                                {% endif %}
+                                
+                                <span class="video-status-badge status-{{ video.status }}">
+                                    {{ video.status }}
+                                </span>
+                                
+                                {% if video.duration %}
+                                    <span class="video-duration">{{ video.duration }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="video-info">
+                                <div class="video-title">{{ video.title or 'Untitled Video' }}</div>
+                                <div class="video-meta">
+                                    <span><i class="fas fa-calendar"></i> {{ video.created_at if video.created_at else 'Unknown' }}</span>     
+                                    <span><i class="fas fa-film"></i> {{ video.format or '16:9' }}</span>
+                                </div>
+                                
+                                <div class="video-actions">
+                                    {% if video.status == 'completed' and video.video_path %}
+                                        <button onclick="playVideo('{{ video.id }}')" class="video-action primary" style="background-color: #f59e0b; border-color: #f59e0b;">
+                                            <i class="fas fa-download"></i> Download
+                                        </button>
+                                        <button onclick="downloadVideo('{{ video.id }}', '{{ video.title or 'video' }}')" class="video-action secondary" style="background-color: #ffeb3b; border-color: #ffeb3b; color: #000;">
+                                            <i class="fas fa-play"></i> Play
+                                        </button>
+                                    {% elif video.status in ['processing', 'pending'] %}
+                                        <button onclick="refreshVideoStatus('{{ video.id }}')" class="video-action refresh-btn">
+                                            <i class="fas fa-sync-alt"></i> Refresh
+                                        </button>
+                                    {% elif video.status == 'failed' %}
+                                        <span class="video-action secondary" style="opacity: 0.6;">
+                                            <i class="fas fa-exclamation-triangle"></i> Failed
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-video empty-icon"></i>
+                            <h3>No videos created yet</h3>
+                            <p>Start by creating your first AI video using one of the methods above!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Dashboard JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+    
+    <!-- Fixed Video Controls -->
+    <script>
+        function playVideo(videoId) {
+            console.log('Playing video with ID:', videoId);
+            if (!videoId) {
+                alert('Video ID is missing');
+                return;
+            }
+            // Play button should open video in new tab for viewing
+            window.open(`/api/videos/${videoId}/download`, '_blank');
+        }
+        
+        function downloadVideo(videoId, title) {
+            console.log('Downloading video with ID:', videoId);
+            if (!videoId) {
+                alert('Video ID is missing');
+                return;
+            }
+            
+            // Download button should trigger direct download to computer
+            const link = document.createElement('a');
+            link.href = `/api/videos/${videoId}/download`;
+            link.download = `${title || 'video'}.mp4`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        function refreshVideoStatus(videoId) {
+            console.log('Refreshing status for video:', videoId);
+            // Add refresh logic here
+            location.reload();
+        }
+    </script>
+</body>
+</html>

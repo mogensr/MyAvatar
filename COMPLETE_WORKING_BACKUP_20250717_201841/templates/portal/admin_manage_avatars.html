@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage User Avatars - MyAvatar Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .avatar-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        .avatar-placeholder {
+            width: 60px;
+            height: 60px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+        }
+        .delete-btn {
+            transition: all 0.3s ease;
+        }
+        .delete-btn:hover {
+            transform: scale(1.05);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: none;
+        }
+        .alert {
+            border: none;
+            border-radius: 10px;
+        }
+        .btn-group-sm .btn {
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-user-circle me-2 text-primary"></i>
+                Manage User Avatars
+            </h2>
+            <a href="/admin/users" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Users
+            </a>
+        </div>
+
+        <!-- User Info -->
+        <div class="alert alert-info mb-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-1">
+                        <i class="fas fa-user me-2"></i>
+                        User: {{ user_to_manage.username }}
+                    </h5>
+                    <p class="mb-0">
+                        <strong>Email:</strong> {{ user_to_manage.email }} | 
+                        <strong>User ID:</strong> {{ user_to_manage.id }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        {% if success_message %}
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>
+            {{ success_message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        {% if error_message %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ error_message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% elif request.query_params.get('error') == 'timeout' %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Request to HeyGen API timed out. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% elif request.query_params.get('error') == 'delete_failed' %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Failed to delete avatar. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% elif request.query_params.get('error') %}
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            An error occurred. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <!-- Upload Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Add New Avatar
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Upload File Form -->
+                <div class="mb-4">
+                    <h6 class="card-subtitle mb-3">
+                        <i class="fas fa-upload me-2"></i>
+                        Upload Avatar Image
+                    </h6>
+                    <form action="/admin/upload-avatar/{{ user_to_manage.id }}" method="post" enctype="multipart/form-data">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label for="avatar_file" class="form-label">Avatar Image File</label>
+                                <input type="file" class="form-control" id="avatar_file" name="avatar_file" accept=".png,.jpg,.jpeg,.gif" required>
+                                <div class="form-text">Supported formats: PNG, JPG, JPEG, GIF (max 5MB)</div>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-upload me-2"></i>Upload Avatar
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <hr>
+
+                <!-- HeyGen ID Form -->
+                <div class="mb-4">
+                    <h6 class="card-subtitle mb-3">
+                        <i class="fas fa-link me-2"></i>
+                        Fetch from HeyGen
+                    </h6>
+                    <form action="/admin/fetch-heygen-avatar/{{ user_to_manage.id }}" method="post">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
+                                <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" required>
+                                <div class="form-text">Enter the Avatar ID from your HeyGen account</div>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-download me-2"></i>Fetch from HeyGen
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Voice ID Management -->
+                <hr>
+                <div class="mb-0">
+                    <h6 class="card-subtitle mb-3">
+                        <i class="fas fa-volume-up me-2"></i>
+                        Voice ID Management
+                    </h6>
+                    <div class="mb-3">
+                        <label for="current_voice_id" class="form-label">Current Voice ID</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="current_voice_id" value="{{ user_to_manage.heygen_voice_id or '' }}" readonly>
+                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#voiceModal">
+                                <i class="fas fa-edit me-2"></i>Change Voice ID
+                            </button>
+                        </div>
+                        <div class="form-text">This voice ID is used for avatars that require a voice</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Avatars -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-images me-2"></i>
+                    Existing Avatars ({{ avatars|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if avatars %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Avatar</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for avatar in avatars %}
+                            <tr>
+                                <td>
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="Avatar" class="avatar-image"
+                                             onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot;><rect width=&quot;60&quot; height=&quot;60&quot; fill=&quot;%23f8f9fa&quot; stroke=&quot;%23dee2e6&quot; stroke-width=&quot;2&quot; stroke-dasharray=&quot;5,5&quot;/><text x=&quot;30&quot; y=&quot;35&quot; text-anchor=&quot;middle&quot; font-family=&quot;Arial&quot; font-size=&quot;10&quot; fill=&quot;%23666&quot;>No Image</text></svg>';">
+                                    {% else %}
+                                        <div class="avatar-placeholder">
+                                            <i class="fas fa-user fa-lg"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div id="name-display-{{ avatar.id }}">
+                                        <strong>{{ avatar.avatar_name or 'Unnamed Avatar' }}</strong>
+                                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" 
+                                                onclick="editAvatarName({{ avatar.id }}, '{{ avatar.avatar_name or 'Unnamed Avatar' }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                    <div id="name-edit-{{ avatar.id }}" style="display: none;">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="name-input-{{ avatar.id }}" 
+                                                   value="{{ avatar.avatar_name or 'Unnamed Avatar' }}" maxlength="100">
+                                            <button type="button" class="btn btn-success" 
+                                                    onclick="saveAvatarName({{ avatar.id }})">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" 
+                                                    onclick="cancelEditName({{ avatar.id }})">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <br><small class="text-muted">ID: {{ avatar.id }}</small>
+                                </td>
+                                <td>
+                                    {% if avatar.avatar_id %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-link me-1"></i>HeyGen
+                                        </span>
+                                        <br><small class="text-muted">{{ avatar.avatar_id }}</small>
+                                    {% else %}
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-upload me-1"></i>Uploaded
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>
+                                        {% if avatar.created_at %}
+                                            {{ avatar.created_at.strftime('%d-%m-%Y %H:%M') if avatar.created_at else 'Unknown' }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <form action="/admin/delete-avatar/{{ avatar.id }}" method="post" style="display: inline;">
+                                            <button type="submit" class="btn btn-outline-danger delete-btn" 
+                                                    onclick="return confirmDeleteAvatar('{{ avatar.avatar_name or 'Unnamed Avatar' }}')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No avatars found for this user</h5>
+                    <p class="text-muted">Upload an avatar or fetch one from HeyGen above to get started.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-4 d-flex gap-2">
+            <a href="/admin/edit-user/{{ user_to_manage.id }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-2"></i>Edit User
+            </a>
+            <a href="/admin/manage-videos/{{ user_to_manage.id }}" class="btn btn-outline-success">
+                <i class="fas fa-video me-2"></i>Manage Videos
+            </a>
+            <a href="/admin/users" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Users
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Voice ID Selection Modal -->
+    <div class="modal fade" id="voiceModal" tabindex="-1" aria-labelledby="voiceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="voiceModalLabel">
+                        <i class="fas fa-volume-up me-2"></i>
+                        Voice ID Management
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Manual Voice ID Entry -->
+                    <div class="mb-4">
+                        <h6>Manual Voice ID Entry</h6>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="new_voice_id" placeholder="Enter HeyGen Voice ID">
+                            <button class="btn btn-primary" type="button" id="saveVoiceBtn">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                        <div class="form-text">Enter a specific voice ID manually</div>
+                    </div>
+                    
+                    <!-- Available Voices from HeyGen -->
+                    <hr>
+                    <h6>Select from Available Voices</h6>
+                    <div class="mb-3">
+                        <button class="btn btn-outline-primary btn-sm mb-3" id="loadVoicesBtn">
+                            <i class="fas fa-download me-2"></i>Load Available Voices
+                        </button>
+                        <div class="form-text mb-2">Select a voice from the list of available HeyGen voices</div>
+                        <div id="voicesContainer" class="list-group">
+                            <div class="text-center py-3 text-muted" id="loadingVoices" style="display: none;">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Loading voices...
+                            </div>
+                            <div class="text-center py-3 text-muted" id="noVoicesMessage">
+                                Click the button above to load available voices
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Enhanced delete confirmation function
+        function confirmDeleteAvatar(avatarName) {
+            const message = `Are you sure you want to delete the avatar "${avatarName}"?\n\nThis action cannot be undone!`;
+            return confirm(message);
+        }
+
+        // Voice ID Management
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load voices button
+            const loadVoicesBtn = document.getElementById('loadVoicesBtn');
+            const voicesContainer = document.getElementById('voicesContainer');
+            const loadingVoices = document.getElementById('loadingVoices');
+            const noVoicesMessage = document.getElementById('noVoicesMessage');
+            const saveVoiceBtn = document.getElementById('saveVoiceBtn');
+            const currentVoiceInput = document.getElementById('current_voice_id');
+            const newVoiceInput = document.getElementById('new_voice_id');
+            const userId = '{{ user_to_manage.id }}';
+            
+            // Load available voices
+            loadVoicesBtn.addEventListener('click', function() {
+                loadingVoices.style.display = 'block';
+                noVoicesMessage.style.display = 'none';
+                voicesContainer.innerHTML = '';
+                
+                // Add loading indicator
+                voicesContainer.appendChild(loadingVoices);
+                
+                // Call API to get voices
+                fetch('/api/voices')
+                    .then(response => response.json())
+                    .then(data => {
+                        loadingVoices.style.display = 'none';
+                        
+                        if (data.success && data.voices && data.voices.length > 0) {
+                            // Create voice list
+                            data.voices.forEach(voice => {
+                                const voiceItem = document.createElement('button');
+                                voiceItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                                voiceItem.innerHTML = `
+                                    <div>
+                                        <strong>${voice.name}</strong>
+                                        <br>
+                                        <small class="text-muted">${voice.id}</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">${voice.language || 'Unknown'}</span>
+                                `;
+                                voiceItem.addEventListener('click', function() {
+                                    newVoiceInput.value = voice.id;
+                                });
+                                voicesContainer.appendChild(voiceItem);
+                            });
+                        } else {
+                            voicesContainer.innerHTML = '<div class="text-center py-3 text-danger">No voices available or error loading voices</div>';
+                        }
+                    })
+                    .catch(error => {
+                        loadingVoices.style.display = 'none';
+                        voicesContainer.innerHTML = '<div class="text-center py-3 text-danger">Error loading voices. Please try again.</div>';
+                        console.error('Error loading voices:', error);
+                    });
+            });
+            
+            // Save voice ID changes
+            saveVoiceBtn.addEventListener('click', function() {
+                const newVoiceId = newVoiceInput.value.trim();
+                if (!newVoiceId) {
+                    alert('Please enter a voice ID');
+                    return;
+                }
+                
+                // Add loading state
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+                this.disabled = true;
+                
+                // Call API to update voice ID
+                fetch('/admin/update-voice-id', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        voice_id: newVoiceId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Voice ID updated successfully!');
+                        // Refresh the page to show the updated voice ID
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to update voice ID'));
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating voice ID. Please try again.');
+                    console.error('Error:', error);
+                })
+                .finally(() => {
+                    // Reset button state
+                    this.innerHTML = originalHTML;
+                    this.disabled = false;
+                });
+            });
+        });
+        
+        // Avatar name editing functions
+        function editAvatarName(avatarId, currentName) {
+            // Hide display, show edit form
+            document.getElementById('name-display-' + avatarId).style.display = 'none';
+            document.getElementById('name-edit-' + avatarId).style.display = 'block';
+            
+            // Focus on input field
+            const input = document.getElementById('name-input-' + avatarId);
+            input.focus();
+            input.select();
+        }
+        
+        function cancelEditName(avatarId) {
+            // Show display, hide edit form
+            document.getElementById('name-display-' + avatarId).style.display = 'block';
+            document.getElementById('name-edit-' + avatarId).style.display = 'none';
+        }
+        
+        function saveAvatarName(avatarId) {
+            const newName = document.getElementById('name-input-' + avatarId).value.trim();
+            
+            if (!newName) {
+                alert('Please enter a name');
+                return;
+            }
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('avatar_id', avatarId);
+            formData.append('new_name', newName);
+            
+            // Call API to update name
+            fetch('/admin/update-avatar-name', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update display with new name
+                    const displayDiv = document.getElementById('name-display-' + avatarId);
+                    const strongTag = displayDiv.querySelector('strong');
+                    strongTag.textContent = newName;
+                    
+                    // Hide edit form, show display
+                    cancelEditName(avatarId);
+                    
+                    // Show success message
+                    alert('Avatar name updated successfully!');
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to update avatar name'));
+                }
+            })
+            .catch(error => {
+                alert('Error updating avatar name. Please try again.');
+                console.error('Error:', error);
+            });
+        }
+
+        // Auto-dismiss alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

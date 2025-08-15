@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Distribution - MyAvatar</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <main class="main-content">
+        <!-- Header (reuse from videos.html) -->
+        <header class="header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <div class="search-bar compact">
+                    <input type="text" 
+                           class="search-input" 
+                           id="videoSearch"
+                           placeholder="Search videos for LinkedIn..."
+                           onkeyup="filterVideos()">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="filter-dropdown compact">
+                    <select id="statusFilter" onchange="filterVideos()" class="filter-select">
+                        <option value="completed">Ready to Post</option>
+                        <option value="all">All Videos</option>
+                    </select>
+                </div>
+                
+                <div class="header-actions">
+                    <button class="header-btn" onclick="toggleTheme()" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <div class="user-menu">
+                        <button class="user-btn" onclick="logout()">
+                            <i class="fas fa-user-circle"></i>
+                            <span>{{ username }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Page Content -->
+        <div class="page-content linkedin-distribution">
+            <!-- LinkedIn Distribution Header -->
+            <div class="distribution-header compact">
+                <div class="distribution-header-content">
+                    <h1 class="distribution-title compact">
+                        <i class="fab fa-linkedin"></i>
+                        LinkedIn Distribution
+                    </h1>
+                    <p class="distribution-subtitle">Select videos to share on LinkedIn</p>
+                </div>
+                
+                <div class="linkedin-stats compact">
+                    <div class="stat-item compact">
+                        <div class="stat-number">{{ total_videos }}</div>
+                        <div class="stat-label">Ready</div>
+                    </div>
+                    <div class="stat-item compact" id="selectedStat">
+                        <div class="stat-number" id="selectedCount">0</div>
+                        <div class="stat-label">Selected</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- LinkedIn Connection Status -->
+            <div class="linkedin-connection" id="linkedinConnection">
+                <div class="connection-status disconnected" id="connectionStatus">
+                    <i class="fab fa-linkedin"></i>
+                    <span>Connect to LinkedIn</span>
+                    <button class="connect-btn" onclick="connectLinkedIn()">
+                        <i class="fab fa-linkedin"></i> Connect Account
+                    </button>
+                </div>
+            </div>
+            
+            <!-- GDPR Consent & Waiver -->
+            <div class="compliance-section" id="complianceSection" style="display: none;">
+                <div class="compliance-card">
+                    <h3><i class="fas fa-shield-alt"></i> Content Distribution Agreement</h3>
+                    
+                    <div class="consent-items">
+                        <label class="consent-item">
+                            <input type="checkbox" id="gdprConsent" onchange="updateComplianceStatus()">
+                            <span class="checkmark"></span>
+                            <div class="consent-text">
+                                <strong>GDPR Consent:</strong> I consent to MyAvatar processing my LinkedIn profile data and video content for distribution purposes. I understand I can revoke this consent at any time.
+                            </div>
+                        </label>
+                        
+                        <label class="consent-item">
+                            <input type="checkbox" id="contentWaiver" onchange="updateComplianceStatus()">
+                            <span class="checkmark"></span>
+                            <div class="consent-text">
+                                <strong>Content Responsibility:</strong> I acknowledge that I am solely responsible for the content I distribute through MyAvatar. MyAvatar is not liable for any consequences arising from my posted content.
+                            </div>
+                        </label>
+                        
+                        <label class="consent-item">
+                            <input type="checkbox" id="platformTerms" onchange="updateComplianceStatus()">
+                            <span class="checkmark"></span>
+                            <div class="consent-text">
+                                <strong>Platform Compliance:</strong> I confirm my content complies with LinkedIn's Terms of Service and Community Guidelines.
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="compliance-actions">
+                        <button class="btn secondary" onclick="hideCompliance()">Cancel</button>
+                        <button class="btn primary" id="acceptCompliance" onclick="acceptCompliance()" disabled>
+                            Accept & Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Video Selection Grid -->
+            <div class="videos-container compact" id="videosContainer">
+                {% if videos %}
+                    <div class="action-bar compact">
+                        <div class="action-left">
+                            <button class="action-btn secondary compact" onclick="selectAllVideos()" id="selectAllBtn">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button class="action-btn secondary compact" onclick="clearSelection()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                        
+                        <div class="action-right">
+                            <button class="action-btn primary compact" onclick="postToLinkedIn()" id="postBtn" disabled>
+                                <i class="fab fa-linkedin"></i> Post to LinkedIn
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="videos-grid compact" id="videosGrid">
+                        {% for video in videos %}
+                        <div class="video-card compact selectable" 
+                             data-video-id="{{ video.id }}" 
+                             data-title="{{ video.title or 'Untitled Video' }}"
+                             onclick="toggleVideoSelection('{{ video.id }}')">
+                            
+                            <!-- Selection Indicator -->
+                            <div class="selection-indicator" id="selection-{{ video.id }}">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            
+                            <!-- Video Thumbnail -->
+                            <div class="video-thumbnail compact">
+                                <video controls preload="metadata" class="video-player compact">
+                                    <source src="{{ video.video_path }}" type="video/mp4">
+                                </video>
+                            </div>
+                            
+                            <!-- Video Info -->
+                            <div class="video-info compact">
+                                <div class="video-title compact">{{ video.title or 'Untitled Video' }}</div>
+                                <div class="video-meta compact">
+                                    <span class="video-date">
+                                        {{ video.created_at.strftime('%b %d') if video.created_at else 'Unknown' }}
+                                    </span>
+                                    {% if video.avatar_name %}
+                                        <span class="video-avatar">{{ video.avatar_name[:10] }}...</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state compact">
+                        <div class="empty-icon compact">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h3>No videos ready</h3>
+                        <p>Create completed videos to share on LinkedIn!</p>
+                        <div class="empty-actions compact">
+                            <a href="/dashboard" class="btn primary compact">
+                                <i class="fas fa-plus"></i> Create Video
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+    
+    <!-- LinkedIn Distribution CSS -->
+    <style>
+        /* Reuse compact styles from videos.html */
+        .linkedin-distribution {
+            background: #f8fafc;
+        }
+        
+        .distribution-header.compact {
+            background: linear-gradient(135deg, #0077b5 0%, #005885 100%);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            color: white;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1.5rem;
+            align-items: center;
+        }
+        
+        .distribution-title.compact {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .linkedin-stats.compact {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .linkedin-connection {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+        }
+        
+        .connection-status.disconnected {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+        }
+        
+        .connection-status.connected {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            color: #0369a1;
+        }
+        
+        .connect-btn {
+            background: #0077b5;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+        
+        .compliance-section {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .compliance-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .compliance-card h3 {
+            margin: 0 0 1.5rem 0;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .consent-items {
+            margin-bottom: 1.5rem;
+        }
+        
+        .consent-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+        
+        .consent-item input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .consent-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .consent-text strong {
+            color: #1f2937;
+        }
+        
+        .compliance-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        
+        .video-card.selectable {
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        
+        .video-card.selectable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .video-card.selected {
+            border: 2px solid #0077b5;
+            background: #f0f9ff;
+        }
+        
+        .selection-indicator {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 24px;
+            height: 24px;
+            background: #0077b5;
+            color: white;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+        
+        .video-card.selected .selection-indicator {
+            display: flex;
+        }
+        
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        
+        .btn.primary {
+            background: #0077b5;
+            color: white;
+        }
+        
+        .btn.secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Reuse other compact styles from videos.html */
+        .videos-container.compact, .videos-grid.compact, .video-card.compact,
+        .video-thumbnail.compact, .video-info.compact, .empty-state.compact,
+        .action-bar.compact, .stat-item.compact {
+            /* Inherit styles from videos.html */
+        }
+    </style>
+    
+    <!-- LinkedIn Distribution JavaScript -->
+    <script>
+        let selectedVideos = new Set();
+        let linkedinConnected = false;
+        let complianceAccepted = false;
+        
+        // Video Selection
+        function toggleVideoSelection(videoId) {
+            const card = document.querySelector(`[data-video-id="${videoId}"]`);
+            
+            if (selectedVideos.has(videoId)) {
+                selectedVideos.delete(videoId);
+                card.classList.remove('selected');
+            } else {
+                selectedVideos.add(videoId);
+                card.classList.add('selected');
+            }
+            
+            updateSelectionUI();
+        }
+        
+        function selectAllVideos() {
+            const videoCards = document.querySelectorAll('.video-card[data-video-id]');
+            videoCards.forEach(card => {
+                const videoId = card.dataset.videoId;
+                selectedVideos.add(videoId);
+                card.classList.add('selected');
+            });
+            updateSelectionUI();
+        }
+        
+        function clearSelection() {
+            selectedVideos.clear();
+            document.querySelectorAll('.video-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            updateSelectionUI();
+        }
+        
+        function updateSelectionUI() {
+            document.getElementById('selectedCount').textContent = selectedVideos.size;
+            
+            const postBtn = document.getElementById('postBtn');
+            postBtn.disabled = selectedVideos.size === 0 || !linkedinConnected || !complianceAccepted;
+            
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const totalVideos = document.querySelectorAll('.video-card[data-video-id]').length;
+            selectAllBtn.textContent = selectedVideos.size === totalVideos ? 'Deselect All' : 'Select All';
+        }
+        
+        // LinkedIn Connection
+        function connectLinkedIn() {
+            // Show compliance modal first
+            document.getElementById('complianceSection').style.display = 'flex';
+        }
+        
+        function acceptCompliance() {
+            complianceAccepted = true;
+            document.getElementById('complianceSection').style.display = 'none';
+            
+            // Simulate LinkedIn OAuth (replace with real implementation)
+            simulateLinkedInAuth();
+        }
+        
+        function hideCompliance() {
+            document.getElementById('complianceSection').style.display = 'none';
+        }
+        
+        function updateComplianceStatus() {
+            const gdpr = document.getElementById('gdprConsent').checked;
+            const waiver = document.getElementById('contentWaiver').checked;
+            const terms = document.getElementById('platformTerms').checked;
+            
+            const acceptBtn = document.getElementById('acceptCompliance');
+            acceptBtn.disabled = !(gdpr && waiver && terms);
+        }
+        
+        function simulateLinkedInAuth() {
+            // TODO: Replace with real LinkedIn OAuth
+            setTimeout(() => {
+                linkedinConnected = true;
+                const status = document.getElementById('connectionStatus');
+                status.className = 'connection-status connected';
+                status.innerHTML = `
+                    <i class="fab fa-linkedin"></i>
+                    <span>Connected to LinkedIn</span>
+                    <button class="connect-btn" onclick="disconnectLinkedIn()" style="background: #dc2626;">
+                        <i class="fas fa-unlink"></i> Disconnect
+                    </button>
+                `;
+                updateSelectionUI();
+                showNotification('LinkedIn connected successfully!', 'success');
+            }, 1000);
+        }
+        
+        function disconnectLinkedIn() {
+            linkedinConnected = false;
+            complianceAccepted = false;
+            const status = document.getElementById('connectionStatus');
+            status.className = 'connection-status disconnected';
+            status.innerHTML = `
+                <i class="fab fa-linkedin"></i>
+                <span>Connect to LinkedIn</span>
+                <button class="connect-btn" onclick="connectLinkedIn()">
+                    <i class="fab fa-linkedin"></i> Connect Account
+                </button>
+            `;
+            updateSelectionUI();
+            showNotification('LinkedIn disconnected', 'info');
+        }
+        
+        // Post to LinkedIn
+        function postToLinkedIn() {
+            if (selectedVideos.size === 0) {
+                showNotification('Please select videos to post', 'error');
+                return;
+            }
+            
+            if (!linkedinConnected) {
+                showNotification('Please connect to LinkedIn first', 'error');
+                return;
+            }
+            
+            // TODO: Implement actual LinkedIn posting
+            showNotification(`Posting ${selectedVideos.size} videos to LinkedIn...`, 'info');
+            
+            setTimeout(() => {
+                showNotification(`Successfully posted ${selectedVideos.size} videos to LinkedIn!`, 'success');
+                clearSelection();
+            }, 2000);
+        }
+        
+        // Utility Functions
+        function filterVideos() {
+            // Reuse from videos.html
+            console.log('Filter videos for LinkedIn');
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        function toggleSidebar() { console.log('Toggle sidebar'); }
+        function toggleTheme() { console.log('Toggle theme'); }
+        function logout() { if (confirm('Logout?')) window.location.href = '/logout'; }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectionUI();
+            console.log('🔗 LinkedIn Distribution MVP loaded');
+        });
+    </script>
+</body>
+</html>

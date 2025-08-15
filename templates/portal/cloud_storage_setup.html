@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Storage Setup - MyAvatar</title>
+    
+    <!-- Bootstrap 5.3.0 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --focus-color: #3b82f6;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 1rem;
+        }
+
+        .cloud-setup-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cloud-setup-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .setup-logo {
+            background: var(--primary-gradient);
+            color: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .setup-title {
+            color: #2d3748;
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .setup-subtitle {
+            color: #718096;
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            gap: 1rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .step.completed {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .step.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .step.pending {
+            background: #e2e8f0;
+            color: #718096;
+        }
+
+        .step-line {
+            width: 60px;
+            height: 2px;
+            background: #e2e8f0;
+        }
+
+        .step-line.completed {
+            background: var(--success-color);
+        }
+
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .provider-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .provider-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        .provider-card.selected {
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        }
+
+        .provider-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: var(--success-color);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .provider-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border-radius: 12px;
+        }
+
+        .provider-icon.google {
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 75%, #ea4335 100%);
+            color: white;
+        }
+
+        .provider-icon.dropbox {
+            background: #0061ff;
+            color: white;
+        }
+
+        .provider-icon.onedrive {
+            background: #0078d4;
+            color: white;
+        }
+
+        .provider-icon.aws {
+            background: #ff9900;
+            color: white;
+        }
+
+        .provider-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+        }
+
+        .provider-description {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-bottom: 1rem;
+        }
+
+        .provider-quota {
+            background: #f7fafc;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #4a5568;
+        }
+
+        .setup-form {
+            margin-top: 2rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--focus-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+
+        .btn-connect {
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+
+        .btn-connect:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .btn-skip {
+            background: transparent;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            color: #718096;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .btn-skip:hover {
+            border-color: #cbd5e0;
+            color: #4a5568;
+        }
+
+        .connection-status {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .connection-status.success {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            color: #22543d;
+        }
+
+        .connection-status.error {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #742a2a;
+        }
+
+        .connection-status.loading {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            color: #2c5282;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .quota-display {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .quota-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .quota-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .quota-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .quota-progress {
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .cloud-setup-container {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+
+            .provider-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-steps {
+                gap: 0.5rem;
+            }
+
+            .step-line {
+                width: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="cloud-setup-container">
+        <!-- Header -->
+        <div class="setup-header">
+            <div class="setup-logo">
+                <i class="fas fa-cloud"></i>
+            </div>
+            <h1 class="setup-title">Cloud Storage Setup</h1>
+            <p class="setup-subtitle">Connect your cloud storage to save and sync your AI videos</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="step completed">1</div>
+            <div class="step-line completed"></div>
+            <div class="step completed">2</div>
+            <div class="step-line"></div>
+            <div class="step active">3</div>
+        </div>
+
+        <!-- Provider Selection -->
+        <form id="cloudSetupForm" class="setup-form">
+            <div class="provider-grid">
+                <!-- Google Drive -->
+                <div class="provider-card" data-provider="google_drive" onclick="selectProvider('google_drive')">
+                    <div class="provider-icon google">
+                        <i class="fab fa-google-drive"></i>
+                    </div>
+                    <div class="provider-name">Google Drive</div>
+                    <div class="provider-description">15GB free storage, excellent integration</div>
+                    <div class="provider-quota">Free: 15GB • Paid: 100GB+</div>
+                </div>
+
+                <!-- Dropbox -->
+                <div class="provider-card" data-provider="dropbox" onclick="selectProvider('dropbox')">
+                    <div class="provider-icon dropbox">
+                        <i class="fab fa-dropbox"></i>
+                    </div>
+                    <div class="provider-name">Dropbox</div>
+                    <div class="provider-description">Reliable sync, great for collaboration</div>
+                    <div class="provider-quota">Free: 2GB • Paid: 2TB+</div>
+                </div>
+
+                <!-- OneDrive -->
+                <div class="provider-card" data-provider="onedrive" onclick="selectProvider('onedrive')">
+                    <div class="provider-icon onedrive">
+                        <i class="fab fa-microsoft"></i>
+                    </div>
+                    <div class="provider-name">OneDrive</div>
+                    <div class="provider-description">Microsoft integration, Office compatibility</div>
+                    <div class="provider-quota">Free: 5GB • Paid: 1TB+</div>
+                </div>
+
+                <!-- AWS S3 -->
+                <div class="provider-card" data-provider="aws_s3" onclick="selectProvider('aws_s3')">
+                    <div class="provider-icon aws">
+                        <i class="fab fa-aws"></i>
+                    </div>
+                    <div class="provider-name">AWS S3</div>
+                    <div class="provider-description">Enterprise-grade, pay-as-you-use</div>
+                    <div class="provider-quota">Pay per GB • Highly scalable</div>
+                </div>
+            </div>
+
+            <!-- Connection Form -->
+            <div id="connectionForm" style="display: none;">
+                <div class="mb-3">
+                    <label class="form-label">Selected Provider</label>
+                    <input type="text" id="selectedProvider" class="form-control" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Folder Name</label>
+                    <input type="text" id="folderName" class="form-control" value="MyAvatar Videos" placeholder="MyAvatar Videos">
+                    <div class="form-text">This folder will be created in your cloud storage</div>
+                </div>
+
+                <button type="button" id="connectBtn" class="btn-connect" onclick="connectCloudStorage()">
+                    <i class="fas fa-link"></i> Connect to <span id="providerName">Cloud Storage</span>
+                </button>
+
+                <button type="button" class="btn-skip" onclick="skipCloudSetup()">
+                    Skip for now (you can set this up later)
+                </button>
+            </div>
+
+            <!-- Connection Status -->
+            <div id="connectionStatus" class="connection-status">
+                <div class="status-content">
+                    <i class="status-icon"></i>
+                    <span class="status-text"></span>
+                </div>
+            </div>
+
+            <!-- Quota Display -->
+            <div id="quotaDisplay" class="quota-display" style="display: none;">
+                <h6>Storage Information</h6>
+                <div class="quota-item">
+                    <span>Available Space:</span>
+                    <strong id="availableSpace">--</strong>
+                </div>
+                <div class="quota-item">
+                    <span>MyAvatar Folder:</span>
+                    <strong id="folderStatus">Not created</strong>
+                </div>
+                <div class="quota-bar">
+                    <div class="quota-progress" id="quotaProgress" style="width: 0%"></div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bootstrap 5.3.0 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let selectedProviderType = null;
+
+        function selectProvider(provider) {
+            // Remove previous selection
+            document.querySelectorAll('.provider-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Select current provider
+            document.querySelector(`[data-provider="${provider}"]`).classList.add('selected');
+            selectedProviderType = provider;
+
+            // Update form
+            const providerNames = {
+                'google_drive': 'Google Drive',
+                'dropbox': 'Dropbox', 
+                'onedrive': 'OneDrive',
+                'aws_s3': 'AWS S3'
+            };
+
+            document.getElementById('selectedProvider').value = providerNames[provider];
+            document.getElementById('providerName').textContent = providerNames[provider];
+            document.getElementById('connectionForm').style.display = 'block';
+
+            // Scroll to form
+            document.getElementById('connectionForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function connectCloudStorage() {
+            if (!selectedProviderType) {
+                showStatus('error', 'Please select a cloud storage provider');
+                return;
+            }
+
+            const folderName = document.getElementById('folderName').value.trim();
+            if (!folderName) {
+                showStatus('error', 'Please enter a folder name');
+                return;
+            }
+
+            // Disable button and show loading
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.disabled = true;
+            connectBtn.innerHTML = '<div class="loading-spinner"></div> Connecting...';
+
+            showStatus('loading', 'Connecting to your cloud storage...');
+
+            try {
+                // Step 1: Initiate OAuth flow
+                const response = await fetch('/cloud-storage/oauth/initiate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        provider: selectedProviderType,
+                        folder_name: folderName
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Redirect to OAuth provider
+                    showStatus('loading', 'Redirecting to ' + document.getElementById('providerName').textContent + '...');
+                    setTimeout(() => {
+                        window.location.href = result.oauth_url;
+                    }, 1000);
+                } else {
+                    throw new Error(result.error || 'Failed to initiate connection');
+                }
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus('error', 'Connection failed: ' + error.message);
+                
+                // Reset button
+                connectBtn.disabled = false;
+                connectBtn.innerHTML = '<i class="fas fa-link"></i> Connect to ' + document.getElementById('providerName').textContent;
+            }
+        }
+
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusIcon = statusDiv.querySelector('.status-icon');
+            const statusText = statusDiv.querySelector('.status-text');
+
+            // Reset classes
+            statusDiv.className = 'connection-status ' + type;
+            statusDiv.style.display = 'block';
+
+            // Update content based on type
+            switch(type) {
+                case 'success':
+                    statusIcon.className = 'status-icon fas fa-check-circle';
+                    break;
+                case 'error':
+                    statusIcon.className = 'status-icon fas fa-exclamation-circle';
+                    break;
+                case 'loading':
+                    statusIcon.className = 'status-icon loading-spinner';
+                    break;
+            }
+
+            statusText.textContent = message;
+        }
+
+        function skipCloudSetup() {
+            if (confirm('Are you sure you want to skip cloud storage setup? You can configure this later in your account settings.')) {
+                window.location.href = '/dashboard';
+            }
+        }
+
+        // Check for OAuth callback parameters
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('oauth_success') === 'true') {
+                showStatus('success', 'Cloud storage connected successfully!');
+                document.getElementById('quotaDisplay').style.display = 'block';
+                
+                // Auto-redirect to dashboard after success
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
+            } else if (urlParams.get('oauth_error')) {
+                showStatus('error', 'OAuth error: ' + urlParams.get('oauth_error'));
+            }
+        });
+
+        // Simulate quota display for demo
+        function updateQuotaDisplay(provider) {
+            const quotas = {
+                'google_drive': { available: '14.2 GB', used: '0.8 GB', percentage: 5 },
+                'dropbox': { available: '1.8 GB', used: '0.2 GB', percentage: 10 },
+                'onedrive': { available: '4.7 GB', used: '0.3 GB', percentage: 6 },
+                'aws_s3': { available: 'Unlimited', used: '0 GB', percentage: 0 }
+            };
+
+            const quota = quotas[provider];
+            if (quota) {
+                document.getElementById('availableSpace').textContent = quota.available;
+                document.getElementById('quotaProgress').style.width = quota.percentage + '%';
+                document.getElementById('folderStatus').textContent = 'Ready to create';
+            }
+        }
+    </script>
+</body>
+</html>

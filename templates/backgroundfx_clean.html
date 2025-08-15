@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackgroundFX - AI Video Background Replacement</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2d3748;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 2rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+            transform: translateX(-4px);
+        }
+
+        .main-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .intro-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .intro-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .intro-description {
+            font-size: 1.1rem;
+            color: #718096;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Single Video Background Replacer Interface */
+        .video-replacer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .replacer-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .replacer-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .replacer-subtitle {
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .source-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .source-section {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .source-section:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.1);
+        }
+
+        .source-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .source-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .source-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .source-tabs {
+            display: flex;
+            background: #e2e8f0;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .source-tab {
+            flex: 1;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .source-tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            font-size: 1rem;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .selected-file {
+            background: #e8f4fd;
+            border: 1px solid #667eea;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .selected-file.show {
+            display: block;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .file-details h4 {
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .file-details p {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .gallery-item {
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .gallery-item.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .process-section {
+            text-align: center;
+            margin-top: 32px;
+        }
+
+        .process-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            min-width: 200px;
+        }
+
+        .process-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .process-btn.processing {
+            background: #10b981;
+        }
+
+        .process-btn.processing::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .status-message {
+            margin-top: 16px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .status-message.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .source-sections {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .title {
+                font-size: 1.5rem;
+            }
+            
+            .intro-title {
+                font-size: 1.6rem;
+            }
+            
+            .replacer-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">🎬</div>
+                <h1 class="title">BackgroundFX</h1>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-badge">
+                    <i class="fas fa-user"></i>
+                    User: Guest
+                </div>
+                <a href="/dashboard" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="intro-section">
+            <h2 class="intro-title">AI-Powered Video Background Replacement</h2>
+            <p class="intro-description">
+                Transform your videos with cinema-quality AI background replacement. 
+                Choose your video source and background, then let our advanced AI create stunning results.
+            </p>
+        </div>
+
+        <div class="video-replacer">
+            <div class="replacer-header">
+                <h3 class="replacer-title">
+                    <i class="fas fa-magic"></i>
+                    Video Background Replacer
+                </h3>
+                <p class="replacer-subtitle">Replace your video background with AI + Audio!</p>
+            </div>
+
+            <div class="source-sections">
+                <!-- Video Source Section -->
+                <div class="source-section">
+                    <div class="source-header">
+                        <div class="source-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h4 class="source-title">Video Source</h4>
+                    </div>
+                    
+                    <div class="source-tabs">
+                        <button class="source-tab active" onclick="switchVideoTab('upload')">Upload New Video</button>
+                        <button class="source-tab" onclick="switchVideoTab('gallery')">From My Videos</button>
+                    </div>
+                    
+                    <div id="video-upload" class="tab-content active">
+                        <div class="upload-area" onclick="document.getElementById('videoFile').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">Choose a video file</div>
+                            <div class="upload-hint">Drag and drop or click to browse</div>
+                        </div>
+                        <input type="file" id="videoFile" class="file-input" accept="video/*">
+                        <div id="selectedVideo" class="selected-file">
+                            <div class="file-info">
+                                <div class="file-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="file-details">
+                                    <h4 id="videoFileName">Selected Video</h4>
+                                    <p id="videoFileSize">File size</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="video-gallery" class="tab-content">
+                        <div class="gallery-grid">
+                            <!-- Video gallery items would be populated here -->
+                            <div class="gallery-item">
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjY4IiB2aWV3Qm94PSIwIDAgMTIwIDY4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjY4IiBmaWxsPSIjRjdGQUZDIi8+CjxwYXRoIGQ9Ik00OCA0NEw2NCAzNEw0OCAyNFY0NFoiIGZpbGw9IiM2NjdFRUEiLz4KPC9zdmc+" alt="Video thumbnail">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Background Source Section -->
+                <div class="source-section">
+                    <div class="source-header">
+                        <div class="source-icon">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        <h4 class="source-title">Background Source</h4>
+                    </div>
+                    
+                    <div class="source-tabs">
+                        <button class="source-tab active" onclick="switchBackgroundTab('upload')">Upload New Image</button>
+                        <button class="source-tab" onclick="switchBackgroundTab('gallery')">From Image Gallery</button>
+                    </div>
+                    
+                    <div id="background-upload" class="tab-content active">
+                        <div class="upload-area" onclick="document.getElementById('backgroundFile').click()">
+                            <div class="upload-icon">
+                                <i class="fas fa-image"></i>
+                            </div>
+                            <div class="upload-text">Choose a background image</div>
+                            <div class="upload-hint">Drag and drop or click to browse</div>
+                        </div>
+                        <input type="file" id="backgroundFile" class="file-input" accept="image/*">
+                        <div id="selectedBackground" class="selected-file">
+                            <div class="file-info">
+                                <div class="file-icon">
+                                    <i class="fas fa-image"></i>
+                                </div>
+                                <div class="file-details">
+                                    <h4 id="backgroundFileName">Selected Background</h4>
+                                    <p id="backgroundFileSize">File size</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="background-gallery" class="tab-content">
+                        <div class="gallery-grid">
+                            <!-- Background gallery items would be populated here -->
+                            <div class="gallery-item">
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjY4IiB2aWV3Qm94PSIwIDAgMTIwIDY4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2N0VFQTtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojNzY0QkEyO3N0b3Atb3BhY2l0eToxIiAvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iNjgiIGZpbGw9InVybCgjZ3JhZCkiLz4KPC9zdmc+" alt="Background">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="process-section">
+                <button id="processBtn" class="process-btn" onclick="processVideo()" disabled>
+                    <i class="fas fa-magic"></i>
+                    Select Video & Background to Process
+                </button>
+                
+                <div id="statusMessage" class="status-message">
+                    <span id="statusText"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedVideoFile = null;
+        let selectedBackgroundFile = null;
+        let selectedVideoFromGallery = null;
+        let selectedBackgroundFromGallery = null;
+
+        // Tab switching functions
+        function switchVideoTab(tab) {
+            document.querySelectorAll('.source-section:first-child .source-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.source-section:first-child .tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`video-${tab}`).classList.add('active');
+            
+            updateProcessButton();
+        }
+
+        function switchBackgroundTab(tab) {
+            document.querySelectorAll('.source-section:last-child .source-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.source-section:last-child .tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`background-${tab}`).classList.add('active');
+            
+            updateProcessButton();
+        }
+
+        // File handling
+        document.getElementById('videoFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedVideoFile = file;
+                showSelectedFile('video', file);
+                updateProcessButton();
+            }
+        });
+
+        document.getElementById('backgroundFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedBackgroundFile = file;
+                showSelectedFile('background', file);
+                updateProcessButton();
+            }
+        });
+
+        function showSelectedFile(type, file) {
+            const container = document.getElementById(`selected${type.charAt(0).toUpperCase() + type.slice(1)}`);
+            const fileName = document.getElementById(`${type}FileName`);
+            const fileSize = document.getElementById(`${type}FileSize`);
+            
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            container.classList.add('show');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Drag and drop functionality
+        function setupDragAndDrop() {
+            const uploadAreas = document.querySelectorAll('.upload-area');
+            
+            uploadAreas.forEach(area => {
+                area.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+                
+                area.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                });
+                
+                area.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        const isVideo = area.closest('.source-section').querySelector('.fas.fa-video');
+                        
+                        if (isVideo && file.type.startsWith('video/')) {
+                            selectedVideoFile = file;
+                            showSelectedFile('video', file);
+                            updateProcessButton();
+                        } else if (!isVideo && file.type.startsWith('image/')) {
+                            selectedBackgroundFile = file;
+                            showSelectedFile('background', file);
+                            updateProcessButton();
+                        } else {
+                            showStatus('error', 'Please select the correct file type.');
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateProcessButton() {
+            const processBtn = document.getElementById('processBtn');
+            const hasVideo = selectedVideoFile || selectedVideoFromGallery;
+            const hasBackground = selectedBackgroundFile || selectedBackgroundFromGallery;
+            
+            if (hasVideo && hasBackground) {
+                processBtn.disabled = false;
+                processBtn.innerHTML = '<i class="fas fa-magic"></i> Process Video with AI';
+            } else if (hasVideo && !hasBackground) {
+                processBtn.disabled = true;
+                processBtn.innerHTML = '<i class="fas fa-image"></i> Select Background Image';
+            } else if (!hasVideo && hasBackground) {
+                processBtn.disabled = true;
+                processBtn.innerHTML = '<i class="fas fa-video"></i> Select Video File';
+            } else {
+                processBtn.disabled = true;
+                processBtn.innerHTML = '<i class="fas fa-magic"></i> Select Video & Background to Process';
+            }
+        }
+
+        function processVideo() {
+            const processBtn = document.getElementById('processBtn');
+            
+            if (processBtn.disabled) return;
+            
+            // Start processing animation
+            processBtn.classList.add('processing');
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing with AI...';
+            processBtn.disabled = true;
+            
+            showStatus('success', 'Processing started! Your video is being enhanced with AI...');
+            
+            // Simulate processing (replace with actual API call)
+            setTimeout(() => {
+                processBtn.classList.remove('processing');
+                processBtn.innerHTML = '<i class="fas fa-check"></i> Processing Complete!';
+                showStatus('success', 'Video processing completed successfully! Check your downloads.');
+                
+                // Reset after 3 seconds
+                setTimeout(() => {
+                    resetInterface();
+                }, 3000);
+            }, 5000);
+        }
+
+        function showStatus(type, message) {
+            const statusMessage = document.getElementById('statusMessage');
+            const statusText = document.getElementById('statusText');
+            
+            statusMessage.className = `status-message ${type} show`;
+            statusText.textContent = message;
+        }
+
+        function resetInterface() {
+            selectedVideoFile = null;
+            selectedBackgroundFile = null;
+            selectedVideoFromGallery = null;
+            selectedBackgroundFromGallery = null;
+            
+            document.getElementById('videoFile').value = '';
+            document.getElementById('backgroundFile').value = '';
+            document.getElementById('selectedVideo').classList.remove('show');
+            document.getElementById('selectedBackground').classList.remove('show');
+            document.getElementById('statusMessage').classList.remove('show');
+            
+            updateProcessButton();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop();
+            updateProcessButton();
+        });
+    </script>
+</body>
+</html>

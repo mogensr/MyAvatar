@@ -1,0 +1,2 @@
+Force Railway deployment - timestamp: 2025-07-08T13:58:33+02:00
+This file forces a new deployment to ensure all changes are live.

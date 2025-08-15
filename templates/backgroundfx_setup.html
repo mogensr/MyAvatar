@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackgroundFX - Cloud Storage Setup</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .setup-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .welcome-message {
+            background: linear-gradient(135deg, #e8f4fd 0%, #f0e8ff 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+            border-left: 4px solid #667eea;
+        }
+
+        .welcome-message h3 {
+            color: #2d3748;
+            font-size: 1.3rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .welcome-message p {
+            color: #4a5568;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        .benefits {
+            text-align: left;
+            margin: 24px 0;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .benefit-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .benefit-icon {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .benefit-text {
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .providers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin: 32px 0;
+        }
+
+        .provider-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .provider-card:hover {
+            border-color: #667eea;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+        }
+
+        .provider-card:active {
+            transform: translateY(-2px);
+        }
+
+        .provider-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .google-drive { color: #4285f4; }
+        .dropbox { color: #0061ff; }
+        .onedrive { color: #0078d4; }
+
+        .provider-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .provider-description {
+            font-size: 0.9rem;
+            color: #718096;
+            line-height: 1.4;
+        }
+
+        .connect-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 24px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .connect-btn:active {
+            transform: translateY(0);
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer-note {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+            transform: translateX(-4px);
+        }
+
+        @media (max-width: 768px) {
+            .setup-container {
+                padding: 24px;
+                margin: 10px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .providers {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <a href="/dashboard" class="back-link">
+            <i class="fas fa-arrow-left"></i>
+            Back to Dashboard
+        </a>
+
+        <div class="logo">🍹</div>
+        <h1 class="title">BackgroundFX</h1>
+        <p class="subtitle">AI-Powered Video Background Replacement</p>
+
+        <div class="welcome-message">
+            <h3>
+                <i class="fas fa-cloud"></i>
+                Welcome, {{ username }}!
+            </h3>
+            <p>
+                To get started with BackgroundFX, you'll need to connect your cloud storage. 
+                This ensures your processed videos are saved securely to your own cloud account, 
+                giving you full control and unlimited storage space.
+            </p>
+        </div>
+
+        <div class="benefits">
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fas fa-infinity"></i>
+                </div>
+                <div class="benefit-text">Unlimited storage space in your cloud</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="benefit-text">Your videos stay private in your account</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fas fa-sync"></i>
+                </div>
+                <div class="benefit-text">Automatic sync across all your devices</div>
+            </div>
+
+            <div class="benefit-item">
+                <div class="benefit-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div class="benefit-text">No additional storage costs for you</div>
+            </div>
+        </div>
+
+        <h3 style="color: #2d3748; margin-bottom: 20px; font-size: 1.3rem;">Choose Your Cloud Storage Provider</h3>
+
+        <div class="providers">
+            <div class="provider-card" onclick="connectProvider('google_drive')">
+                <div class="provider-icon google-drive">
+                    <i class="fab fa-google-drive"></i>
+                </div>
+                <div class="provider-name">Google Drive</div>
+                <div class="provider-description">15GB free, seamless integration with Google services</div>
+            </div>
+
+            <div class="provider-card" onclick="connectProvider('dropbox')">
+                <div class="provider-icon dropbox">
+                    <i class="fab fa-dropbox"></i>
+                </div>
+                <div class="provider-name">Dropbox</div>
+                <div class="provider-description">Reliable sync, great for collaboration and sharing</div>
+            </div>
+
+            <div class="provider-card" onclick="connectProvider('onedrive')">
+                <div class="provider-icon onedrive">
+                    <i class="fas fa-cloud"></i>
+                </div>
+                <div class="provider-name">OneDrive</div>
+                <div class="provider-description">5GB free, perfect integration with Microsoft apps</div>
+            </div>
+        </div>
+
+        <form id="connectForm" method="post" action="/backgroundfx/connect-storage" style="display: none;">
+            <input type="hidden" name="provider" id="selectedProvider">
+        </form>
+
+        <div class="footer-note">
+            <i class="fas fa-info-circle"></i>
+            This is a one-time setup. Once connected, all your BackgroundFX videos will be automatically saved to your chosen cloud storage.
+        </div>
+    </div>
+
+    <script>
+        function connectProvider(provider) {
+            // Visual feedback
+            const cards = document.querySelectorAll('.provider-card');
+            cards.forEach(card => card.style.opacity = '0.5');
+            
+            const selectedCard = event.currentTarget;
+            selectedCard.style.opacity = '1';
+            selectedCard.style.transform = 'scale(1.05)';
+            
+            // Show loading state
+            const providerName = selectedCard.querySelector('.provider-name').textContent;
+            selectedCard.innerHTML = `
+                <div class="loading" style="display: flex;">
+                    <div class="spinner"></div>
+                    <span>Connecting to ${providerName}...</span>
+                </div>
+            `;
+            
+            // Submit form
+            document.getElementById('selectedProvider').value = provider;
+            document.getElementById('connectForm').submit();
+        }
+
+        // Handle back navigation
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // Reset page if user navigates back
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>

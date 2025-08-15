@@ -1,0 +1,24 @@
+gradio>=4.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+moviepy>=1.0.3
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Install MatAnyone from GitHub
+git+https://github.com/pq-yang/MatAnyone.git
+
+# MatAnyone dependencies
+omegaconf>=2.3.0
+hydra-core>=1.3.0
+easydict>=0.1.10
+imageio>=2.25.0
+huggingface-hub>=0.16.0
+safetensors>=0.3.0
+einops>=0.6.0
+scipy>=1.10.0
+av>=10.0.0
+
+# Keep rembg as fallback
+rembg>=2.0.50

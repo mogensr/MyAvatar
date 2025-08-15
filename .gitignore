@@ -1,0 +1,24 @@
+# Environment files 
+.env 
+.env.* 
+*.env 
+.env.development 
+.env.production 
+.env.template 
+# 
+# Python 
+__pycache__/ 
+*.pyc 
+*.pyo 
+venv/ 
+# 
+# System files 
+.DS_Store 
+Thumbs.db 
+# 
+# Project specific 
+Cloudinare.txt
+
+# AI_Worker (separate project in same repo)
+AI_Worker/
+../AI_Worker/ 

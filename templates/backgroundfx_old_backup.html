@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackgroundFX - AI Video Background Replacement</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2d3748;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            font-size: 2rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cloud-status {
+            background: #10b981;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+            transform: translateX(-4px);
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .intro-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .intro-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .intro-description {
+            font-size: 1.1rem;
+            color: #718096;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .iframe-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 32px;
+        }
+
+        .iframe-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .iframe-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .iframe-wrapper {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .iframe-wrapper:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+        }
+
+        #backgroundfx-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 14px;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 32px;
+        }
+
+        .upload-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .upload-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtitle {
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .upload-form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .file-input-container {
+            border: 2px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 24px;
+            position: relative;
+            background: linear-gradient(45deg, #f7fafc 0%, #edf2f7 100%);
+        }
+
+        .file-input-container:hover {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #e8f4fd 0%, #f0e8ff 100%);
+        }
+
+        .file-input-container.dragover {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #e8f4fd 0%, #f0e8ff 100%);
+            transform: scale(1.02);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 16px;
+        }
+
+        .file-input-text {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .file-input-hint {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .selected-file {
+            background: #e8f4fd;
+            border: 1px solid #667eea;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .selected-file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .upload-progress {
+            display: none;
+            margin-top: 16px;
+        }
+
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .success-message, .error-message {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+
+        .cloud-info {
+            background: linear-gradient(135deg, #e8f4fd 0%, #f0e8ff 100%);
+            border: 1px solid #667eea;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .cloud-icon {
+            background: #667eea;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .cloud-details h4 {
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+        }
+
+        .cloud-details p {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .main-content {
+                padding: 20px 16px;
+            }
+
+            .intro-section, .iframe-container, .upload-section {
+                padding: 20px;
+            }
+
+            .iframe-wrapper {
+                height: 400px;
+            }
+
+            .title {
+                font-size: 1.5rem;
+            }
+
+            .intro-title {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo">🍹</div>
+                <h1 class="title">BackgroundFX</h1>
+            </div>
+            
+            <div class="user-info">
+                <div class="cloud-status">
+                    <i class="fas fa-cloud-check"></i>
+                    {{ cloud_provider|title }} Connected
+                </div>
+                <div class="user-badge">
+                    <i class="fas fa-user"></i>
+                    {{ username }}
+                </div>
+                <a href="/dashboard" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="intro-section">
+            <h2 class="intro-title">AI-Powered Video Background Replacement</h2>
+            <p class="intro-description">
+                Transform your videos with AI-powered background replacement. Upload any video, 
+                choose a new background, and let our advanced AI do the rest. Your processed 
+                videos will be automatically saved to your connected cloud storage.
+            </p>
+        </div>
+
+        <div class="iframe-container">
+            <div class="iframe-header">
+                <h3 class="iframe-title">
+                    <i class="fas fa-magic"></i>
+                    BackgroundFX Studio
+                </h3>
+            </div>
+            
+            <div class="iframe-wrapper">
+                <iframe 
+                    id="backgroundfx-iframe" 
+                    src="{{ hf_space_url }}"
+                    title="BackgroundFX Interface"
+                    allow="camera; microphone; fullscreen; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin">
+                </iframe>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-header">
+                <h3 class="upload-title">Save Your Processed Video</h3>
+                <p class="upload-subtitle">Upload your processed video to save it to your cloud storage and Recent Videos</p>
+            </div>
+
+            <div class="cloud-info">
+                <div class="cloud-icon">
+                    {% if cloud_provider == 'google_drive' %}
+                        <i class="fab fa-google-drive"></i>
+                    {% elif cloud_provider == 'dropbox' %}
+                        <i class="fab fa-dropbox"></i>
+                    {% elif cloud_provider == 'onedrive' %}
+                        <i class="fas fa-cloud"></i>
+                    {% endif %}
+                </div>
+                <div class="cloud-details">
+                    <h4>Connected to {{ cloud_provider|replace('_', ' ')|title }}</h4>
+                    <p>Videos will be saved to: {{ cloud_folder }}</p>
+                </div>
+            </div>
+
+            <form id="uploadForm" class="upload-form" enctype="multipart/form-data">
+                <div class="file-input-container" onclick="document.getElementById('videoFile').click()">
+                    <div class="file-input-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="file-input-text">Click to upload your processed video</div>
+                    <div class="file-input-hint">Or drag and drop your video file here (MP4, MOV, AVI)</div>
+                    <input type="file" id="videoFile" name="video_file" class="file-input" accept="video/*" required>
+                </div>
+
+                <div id="selectedFile" class="selected-file">
+                    <div class="selected-file-info">
+                        <div class="file-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="file-details">
+                            <div class="file-name" id="fileName"></div>
+                            <div class="file-size" id="fileSize"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="uploadBtn" class="upload-btn" disabled>
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Upload to {{ cloud_provider|replace('_', ' ')|title }}
+                </button>
+
+                <div id="uploadProgress" class="upload-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Uploading...</div>
+                </div>
+
+                <div id="successMessage" class="success-message">
+                    <i class="fas fa-check-circle"></i>
+                    <span id="successText"></span>
+                </div>
+
+                <div id="errorMessage" class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="errorText"></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('videoFile');
+        const fileContainer = document.querySelector('.file-input-container');
+        const selectedFile = document.getElementById('selectedFile');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // File input change handler
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Drag and drop handlers
+        fileContainer.addEventListener('dragover', handleDragOver);
+        fileContainer.addEventListener('dragleave', handleDragLeave);
+        fileContainer.addEventListener('drop', handleDrop);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                displaySelectedFile(file);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            fileContainer.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            fileContainer.classList.remove('dragover');
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            fileContainer.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('video/')) {
+                    fileInput.files = files;
+                    displaySelectedFile(file);
+                } else {
+                    showError('Please select a video file.');
+                }
+            }
+        }
+
+        function displaySelectedFile(file) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            selectedFile.style.display = 'block';
+            uploadBtn.disabled = false;
+            hideMessages();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const file = fileInput.files[0];
+            if (!file) {
+                showError('Please select a video file.');
+                return;
+            }
+
+            // Show upload progress
+            uploadBtn.disabled = true;
+            uploadProgress.style.display = 'block';
+            hideMessages();
+
+            try {
+                const formData = new FormData();
+                formData.append('video_file', file);
+                formData.append('filename', file.name);
+
+                const response = await fetch('/backgroundfx/upload-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess(`Video "${result.title}" uploaded successfully to your cloud storage!`);
+                    resetForm();
+                } else {
+                    showError(result.error || 'Upload failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showError('Upload failed. Please check your connection and try again.');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadProgress.style.display = 'none';
+            }
+        });
+
+        function showSuccess(message) {
+            document.getElementById('successText').textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        function hideMessages() {
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+        }
+
+        function resetForm() {
+            fileInput.value = '';
+            selectedFile.style.display = 'none';
+            uploadBtn.disabled = true;
+            hideMessages();
+        }
+
+        // Handle URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('setup') === 'success') {
+            showSuccess('Cloud storage connected successfully! You can now upload your videos.');
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (urlParams.get('setup') === 'error') {
+            showError('Failed to connect cloud storage. Please try again.');
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
+</body>
+</html>

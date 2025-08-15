@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrér Avatarer - MyAvatar Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>👤 Administrér Avatarer</h2>
+            <a href="/admin/users" class="btn btn-secondary">← Tilbage til Brugere</a>
+        </div>
+
+        <!-- User Info -->
+        <div class="alert alert-info mb-4">
+            <h5>Bruger: {{ user_to_manage.username }}</h5>
+            <p class="mb-0"><strong>Email:</strong> {{ user_to_manage.email }} | <strong>Oprettet:</strong> {{ user_to_manage.created_at }}</p>
+        </div>
+
+        <!-- Success/Error Messages -->
+        {% if request.query_params.get('success') %}
+        <div class="alert alert-success">
+            {% if request.query_params.get('success') == 'avatar_uploaded' %}
+                Avatar blev uploadet succesfuldt!
+            {% elif request.query_params.get('success') == 'avatar_deleted' %}
+                Avatar blev slettet succesfuldt!
+            {% elif request.query_params.get('success') == 'avatar_fetched' %}
+                Avatar blev hentet fra HeyGen succesfuldt!
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if request.query_params.get('error') %}
+        <div class="alert alert-danger">
+            {% if request.query_params.get('error') == 'upload_failed' %}
+                Fejl ved upload af avatar. Prøv igen.
+            {% elif request.query_params.get('error') == 'invalid_file' %}
+                Kun PNG, JPG og JPEG filer er tilladt.
+            {% elif request.query_params.get('error') == 'heygen_failed' %}
+                Kunne ikke hente avatar fra HeyGen. Kontroller Avatar ID.
+            {% else %}
+                Der opstod en fejl. Prøv igen.
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Upload Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">📁 Upload Avatar Billede</h5>
+                
+                <!-- Upload File Form -->
+                <form action="/admin/upload-avatar/{{ user_to_manage.id }}" method="post" enctype="multipart/form-data" class="mb-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label for="avatar_file" class="form-label">Avatar-billede (HeyGen)</label>
+                            <input type="file" class="form-control" id="avatar_file" name="avatar_file" accept=".png,.jpg,.jpeg" required>
+                            <div class="form-text">Understøttede formater: PNG, JPG, JPEG (maks 5MB)</div>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">Upload Avatar</button>
+                        </div>
+                    </div>
+                </form>
+
+                <hr>
+
+                <!-- HeyGen ID Form -->
+                <h5 class="card-title">🔗 Hent fra HeyGen</h5>
+                <form action="/admin/fetch-heygen-avatar/{{ user_to_manage.id }}" method="post">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label for="heygen_avatar_id" class="form-label">HeyGen Avatar ID</label>
+                            <input type="text" class="form-control" id="heygen_avatar_id" name="heygen_avatar_id" placeholder="Enter HeyGen Avatar ID" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-success w-100">Fetch from HeyGen</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Existing Avatars -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Eksisterende Avatarer ({{ avatars|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% if avatars %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Avatar</th>
+                                <th>Navn</th>
+                                <th>HeyGen ID</th>
+                                <th>Oprettet</th>
+                                <th>Handling</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for avatar in avatars %}
+                            <tr>
+                                <td>
+                                    {% if avatar.avatar_image_url %}
+                                        <img src="{{ avatar.avatar_image_url }}" alt="Avatar" class="rounded-circle" style="width: 48px; height: 48px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                            <i class="text-muted">👤</i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ avatar.avatar_name or 'Unnamed Avatar' }}</strong>
+                                    <br><small class="text-muted">ID: {{ avatar.id }}</small>
+                                </td>
+                                <td>
+                                    {% if avatar.avatar_id %}
+                                        <code>{{ avatar.avatar_id }}</code>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ avatar.created_at }}</small>
+                                </td>
+                                <td>
+                                    <form action="/admin/delete-image/{{ avatar.id }}" method="post" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('Er du sikker på, at du vil slette denne avatar?')">
+                                            🗑️ Slet
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted mb-0">Ingen avatarer fundet for denne bruger.</p>
+                    <p class="text-muted">Upload en avatar eller hent en fra HeyGen ovenfor.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-4 d-flex gap-2">
+            <a href="/admin/edit-user/{{ user_to_manage.id }}" class="btn btn-outline-primary">✏️ Rediger Bruger</a>
+            <a href="/admin/users" class="btn btn-secondary">← Tilbage til Brugere</a>
+        </div>
+    </div>
+</body>
+</html>

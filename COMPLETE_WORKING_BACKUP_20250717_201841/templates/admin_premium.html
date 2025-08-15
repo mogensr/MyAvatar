@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Management - MyAvatar Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .users-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            width: 300px;
+            font-size: 1em;
+        }
+        
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .users-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .users-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status-premium {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-trial {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-basic {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .status-expired {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 100px auto;
+            position: relative;
+        }
+        
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        
+        .alert-error {
+            background: #fecaca;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .feature-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .feature-tag {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+        
+        @media (max-width: 768px) {
+            .users-table {
+                font-size: 0.9em;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Premium Management</h1>
+            <p>Manage premium subscriptions and user access to BackgroundFX and Video Processing</p>
+        </div>
+        
+        <div id="alert-container"></div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" onclick="refreshUsers()">
+                🔄 Refresh Users
+            </button>
+            <button class="btn btn-success" onclick="showSetPremiumModal()">
+                ⭐ Set User Premium
+            </button>
+            <button class="btn btn-warning" onclick="showBulkTrialModal()">
+                🎁 Bulk Trial Setup
+            </button>
+            <a href="/admin" class="btn btn-primary">
+                ← Back to Admin
+            </a>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-users">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="premium-users">-</div>
+                <div class="stat-label">Premium Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="trial-users">-</div>
+                <div class="stat-label">Trial Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="basic-users">-</div>
+                <div class="stat-label">Basic Users</div>
+            </div>
+        </div>
+        
+        <div class="users-section">
+            <div class="users-header">
+                <h2>User Management</h2>
+                <input type="text" class="search-box" placeholder="Search users..." id="searchBox" oninput="filterUsers()">
+            </div>
+            
+            <div id="users-loading" class="loading">
+                Loading users...
+            </div>
+            
+            <table class="users-table" id="users-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Plan</th>
+                        <th>Expires</th>
+                        <th>Features</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Set Premium Modal -->
+    <div id="setPremiumModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('setPremiumModal')">&times;</span>
+            <h3>Set User Premium</h3>
+            <form id="setPremiumForm">
+                <div class="form-group">
+                    <label for="userId">User ID</label>
+                    <input type="number" id="userId" name="userId" required>
+                </div>
+                <div class="form-group">
+                    <label for="planType">Plan Type</label>
+                    <select id="planType" name="planType" required>
+                        <option value="trial">14-Day Trial</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                        <option value="lifetime">Lifetime</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="durationDays">Duration (Days)</label>
+                    <input type="number" id="durationDays" name="durationDays" value="30" min="1">
+                    <small>Leave empty for lifetime plan</small>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Set Premium</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('setPremiumModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Bulk Trial Modal -->
+    <div id="bulkTrialModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('bulkTrialModal')">&times;</span>
+            <h3>Bulk Trial Setup</h3>
+            <form id="bulkTrialForm">
+                <div class="form-group">
+                    <label for="userIds">User IDs (comma-separated)</label>
+                    <input type="text" id="userIds" name="userIds" placeholder="1,2,3,4" required>
+                </div>
+                <div class="form-group">
+                    <label for="trialDays">Trial Duration (Days)</label>
+                    <input type="number" id="trialDays" name="trialDays" value="14" min="1" max="90">
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-success">Start Trials</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('bulkTrialModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let allUsers = [];
+        let currentUserData = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUsers();
+        });
+        
+        // Load users from API
+        async function loadUsers() {
+            try {
+                document.getElementById('users-loading').style.display = 'block';
+                document.getElementById('users-table').style.display = 'none';
+                
+                const response = await fetch('/admin/premium/users', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load users');
+                }
+                
+                const data = await response.json();
+                allUsers = data.users || [];
+                
+                updateStats();
+                renderUsers();
+                
+                document.getElementById('users-loading').style.display = 'none';
+                document.getElementById('users-table').style.display = 'table';
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showAlert('Error loading users: ' + error.message, 'error');
+            }
+        }
+        
+        // Update statistics
+        function updateStats() {
+            const totalUsers = allUsers.length;
+            const premiumUsers = allUsers.filter(u => u.is_premium && u.premium_type !== 'trial').length;
+            const trialUsers = allUsers.filter(u => u.is_premium && u.premium_type === 'trial').length;
+            const basicUsers = allUsers.filter(u => !u.is_premium).length;
+            
+            document.getElementById('total-users').textContent = totalUsers;
+            document.getElementById('premium-users').textContent = premiumUsers;
+            document.getElementById('trial-users').textContent = trialUsers;
+            document.getElementById('basic-users').textContent = basicUsers;
+        }
+        
+        // Render users table
+        function renderUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            
+            allUsers.forEach(user => {
+                const row = document.createElement('tr');
+                
+                // Status badge
+                let statusClass = 'status-basic';
+                let statusText = 'Basic';
+                
+                if (user.is_premium) {
+                    if (user.premium_type === 'trial') {
+                        statusClass = 'status-trial';
+                        statusText = 'Trial';
+                    } else {
+                        statusClass = 'status-premium';
+                        statusText = 'Premium';
+                    }
+                }
+                
+                // Features
+                const features = user.features || [];
+                const featureElements = features.map(f => `<span class="feature-tag">${f}</span>`).join('');
+                
+                // Expiration
+                const expiresAt = user.premium_expires ? new Date(user.premium_expires).toLocaleDateString() : 'Never';
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${user.username}</strong>
+                        ${user.is_admin ? '<span class="feature-tag">Admin</span>' : ''}
+                    </td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${user.premium_type || 'N/A'}</td>
+                    <td>${expiresAt}</td>
+                    <td><div class="feature-list">${featureElements}</div></td>
+                    <td>
+                        <button class="btn btn-success" onclick="setPremium(${user.id})" style="padding: 5px 10px; font-size: 0.8em;">
+                            ⭐ Premium
+                        </button>
+                        <button class="btn btn-danger" onclick="removePremium(${user.id})" style="padding: 5px 10px; font-size: 0.8em;">
+                            ❌ Remove
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Filter users
+        function filterUsers() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            const filteredUsers = allUsers.filter(user => 
+                user.username.toLowerCase().includes(searchTerm) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm))
+            );
+            
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            
+            filteredUsers.forEach(user => {
+                // Same rendering logic as renderUsers()
+                const row = document.createElement('tr');
+                
+                let statusClass = 'status-basic';
+                let statusText = 'Basic';
+                
+                if (user.is_premium) {
+                    if (user.premium_type === 'trial') {
+                        statusClass = 'status-trial';
+                        statusText = 'Trial';
+                    } else {
+                        statusClass = 'status-premium';
+                        statusText = 'Premium';
+                    }
+                }
+                
+                const features = user.features || [];
+                const featureElements = features.map(f => `<span class="feature-tag">${f}</span>`).join('');
+                const expiresAt = user.premium_expires ? new Date(user.premium_expires).toLocaleDateString() : 'Never';
+                
+                row.innerHTML = `
+                    <td>
+                        <strong>${user.username}</strong>
+                        ${user.is_admin ? '<span class="feature-tag">Admin</span>' : ''}
+                    </td>
+                    <td>${user.email || 'N/A'}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>${user.premium_type || 'N/A'}</td>
+                    <td>${expiresAt}</td>
+                    <td><div class="feature-list">${featureElements}</div></td>
+                    <td>
+                        <button class="btn btn-success" onclick="setPremium(${user.id})" style="padding: 5px 10px; font-size: 0.8em;">
+                            ⭐ Premium
+                        </button>
+                        <button class="btn btn-danger" onclick="removePremium(${user.id})" style="padding: 5px 10px; font-size: 0.8em;">
+                            ❌ Remove
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Set premium for user
+        async function setPremium(userId) {
+            document.getElementById('userId').value = userId;
+            document.getElementById('setPremiumModal').style.display = 'block';
+        }
+        
+        // Remove premium from user
+        async function removePremium(userId) {
+            if (!confirm('Are you sure you want to remove premium access from this user?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/premium/remove-user-premium', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ user_id: userId })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to remove premium');
+                }
+                
+                showAlert('Premium access removed successfully', 'success');
+                loadUsers();
+                
+            } catch (error) {
+                console.error('Error removing premium:', error);
+                showAlert('Error removing premium: ' + error.message, 'error');
+            }
+        }
+        
+        // Handle set premium form
+        document.getElementById('setPremiumForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                user_id: parseInt(formData.get('userId')),
+                plan_type: formData.get('planType'),
+                duration_days: parseInt(formData.get('durationDays')) || 30
+            };
+            
+            try {
+                const response = await fetch('/admin/premium/set-user-premium', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to set premium');
+                }
+                
+                showAlert('Premium access set successfully', 'success');
+                closeModal('setPremiumModal');
+                loadUsers();
+                
+            } catch (error) {
+                console.error('Error setting premium:', error);
+                showAlert('Error setting premium: ' + error.message, 'error');
+            }
+        });
+        
+        // Modal functions
+        function showSetPremiumModal() {
+            document.getElementById('setPremiumModal').style.display = 'block';
+        }
+        
+        function showBulkTrialModal() {
+            document.getElementById('bulkTrialModal').style.display = 'block';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // Show alert
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+            
+            container.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Refresh users
+        function refreshUsers() {
+            loadUsers();
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.getElementsByClassName('modal');
+            for (let modal of modals) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

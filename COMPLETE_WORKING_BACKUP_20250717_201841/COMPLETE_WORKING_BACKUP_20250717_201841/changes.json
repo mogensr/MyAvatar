@@ -1,0 +1,1398 @@
+{
+  "changes": [
+    {
+      "timestamp": "2025-07-17T08:40:39.575104",
+      "event_type": "MODIFIED",
+      "file_path": "requirements.txt",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\requirements.txt",
+      "file_info": {
+        "size": 1962,
+        "modified": "2025-07-17T08:40:39.574875",
+        "hash": "100bcb52e049aa83b2152f2757557d18",
+        "extension": ".txt",
+        "is_code_file": false
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T08:46:50.875623",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 76937,
+        "modified": "2025-07-17T08:46:50.874376",
+        "hash": "8d78f31d918d0b9cd3e81697ae20780b",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T08:46:50.875850",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 76937,
+        "modified": "2025-07-17T08:46:50.874376",
+        "hash": "8d78f31d918d0b9cd3e81697ae20780b",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T08:47:33.541850",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\api_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\api_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T08:47:33.541013",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T08:47:33.544854",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\api_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\api_routes.py",
+      "file_info": {
+        "size": 53991,
+        "modified": "2025-07-17T08:47:33.542095",
+        "hash": "03ee4694faf1263c7758094077452291",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T08:47:33.542450",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\api_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\api_routes.py",
+      "file_info": {
+        "size": 53991,
+        "modified": "2025-07-17T08:47:33.542095",
+        "hash": "03ee4694faf1263c7758094077452291",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:15:39.499105",
+      "event_type": "MODIFIED",
+      "file_path": "working_web_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\working_web_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:15:39.498496",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:15:39.508441",
+      "event_type": "MODIFIED",
+      "file_path": "working_web_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\working_web_routes.py",
+      "file_info": {
+        "size": 80044,
+        "modified": "2025-07-17T10:15:39.507466",
+        "hash": "c3966caa5783398a54f5f205bf31dab0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:18:27.399415",
+      "event_type": "CREATED",
+      "file_path": "test_admin_upload.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\test_admin_upload.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:18:27.397895",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "New file created"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:18:27.399625",
+      "event_type": "CREATED",
+      "file_path": "test_admin_upload.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\test_admin_upload.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:18:27.397895",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "New file created"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:18:27.404506",
+      "event_type": "MODIFIED",
+      "file_path": "test_admin_upload.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\test_admin_upload.py",
+      "file_info": {
+        "size": 5091,
+        "modified": "2025-07-17T10:18:27.404249",
+        "hash": "913bc8da583132bc78c8bad32772a4a0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:18:27.404833",
+      "event_type": "MODIFIED",
+      "file_path": "test_admin_upload.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\test_admin_upload.py",
+      "file_info": {
+        "size": 5091,
+        "modified": "2025-07-17T10:18:27.404249",
+        "hash": "913bc8da583132bc78c8bad32772a4a0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:21:01.492401",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77718,
+        "modified": "2025-07-17T10:21:01.491669",
+        "hash": "13beb8cb0a7cbf8a9037ddb94104d143",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:21:18.638879",
+      "event_type": "MODIFIED",
+      "file_path": "templates\\portal\\admin_manage_avatars.html",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\templates\\portal\\admin_manage_avatars.html",
+      "file_info": {
+        "size": 26976,
+        "modified": "2025-07-17T10:21:18.637388",
+        "hash": "387b218ba324dcb0220e6ad61dc600c4",
+        "extension": ".html",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:21:34.186977",
+      "event_type": "MODIFIED",
+      "file_path": "templates\\portal\\admin_manage_avatars.html",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\templates\\portal\\admin_manage_avatars.html",
+      "file_info": {
+        "size": 25908,
+        "modified": "2025-07-17T10:21:34.186788",
+        "hash": "06a3ba4942d444e14f32db4025d22d00",
+        "extension": ".html",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:23:01.044291",
+      "event_type": "CREATED",
+      "file_path": "create_admin.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\create_admin.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:23:01.042362",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "New file created"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:23:01.043840",
+      "event_type": "CREATED",
+      "file_path": "create_admin.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\create_admin.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:23:01.042362",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "New file created"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:23:01.077532",
+      "event_type": "MODIFIED",
+      "file_path": "create_admin.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\create_admin.py",
+      "file_info": {
+        "size": 1467,
+        "modified": "2025-07-17T10:23:01.076408",
+        "hash": "cfcef3b0a353a6a192b4007c90157090",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:30:56.582881",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77704,
+        "modified": "2025-07-17T10:30:56.581750",
+        "hash": "32635a00844620936c55dcb2b8b206d5",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:30:56.582948",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77704,
+        "modified": "2025-07-17T10:30:56.581750",
+        "hash": "32635a00844620936c55dcb2b8b206d5",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:31:10.338796",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77686,
+        "modified": "2025-07-17T10:31:10.337955",
+        "hash": "b90463a6e666ba990d0c553654df77e3",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:37:48.930384",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77717,
+        "modified": "2025-07-17T10:37:48.930495",
+        "hash": "a5cdbf938761678383e4541a847b9a51",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:37:48.930551",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77717,
+        "modified": "2025-07-17T10:37:48.930495",
+        "hash": "a5cdbf938761678383e4541a847b9a51",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:42:31.999617",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77704,
+        "modified": "2025-07-17T10:42:31.999596",
+        "hash": "32635a00844620936c55dcb2b8b206d5",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:42:31.999927",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77704,
+        "modified": "2025-07-17T10:42:31.999596",
+        "hash": "32635a00844620936c55dcb2b8b206d5",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:43:47.957141",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77717,
+        "modified": "2025-07-17T10:43:47.956478",
+        "hash": "3471e8071b8b9faace3977395ec6e22d",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:43:47.957253",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77717,
+        "modified": "2025-07-17T10:43:47.956478",
+        "hash": "3471e8071b8b9faace3977395ec6e22d",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:46:44.029349",
+      "event_type": "MODIFIED",
+      "file_path": "app\\db\\database.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\db\\database.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T10:46:44.028136",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:46:44.036657",
+      "event_type": "MODIFIED",
+      "file_path": "app\\db\\database.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\db\\database.py",
+      "file_info": {
+        "size": 11415,
+        "modified": "2025-07-17T10:46:44.030141",
+        "hash": "55e24842917cd17bd6c57271578dfaad",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:46:44.044411",
+      "event_type": "MODIFIED",
+      "file_path": "app\\db\\database.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\db\\database.py",
+      "file_info": {
+        "size": 11415,
+        "modified": "2025-07-17T10:46:44.030141",
+        "hash": "55e24842917cd17bd6c57271578dfaad",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:47:10.491045",
+      "event_type": "MODIFIED",
+      "file_path": "app\\db\\database.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\db\\database.py",
+      "file_info": {
+        "size": 13848,
+        "modified": "2025-07-17T10:47:10.491151",
+        "hash": "830b7b781934ad7eaf80a5d59a876b1c",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:47:23.122686",
+      "event_type": "MODIFIED",
+      "file_path": "app\\db\\database.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\db\\database.py",
+      "file_info": {
+        "size": 13935,
+        "modified": "2025-07-17T10:47:23.122484",
+        "hash": "d12d6e3c1031eb20188c132deaf0e021",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:47:35.398764",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77704,
+        "modified": "2025-07-17T10:47:35.398671",
+        "hash": "32635a00844620936c55dcb2b8b206d5",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:47:57.525501",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77726,
+        "modified": "2025-07-17T10:47:57.524995",
+        "hash": "2d0c45abe64b0220c33a3b78d2095be0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:48:06.092530",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77744,
+        "modified": "2025-07-17T10:48:06.092215",
+        "hash": "57503b511d08f5e9be16358a13f07e24",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:48:06.092524",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77744,
+        "modified": "2025-07-17T10:48:06.092215",
+        "hash": "57503b511d08f5e9be16358a13f07e24",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:53:04.788864",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77750,
+        "modified": "2025-07-17T10:53:04.788495",
+        "hash": "f36e22f54c3ddc0cb4a8ceb7bee321ee",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:53:04.788393",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77750,
+        "modified": "2025-07-17T10:53:04.788495",
+        "hash": "f36e22f54c3ddc0cb4a8ceb7bee321ee",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T10:53:04.788523",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77750,
+        "modified": "2025-07-17T10:53:04.788495",
+        "hash": "f36e22f54c3ddc0cb4a8ceb7bee321ee",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:00:48.100950",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:00:48.100262",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:00:48.101628",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77744,
+        "modified": "2025-07-17T11:00:48.100768",
+        "hash": "57503b511d08f5e9be16358a13f07e24",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:00:48.109014",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77744,
+        "modified": "2025-07-17T11:00:48.100768",
+        "hash": "57503b511d08f5e9be16358a13f07e24",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:10:52.444023",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 77757,
+        "modified": "2025-07-17T11:10:52.443247",
+        "hash": "34464266cebc010e678503dfc52721ed",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:17:33.536467",
+      "event_type": "MODIFIED",
+      "file_path": "templates\\portal\\admin_manage_avatars.html",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\templates\\portal\\admin_manage_avatars.html",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:17:33.523664",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".html",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:17:34.769679",
+      "event_type": "MODIFIED",
+      "file_path": "templates\\portal\\admin_manage_avatars.html",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\templates\\portal\\admin_manage_avatars.html",
+      "file_info": {
+        "size": 39865,
+        "modified": "2025-07-17T11:17:34.768265",
+        "hash": "ade2e6efed483832c7c2710f421cc367",
+        "extension": ".html",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:17:34.771174",
+      "event_type": "MODIFIED",
+      "file_path": "templates\\portal\\admin_manage_avatars.html",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\templates\\portal\\admin_manage_avatars.html",
+      "file_info": {
+        "size": 39865,
+        "modified": "2025-07-17T11:17:34.768265",
+        "hash": "ade2e6efed483832c7c2710f421cc367",
+        "extension": ".html",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:39:00.693779",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:39:00.690245",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:39:00.692117",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:39:00.690245",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:39:02.443352",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 89575,
+        "modified": "2025-07-17T11:39:02.442058",
+        "hash": "b814bfd13da880ccccde9990cec7d3fd",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:50:08.327560",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:50:08.326005",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:50:08.328244",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T11:50:08.326005",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T11:50:09.433233",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78319,
+        "modified": "2025-07-17T11:50:09.432957",
+        "hash": "e18516002b351d4b0eddd36c9c52e106",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:03.659666",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78244,
+        "modified": "2025-07-17T12:05:03.647418",
+        "hash": "68159ab606814c242bad94f9c7eeb94a",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:04.895434",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78339,
+        "modified": "2025-07-17T12:05:04.895108",
+        "hash": "f236fec74b31a8fd115ed9b7316e9e6c",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:12.626311",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T12:05:12.625084",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:12.633325",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78339,
+        "modified": "2025-07-17T12:05:12.626086",
+        "hash": "f236fec74b31a8fd115ed9b7316e9e6c",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:57.180061",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T12:05:57.179335",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:05:57.188231",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78339,
+        "modified": "2025-07-17T12:05:57.180335",
+        "hash": "f236fec74b31a8fd115ed9b7316e9e6c",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:17.136147",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 71532,
+        "modified": "2025-07-17T12:18:17.128673",
+        "hash": "b290a3cc46f783b799ae95be587aae56",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:19.282565",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78545,
+        "modified": "2025-07-17T12:18:19.280786",
+        "hash": "1131c347d69c08615c532a9f2f32c9af",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:32.577327",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78341,
+        "modified": "2025-07-17T12:18:32.563737",
+        "hash": "18e8e3123de5461d6a2a37204e4376eb",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:37.795250",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78339,
+        "modified": "2025-07-17T12:18:37.794027",
+        "hash": "aa10efdc0c74c0bc3bbe68dd922eed9d",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:42.078068",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T12:18:42.077338",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:18:42.085749",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78339,
+        "modified": "2025-07-17T12:18:42.080339",
+        "hash": "aa10efdc0c74c0bc3bbe68dd922eed9d",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:22:19.466380",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78337,
+        "modified": "2025-07-17T12:22:19.463979",
+        "hash": "e1d01bfcffed6162332927d904170946",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:22:19.466847",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 78337,
+        "modified": "2025-07-17T12:22:19.463979",
+        "hash": "e1d01bfcffed6162332927d904170946",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T12:48:38.503964",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 68835,
+        "modified": "2025-07-17T12:48:38.494008",
+        "hash": "011a3c88517e243a4a7359a533672558",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:04:53.351149",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:04:53.337887",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:04:54.537640",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66511,
+        "modified": "2025-07-17T13:04:54.524481",
+        "hash": "495ff5e8a82b28f95a7b0788ed7a2e1e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:09:17.534176",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66561,
+        "modified": "2025-07-17T13:09:17.532048",
+        "hash": "34038f9694558477a2ed4197ed08af38",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:09:17.535556",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66561,
+        "modified": "2025-07-17T13:09:17.532048",
+        "hash": "34038f9694558477a2ed4197ed08af38",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:09:17.536974",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66561,
+        "modified": "2025-07-17T13:09:17.532048",
+        "hash": "34038f9694558477a2ed4197ed08af38",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:09:19.626218",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66563,
+        "modified": "2025-07-17T13:09:19.625874",
+        "hash": "4e6a47ca7294332f6cf556ea09cd0cc0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:22.768820",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:40:22.764209",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:22.773779",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:40:22.764209",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:22.775849",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:40:22.764209",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:23.969338",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 67612,
+        "modified": "2025-07-17T13:40:23.967718",
+        "hash": "670529adef8358f319651ee4755b9b82",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:31.011045",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 66563,
+        "modified": "2025-07-17T13:40:31.010669",
+        "hash": "4e6a47ca7294332f6cf556ea09cd0cc0",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:33.536881",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:40:33.527922",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:34.776015",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 67612,
+        "modified": "2025-07-17T13:40:34.774489",
+        "hash": "670529adef8358f319651ee4755b9b82",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:36.966325",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T13:40:36.964937",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T13:40:36.978872",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 67612,
+        "modified": "2025-07-17T13:40:36.976223",
+        "hash": "670529adef8358f319651ee4755b9b82",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T15:08:21.894768",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T15:08:21.863869",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T15:08:21.915155",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T15:08:21.863869",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T15:08:23.326044",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 67612,
+        "modified": "2025-07-17T15:08:23.321245",
+        "hash": "670529adef8358f319651ee4755b9b82",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T15:08:27.220641",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 0,
+        "modified": "2025-07-17T15:08:27.218936",
+        "hash": "d41d8cd98f00b204e9800998ecf8427e",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    },
+    {
+      "timestamp": "2025-07-17T15:08:27.230050",
+      "event_type": "MODIFIED",
+      "file_path": "app\\routes\\admin_routes.py",
+      "full_path": "C:\\Brugere\\mogen\\Projects\\python\\CHATGPT\\MyAvatar\\app\\routes\\admin_routes.py",
+      "file_info": {
+        "size": 67612,
+        "modified": "2025-07-17T15:08:27.222442",
+        "hash": "670529adef8358f319651ee4755b9b82",
+        "extension": ".py",
+        "is_code_file": true
+      },
+      "details": {
+        "reason": "File content changed"
+      }
+    }
+  ],
+  "started": "2025-07-17T08:39:31.968933",
+  "last_updated": "2025-07-17T15:08:27.230050"
+}

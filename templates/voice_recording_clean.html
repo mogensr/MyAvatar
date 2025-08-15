@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Recording - MyAvatar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8 text-center">
+                🎤 Voice-to-Video Creation
+            </h1>
+
+            <!-- Avatar Selection Section -->
+            <div class="mb-8">
+                <label class="block text-sm font-medium text-gray-700 mb-4">
+                    Select Your Avatar
+                </label>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {% if avatars %}
+                        {% for avatar in avatars %}
+                        <div class="avatar-option border-2 border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 transition-colors"
+                             data-avatar-id="{{ avatar.id }}" 
+                             data-heygen-id="{{ avatar.heygen_avatar_id or '' }}">
+                            <img src="{{ avatar.image_url }}" 
+                                 alt="{{ avatar.name }}" 
+                                 class="w-full h-24 object-cover rounded-md mb-2">
+                            <p class="text-xs text-center text-gray-600 truncate">{{ avatar.name }}</p>
+                            <input type="radio" name="selected_avatar" value="{{ avatar.id }}" class="hidden">
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-span-full bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <p class="text-yellow-800">
+                                🎭 No avatars available. Please add avatars from your dashboard first.
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Voice Recording Section -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Voice Recording
+                </label>
+                
+                <!-- Recording Controls -->
+                <div class="bg-gray-50 rounded-lg p-6 text-center">
+                    <div id="recording_status" class="mb-4">
+                        <div class="text-4xl mb-2">🎤</div>
+                        <p class="text-gray-600">Click the button below to start recording</p>
+                    </div>
+                    
+                    <!-- Recording Button -->
+                    <button 
+                        id="record_btn" 
+                        class="bg-red-500 text-white px-6 py-3 rounded-full hover:bg-red-600 transition-colors font-medium mb-4"
+                        onclick="toggleRecording()"
+                    >
+                        🔴 Start Recording
+                    </button>
+                    
+                    <!-- Recording Timer -->
+                    <div id="recording_timer" class="text-lg font-mono text-gray-700 hidden">
+                        00:00
+                    </div>
+                    
+                    <!-- Audio Preview -->
+                    <div id="audio_preview" class="mt-4 hidden">
+                        <audio id="recorded_audio" controls class="w-full max-w-md mx-auto">
+                        </audio>
+                        <div class="mt-2 space-x-2">
+                            <button 
+                                onclick="reRecord()" 
+                                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+                            >
+                                🔄 Re-record
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="voice_video_title" class="block text-sm font-medium text-gray-700 mb-2">
+                        Video Title
+                    </label>
+                    <input 
+                        type="text" 
+                        id="voice_video_title" 
+                        name="voice_video_title" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="My Voice Video"
+                        maxlength="100"
+                    >
+                </div>
+                <div>
+                    <label for="voice_video_format" class="block text-sm font-medium text-gray-700 mb-2">
+                        Video Format
+                    </label>
+                    <select 
+                        id="voice_video_format" 
+                        name="voice_video_format" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="1:1">1:1 (Square)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Generate Video Button -->
+            <div class="text-center mb-6">
+                <button 
+                    id="generate_voice_video_btn" 
+                    class="bg-gray-400 text-white px-8 py-3 rounded-lg font-medium cursor-not-allowed"
+                    onclick="generateVoiceVideo()"
+                    disabled
+                >
+                    🎬 Generate Video
+                </button>
+                <p class="text-sm text-gray-500 mt-2">
+                    Select an avatar and record audio to enable
+                </p>
+            </div>
+
+            <!-- Status Display -->
+            <div id="voice_status_display" class="mt-6 hidden">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="text-blue-800 font-medium mb-2">🎬 Creating Your Voice Video...</h3>
+                    <div class="text-blue-700">
+                        <p>Processing your audio and generating video with HeyGen AI...</p>
+                        <p class="text-sm text-blue-600 mt-2">This may take a few minutes. Please don't close this page.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Result Display -->
+            <div id="voice_result_display" class="mt-6 hidden">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h3 class="text-green-800 font-medium mb-2">✅ Voice Video Generated Successfully!</h3>
+                    <div id="voice_video_result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Global variables for recording functionality
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let recordingTime = 0;
+    let recordingTimer;
+    let audioBlob = null;
+
+    // Avatar selection functionality
+    document.querySelectorAll('.avatar-option').forEach(option => {
+        option.addEventListener('click', function() {
+            // Remove selection from all avatars
+            document.querySelectorAll('.avatar-option').forEach(av => {
+                av.classList.remove('border-blue-500', 'bg-blue-50');
+                av.classList.add('border-gray-200');
+            });
+            
+            // Select this avatar
+            this.classList.remove('border-gray-200');
+            this.classList.add('border-blue-500', 'bg-blue-50');
+            this.querySelector('input[type="radio"]').checked = true;
+            
+            updateGenerateButton();
+        });
+    });
+
+    // Initialize microphone access
+    async function initializeMicrophone() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                document.getElementById('recorded_audio').src = audioUrl;
+                document.getElementById('audio_preview').classList.remove('hidden');
+                
+                updateGenerateButton();
+            };
+            
+            console.log('Microphone initialized successfully');
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('Could not access microphone. Please check your browser permissions.');
+        }
+    }
+
+    function toggleRecording() {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    }
+
+    function startRecording() {
+        if (!mediaRecorder) {
+            initializeMicrophone().then(() => {
+                if (mediaRecorder) {
+                    startRecording();
+                }
+            });
+            return;
+        }
+        
+        audioChunks = [];
+        isRecording = true;
+        recordingTime = 0;
+        
+        mediaRecorder.start();
+        
+        // Update UI
+        document.getElementById('record_btn').textContent = '⏹️ Stop Recording';
+        document.getElementById('record_btn').classList.remove('bg-red-500', 'hover:bg-red-600');
+        document.getElementById('record_btn').classList.add('bg-gray-500', 'hover:bg-gray-600');
+        
+        document.getElementById('recording_status').innerHTML = `
+            <div class="text-4xl mb-2 animate-pulse">🔴</div>
+            <p class="text-red-600 font-medium">Recording in progress...</p>
+        `;
+        
+        document.getElementById('recording_timer').classList.remove('hidden');
+        
+        // Start timer
+        recordingTimer = setInterval(() => {
+            recordingTime++;
+            const minutes = Math.floor(recordingTime / 60);
+            const seconds = recordingTime % 60;
+            document.getElementById('recording_timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }, 1000);
+        
+        // Hide audio preview
+        document.getElementById('audio_preview').classList.add('hidden');
+    }
+
+    function stopRecording() {
+        if (!mediaRecorder || !isRecording) return;
+        
+        isRecording = false;
+        mediaRecorder.stop();
+        clearInterval(recordingTimer);
+        
+        // Update UI
+        document.getElementById('record_btn').textContent = '🔴 Start Recording';
+        document.getElementById('record_btn').classList.remove('bg-gray-500', 'hover:bg-gray-600');
+        document.getElementById('record_btn').classList.add('bg-red-500', 'hover:bg-red-600');
+        
+        document.getElementById('recording_status').innerHTML = `
+            <div class="text-4xl mb-2">✅</div>
+            <p class="text-green-600 font-medium">Recording completed!</p>
+        `;
+        
+        document.getElementById('recording_timer').classList.add('hidden');
+    }
+
+    function reRecord() {
+        document.getElementById('audio_preview').classList.add('hidden');
+        document.getElementById('recording_status').innerHTML = `
+            <div class="text-4xl mb-2">🎤</div>
+            <p class="text-gray-600">Click the button below to start recording</p>
+        `;
+        audioBlob = null;
+        updateGenerateButton();
+    }
+
+    function updateGenerateButton() {
+        const selectedAvatar = document.querySelector('input[name="selected_avatar"]:checked');
+        const hasRecording = audioBlob !== null;
+        
+        const generateBtn = document.getElementById('generate_voice_video_btn');
+        generateBtn.disabled = !(selectedAvatar && hasRecording);
+        
+        if (selectedAvatar && hasRecording) {
+            generateBtn.className = 'bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors cursor-pointer';
+        } else {
+            generateBtn.className = 'bg-gray-400 text-white px-8 py-3 rounded-lg font-medium cursor-not-allowed';
+        }
+    }
+
+    // Enhanced generateVideo function with complete integration
+    async function generateVoiceVideo() {
+        console.log('🚀 GENERATE VIDEO CLICKED - COMPLETE FLOW!');
+        
+        const selectedAvatar = document.querySelector('input[name="selected_avatar"]:checked');
+        const videoTitle = document.getElementById('voice_video_title').value.trim();
+        const videoFormat = document.getElementById('voice_video_format').value;
+        
+        console.log('Selected avatar:', selectedAvatar ? selectedAvatar.value : 'None');
+        console.log('Recorded blob size:', audioBlob ? audioBlob.size : 'No blob');
+        console.log('Video title:', videoTitle);
+        console.log('Video format:', videoFormat);
+        
+        // Validate inputs
+        if (!selectedAvatar) {
+            showError('Please select an avatar first');
+            return;
+        }
+        
+        if (!audioBlob) {
+            showError('Please record audio first');
+            return;
+        }
+        
+        // Update button to show loading
+        const button = document.getElementById('generate_voice_video_btn');
+        button.disabled = true;
+        button.textContent = '☁️ Uploading Audio...';
+        button.className = 'bg-blue-400 text-white px-8 py-3 rounded-lg font-medium cursor-not-allowed';
+        
+        // Show status display
+        document.getElementById('voice_status_display').classList.remove('hidden');
+        document.getElementById('voice_result_display').classList.add('hidden');
+        
+        try {
+            // Prepare form data
+            const formData = new FormData();
+            
+            // Add audio file
+            formData.append('audio', audioBlob, 'voice_recording.webm');
+            
+            // Add avatar info
+            formData.append('avatar_id', selectedAvatar.value);
+            formData.append('heygen_avatar_id', selectedAvatar.dataset.heygenId || '');
+            
+            // Add video details
+            formData.append('title', videoTitle || 'My Voice Video');
+            formData.append('format', videoFormat);
+            
+            console.log('📤 Sending COMPLETE request to /api/voice-video/create');
+            console.log('FormData contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}:`, value instanceof File ? `File: ${value.name} (${value.size} bytes)` : value);
+            }
+            
+            // Update progress
+            button.textContent = '🎯 Calling HeyGen API...';
+            
+            // Make API call with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
+            
+            const response = await fetch('/api/voice-video/create', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal,
+                credentials: 'include'
+            });
+            
+            clearTimeout(timeoutId);
+            
+            console.log('📥 Response status:', response.status);
+            const result = await response.json();
+            console.log('📥 Complete response data:', result);
+            
+            if (response.ok && result.success) {
+                showSuccess(`
+                    🎉 Video creation started successfully!
+                    
+                    📝 Video ID: ${result.video_id}
+                    🎯 HeyGen ID: ${result.heygen_video_id}
+                    ⏰ Estimated time: ${result.estimated_time}
+                    
+                    ${result.next_steps}
+                `);
+                
+                // Reset form
+                reRecord();
+                
+                // Optionally redirect to dashboard
+                setTimeout(() => {
+                    if (confirm('Video is being processed. Go to dashboard to check progress?')) {
+                        window.location.href = '/dashboard';
+                    }
+                }, 3000);
+                
+            } else {
+                const errorMsg = result.error || `HTTP ${response.status}: ${response.statusText}`;
+                console.error('❌ API returned error:', errorMsg);
+                
+                let errorText = `Failed to create video: ${errorMsg}`;
+                if (result.audio_uploaded) {
+                    errorText += '\n\n✅ Audio was uploaded successfully to Cloudinary.';
+                    errorText += '\n❌ Error occurred during HeyGen API call.';
+                }
+                if (result.video_id) {
+                    errorText += `\n📝 Video record created with ID: ${result.video_id}`;
+                }
+                
+                showError(errorText);
+            }
+            
+        } catch (error) {
+            console.error('❌ Network/JavaScript error:', error);
+            
+            let errorMessage = `Failed to create video: ${error.message}`;
+            if (error.name === 'AbortError') {
+                errorMessage = 'Request timed out. The video creation process may still be running in the background.';
+            }
+            
+            showError(errorMessage);
+            
+        } finally {
+            // Reset button
+            button.disabled = false;
+            button.textContent = '🎬 Generate Video';
+            updateGenerateButton();
+            
+            // Hide status display
+            document.getElementById('voice_status_display').classList.add('hidden');
+        }
+    }
+
+    function showSuccess(message) {
+        document.getElementById('voice_result_display').classList.remove('hidden');
+        document.getElementById('voice_video_result').innerHTML = `<pre class="whitespace-pre-wrap text-sm">${message}</pre>`;
+    }
+
+    function showError(message) {
+        document.getElementById('voice_result_display').classList.remove('hidden');
+        document.getElementById('voice_result_display').innerHTML = `
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-red-800 font-medium mb-2">❌ Error</h3>
+                <div class="text-red-700">
+                    <pre class="whitespace-pre-wrap text-sm">${message}</pre>
+                </div>
+            </div>
+        `;
+    }
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+        console.log('Voice recording page loaded - ready for use');
+    });
+    </script>
+</body>
+</html>

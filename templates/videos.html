@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Videos - MyAvatar Studio</title>
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Dashboard CSS (reuse existing styles) -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- App Container with Narrower Frame -->
+    <div class="app-container narrower">
+        <!-- Enhanced Sidebar with Blue Line -->
+        <aside class="sidebar enhanced" id="sidebar">
+            <!-- Blue Accent Line -->
+            <div class="sidebar-accent-line"></div>
+            
+            <div class="sidebar-header">
+                <div class="logo compact">
+                    <img src="/static/images/myavatar_logo.png" alt="MyAvatar" class="logo-image compact">
+                    <span>MyAvatar</span>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <!-- Main Navigation -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Navigation</div>
+                    <div class="nav-item">
+                        <a href="/dashboard" class="nav-link">
+                            <i class="fas fa-home"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="/videos" class="nav-link active">
+                            <i class="fas fa-video"></i>
+                            <span>My Videos</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Account Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Account</div>
+                    <div class="nav-item">
+                        <a href="#subscription" class="nav-link">
+                            <i class="fas fa-crown"></i>
+                            <span>Subscription</span>
+                        </a>
+                    </div>
+                    <div class="nav-item">
+                        <a href="#settings" class="nav-link">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content with Constrained Width -->
+        <main class="main-content constrained">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <button class="menu-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    
+                    <!-- Clean Search Bar -->
+                    <div class="search-bar compact clean">
+                        <input type="text" 
+                               class="search-input clean" 
+                               id="videoSearch"
+                               placeholder="Search videos..."
+                               onkeyup="filterVideos()">
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <!-- Compact Filter Dropdown -->
+                    <div class="filter-dropdown compact">
+                        <select id="statusFilter" onchange="filterVideos()" class="filter-select">
+                            <option value="all">All Videos</option>
+                            <option value="completed">Completed</option>
+                            <option value="processing">Processing</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    
+                    <button class="header-btn" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <button class="header-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-dot"></span>
+                    </button>
+                    
+                    <!-- User Menu -->
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar">{{ username[0].upper() if username else 'U' }}</div>
+                        <button onclick="logout()" class="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Page Content with Max Width -->
+            <div class="page-content videos-page constrained">
+                <!-- Compact Videos Library Header -->
+                <div class="videos-header compact">
+                    <div class="videos-header-content">
+                        <h1 class="videos-title compact">
+                            <i class="fas fa-video"></i>
+                            My Videos Library
+                        </h1>
+                        <p class="videos-subtitle">Manage all your AI-generated videos</p>
+                    </div>
+                    
+                    <div class="videos-stats compact">
+                        <div class="stat-item compact">
+                            <div class="stat-number">{{ total_videos }}</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item compact">
+                            <div class="stat-number" id="completedCount">0</div>
+                            <div class="stat-label">Ready</div>
+                        </div>
+                        <div class="stat-item compact">
+                            <div class="stat-number" id="processingCount">0</div>
+                            <div class="stat-label">Processing</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compact Action Bar -->
+                <div class="action-bar compact">
+                    <div class="action-left">
+                        <button class="action-btn secondary compact" onclick="refreshVideos()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="action-btn secondary compact" onclick="toggleBulkMode()" id="bulkModeBtn">
+                            <i class="fas fa-check-square"></i> Select
+                        </button>
+                    </div>
+                    
+                    <div class="action-right">
+                        <div class="view-toggle compact">
+                            <button class="view-btn active" onclick="setView('grid')" data-view="grid" title="Grid View">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="view-btn" onclick="setView('list')" data-view="list" title="List View">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="sort-dropdown compact">
+                            <select id="sortBy" onchange="sortVideos()" class="sort-select">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="title">Title A-Z</option>
+                                <option value="status">Status</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Compact Bulk Actions Bar -->
+                <div class="bulk-actions-bar compact" id="bulkActionsBar" style="display: none;">
+                    <div class="bulk-left">
+                        <span id="selectedCount">0</span> selected
+                        <button class="bulk-btn" onclick="selectAllVideos()">All</button>
+                        <button class="bulk-btn" onclick="clearSelection()">Clear</button>
+                    </div>
+                    <div class="bulk-right">
+                        <button class="bulk-btn danger" onclick="bulkDelete()">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Compact Videos Grid with Constrained Width -->
+                <div class="videos-container compact constrained" id="videosContainer">
+                    {% if videos %}
+                        <div class="videos-grid compact constrained" id="videosGrid">
+                            {% for video in videos %}
+                            <div class="video-card compact" 
+                                 data-video-id="{{ video.id }}" 
+                                 data-status="{{ video.status }}" 
+                                 data-title="{{ video.title or 'Untitled Video' }}"
+                                 data-date="{{ video.created_at }}">
+                                
+                                <!-- Bulk Selection Checkbox -->
+                                <div class="bulk-checkbox compact" style="display: none;">
+                                    <input type="checkbox" 
+                                           class="video-checkbox" 
+                                           value="{{ video.id }}"
+                                           onchange="updateBulkSelection()">
+                                </div>
+                                
+                                <!-- Compact Status Badge -->
+                                <div class="video-status-badge compact status-{{ video.status }}">
+                                    {% if video.status == 'completed' %}
+                                        <i class="fas fa-check"></i>
+                                    {% elif video.status == 'processing' %}
+                                        <i class="fas fa-spinner fa-spin"></i>
+                                    {% elif video.status == 'failed' %}
+                                        <i class="fas fa-times"></i>
+                                    {% else %}
+                                        <i class="fas fa-clock"></i>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Compact Video Thumbnail -->
+                                <div class="video-thumbnail compact">
+                                    {% if video.status == 'completed' and video.video_path %}
+                                        <video controls preload="metadata" 
+                                               class="video-player compact">
+                                            <source src="{{ video.video_path }}" type="video/mp4">
+                                        </video>
+                                    {% else %}
+                                        <div class="video-placeholder compact">
+                                            <i class="fas fa-video"></i>
+                                            <span>Processing...</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Compact Video Info -->
+                                <div class="video-info compact">
+                                    <div class="video-title compact">{{ video.title or 'Untitled Video' }}</div>
+                                    <div class="video-meta compact">
+                                        <span class="video-date">
+                                            {{ video.created_at.strftime('%b %d') if video.created_at else 'Unknown' }}
+                                        </span>
+                                        {% if video.avatar_name %}
+                                            <span class="video-avatar">{{ video.avatar_name[:10] }}...</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Compact Video Actions -->
+                                    <div class="video-actions compact">
+                                        {% if video.status == 'completed' and video.video_path %}
+                                            <a href="{{ video.video_path }}" target="_blank" class="video-action primary compact" title="Play">
+                                                <i class="fas fa-play"></i>
+                                            </a>
+                                            <button onclick="forceDownload('{{ video.video_path }}', '{{ video.title or 'video' }}.mp4')" class="video-action secondary compact" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button onclick="shareVideo('{{ video.id }}')" class="video-action tertiary compact" title="Share">
+                                                <i class="fas fa-share"></i>
+                                            </button>
+                                            <button onclick="deleteVideo('{{ video.id }}')" class="video-action danger compact" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% elif video.status in ['processing', 'pending'] %}
+                                            <button onclick="refreshVideoStatus('{{ video.id }}')" class="video-action refresh-btn compact" title="Refresh">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                            <button onclick="cancelVideo('{{ video.id }}')" class="video-action danger compact" title="Cancel">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        {% elif video.status == 'failed' %}
+                                            <button onclick="retryVideo('{{ video.id }}')" class="video-action secondary compact" title="Retry">
+                                                <i class="fas fa-redo"></i>
+                                            </button>
+                                            <button onclick="deleteVideo('{{ video.id }}')" class="video-action danger compact" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- Compact Empty State -->
+                        <div class="empty-state compact">
+                            <div class="empty-icon compact">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <h3>No videos yet</h3>
+                            <p>Create your first AI video!</p>
+                            <div class="empty-actions compact">
+                                <a href="/dashboard" class="btn primary compact">
+                                    <i class="fas fa-plus"></i> Create
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Loading Indicator -->
+                <div class="loading-indicator compact" id="loadingIndicator" style="display: none;">
+                    <div class="loading-spinner compact"></div>
+                    <div class="loading-text">Loading...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Enhanced Layout CSS -->
+    <style>
+        /* NARROWER FRAME & CONSTRAINED LAYOUT */
+        .app-container.narrower {
+            max-width: 1400px; /* Reduced from unlimited */
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 12px 12px;
+            background: white;
+        }
+        
+        .main-content.constrained {
+            max-width: 1200px; /* Constrain main content width */
+            margin: 0 auto;
+        }
+        
+        .page-content.constrained {
+            max-width: 1100px; /* Even more constrained content */
+            margin: 0 auto;
+            padding: 1rem; /* Reduced padding */
+        }
+        
+        .videos-container.constrained {
+            max-width: 100%;
+        }
+        
+        .videos-grid.constrained {
+            max-width: 1050px; /* Constrain grid width */
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Smaller cards */
+            gap: 0.75rem; /* Tighter gaps */
+        }
+        
+        /* ENHANCED SIDEBAR WITH BLUE LINE */
+        .sidebar.enhanced {
+            position: relative;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .sidebar-accent-line {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border-radius: 0 2px 2px 0;
+        }
+        
+        /* COMPACT LOGO */
+        .logo.compact {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            margin-bottom: 1rem;
+        }
+        
+        .logo-image.compact {
+            width: 28px; /* Much smaller logo */
+            height: 28px;
+            object-fit: contain;
+            margin-right: 0.5rem;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo span {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        /* ENHANCED NAV ITEMS */
+        .nav-link.active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border-radius: 6px;
+            margin: 0 0.5rem;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+        
+        .nav-link {
+            margin: 0 0.5rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-link:hover:not(.active) {
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+        }
+        
+        /* COMPACT DESIGN SYSTEM */
+        .videos-page {
+            background: #f8fafc;
+        }
+        
+        /* COMPACT HEADER */
+        .videos-header.compact {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem; /* Slightly more compact */
+            margin-bottom: 1rem;
+            color: white;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1.5rem;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+        
+        .videos-title.compact {
+            font-size: 1.4rem; /* Slightly smaller */
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .videos-subtitle {
+            font-size: 0.85rem; /* Smaller subtitle */
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        .videos-stats.compact {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .stat-item.compact {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.6rem 0.8rem; /* More compact */
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+            min-width: 55px; /* Smaller minimum */
+        }
+        
+        .stat-number {
+            font-size: 1.4rem; /* Smaller numbers */
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+        }
+        
+        .stat-label {
+            font-size: 0.7rem; /* Smaller labels */
+            opacity: 0.9;
+        }
+        
+        /* COMPACT ACTION BAR */
+        .action-bar.compact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 0.6rem 1rem; /* More compact */
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+        
+        .action-left, .action-right {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem; /* Tighter gaps */
+        }
+        
+        .action-btn.compact {
+            padding: 0.35rem 0.6rem; /* More compact */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.8rem; /* Smaller text */
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        
+        .action-btn.secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* COMPACT VIEW TOGGLE */
+        .view-toggle.compact {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 4px;
+            padding: 1px;
+        }
+        
+        .view-btn {
+            padding: 0.35rem; /* More compact */
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 3px;
+            color: #64748b;
+            transition: all 0.2s ease;
+            font-size: 0.8rem; /* Smaller icons */
+        }
+        
+        .view-btn.active {
+            background: white;
+            color: #6366f1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* COMPACT SELECTS */
+        .filter-select, .sort-select {
+            padding: 0.35rem 0.6rem; /* More compact */
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.75rem; /* Smaller text */
+        }
+        
+        /* COMPACT BULK ACTIONS */
+        .bulk-actions-bar.compact {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 0.5rem 1rem; /* More compact */
+            margin-bottom: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem; /* Smaller text */
+        }
+        
+        .bulk-left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem; /* Tighter gaps */
+            color: #1e40af;
+            font-weight: 500;
+        }
+        
+        .bulk-btn {
+            padding: 0.15rem 0.4rem; /* More compact */
+            border: none;
+            background: transparent;
+            color: #1e40af;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 0.75rem; /* Smaller text */
+            transition: background 0.2s ease;
+        }
+        
+        .bulk-btn:hover {
+            background: rgba(30, 64, 175, 0.1);
+        }
+        
+        .bulk-btn.danger {
+            color: #dc2626;
+        }
+        
+        .bulk-btn.danger:hover {
+            background: rgba(220, 38, 38, 0.1);
+        }
+        
+        /* COMPACT VIDEO CARDS */
+        .video-card.compact {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .video-card.compact:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .bulk-checkbox.compact {
+            position: absolute;
+            top: 0.4rem;
+            left: 0.4rem;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 3px;
+            padding: 0.1rem;
+        }
+        
+        .video-status-badge.compact {
+            position: absolute;
+            top: 0.4rem;
+            right: 0.4rem;
+            z-index: 10;
+            padding: 0.1rem;
+            border-radius: 50%;
+            font-size: 0.65rem; /* Smaller icons */
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px; /* Smaller badges */
+            height: 20px;
+        }
+        
+        .status-completed {
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+        }
+        
+        .status-processing {
+            background: rgba(245, 158, 11, 0.9);
+            color: white;
+        }
+        
+        .status-failed {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+        }
+        
+        /* COMPACT VIDEO THUMBNAILS */
+        .video-thumbnail.compact {
+            height: 120px; /* Even smaller thumbnails */
+            position: relative;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+        
+        .video-player.compact {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .video-placeholder.compact {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #64748b;
+            font-size: 0.7rem; /* Smaller text */
+        }
+        
+        .video-placeholder.compact i {
+            font-size: 1.5rem; /* Smaller icon */
+            margin-bottom: 0.3rem;
+            opacity: 0.5;
+        }
+        
+        /* COMPACT VIDEO INFO */
+        .video-info.compact {
+            padding: 0.6rem; /* More compact */
+        }
+        
+        .video-title.compact {
+            font-size: 0.85rem; /* Smaller title */
+            font-weight: 600;
+            margin: 0 0 0.3rem 0;
+            color: #1f2937;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .video-meta.compact {
+            display: flex;
+            gap: 0.5rem; /* Tighter gaps */
+            margin-bottom: 0.5rem;
+            font-size: 0.7rem; /* Smaller meta text */
+            color: #64748b;
+        }
+        
+        .video-date, .video-avatar {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* COMPACT VIDEO ACTIONS */
+        .video-actions.compact {
+            display: flex;
+            gap: 0.3rem; /* Tighter gaps */
+            justify-content: space-between;
+        }
+        
+        .video-action.compact {
+            flex: 1;
+            padding: 0.3rem; /* More compact */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem; /* Smaller icons */
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            min-height: 28px; /* Smaller height */
+        }
+        
+        .video-action.primary {
+            background: #6366f1;
+            color: white;
+        }
+        
+        .video-action.secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .video-action.tertiary {
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .video-action.danger {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+        
+        .video-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .video-action.danger:hover {
+            background: #dc2626;
+            color: white;
+        }
+        
+        /* COMPACT EMPTY STATE */
+        .empty-state.compact {
+            text-align: center;
+            padding: 2.5rem 1.5rem; /* More compact */
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+        
+        .empty-icon.compact {
+            font-size: 2.5rem; /* Smaller icon */
+            color: #cbd5e1;
+            margin-bottom: 0.8rem;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.1rem; /* Smaller heading */
+            color: #334155;
+            margin: 0 0 0.4rem 0;
+        }
+        
+        .empty-state p {
+            color: #64748b;
+            margin-bottom: 1.2rem;
+            font-size: 0.85rem; /* Smaller text */
+        }
+        
+        .empty-actions.compact {
+            display: flex;
+            gap: 0.6rem;
+            justify-content: center;
+        }
+        
+        .btn.compact {
+            padding: 0.5rem 1rem; /* More compact button */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.8rem; /* Smaller text */
+            transition: all 0.2s ease;
+        }
+        
+        .btn.primary {
+            background: #6366f1;
+            color: white;
+        }
+        
+        /* LOADING INDICATOR */
+        .loading-indicator.compact {
+            text-align: center;
+            padding: 1.2rem; /* More compact */
+        }
+        
+        .loading-spinner.compact {
+            width: 28px; /* Smaller spinner */
+            height: 28px;
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 0.6rem;
+        }
+        
+        .loading-text {
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.8rem; /* Smaller text */
+        }
+        
+        /* NOTIFICATIONS & MODALS (keep existing compact styles) */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 320px; /* Narrower notifications */
+            padding: 0.6rem;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            transform: translateX(100%);
+            animation: slideIn 0.3s ease-out forwards;
+            font-size: 0.8rem; /* Smaller text */
+        }
+        
+        @keyframes slideIn {
+            to { transform: translateX(0); }
+        }
+        
+        .notification-success {
+            background: rgba(16, 185, 129, 0.95);
+            color: white;
+        }
+        
+        .notification-error {
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+        }
+        
+        .notification-info {
+            background: rgba(59, 130, 246, 0.95);
+            color: white;
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 1200px) {
+            .app-container.narrower {
+                max-width: 100%;
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .main-content.constrained {
+                max-width: 100%;
+            }
+            
+            .page-content.constrained {
+                max-width: 100%;
+            }
+            
+            .videos-grid.constrained {
+                max-width: 100%;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .videos-header.compact {
+                grid-template-columns: 1fr;
+                text-align: center;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .videos-stats.compact {
+                justify-content: center;
+            }
+            
+            .action-bar.compact {
+                flex-direction: column;
+                gap: 0.6rem;
+                align-items: stretch;
+            }
+            
+            .action-left, .action-right {
+                justify-content: center;
+            }
+            
+            .videos-grid.constrained {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            
+            .bulk-actions-bar.compact {
+                flex-direction: column;
+                gap: 0.6rem;
+                align-items: stretch;
+                padding: 0.6rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .videos-stats.compact {
+                flex-direction: row;
+                gap: 0.5rem;
+            }
+            
+            .stat-item.compact {
+                min-width: 45px;
+                padding: 0.4rem 0.6rem;
+            }
+            
+            .video-actions.compact {
+                flex-wrap: wrap;
+                gap: 0.2rem;
+            }
+            
+            .video-action.compact {
+                min-width: 40px;
+                font-size: 0.65rem;
+            }
+        }
+        
+        /* CLEAN SEARCH BAR - No Icon */
+        .search-bar.clean {
+            max-width: 280px;
+            position: relative;
+        }
+        
+        .search-input.clean {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.75rem; /* Remove right padding for icon */
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        .search-input.clean:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        /* Share Modal Compact (keep existing) */
+        .share-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .share-modal {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .share-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .share-modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #1f2937;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0.25rem;
+        }
+        
+        .share-link-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        
+        .share-link-input {
+            flex: 1;
+            padding: 0.6rem;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #f9fafb;
+            font-size: 0.85rem;
+        }
+        
+        .copy-link-btn {
+            padding: 0.6rem 1rem;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+        }
+    </style>
+    
+    <!-- Enhanced Videos Library JavaScript (same as before) -->
+    <script>
+        // [Keep all the same JavaScript from the previous version - no changes needed]
+        let bulkModeActive = false;
+        let selectedVideos = new Set();
+
+        // API HELPER FUNCTIONS
+        async function makeAPICall(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('API call failed:', error);
+                throw error;
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // VIDEO MANAGEMENT FUNCTIONS
+        async function deleteVideo(videoId) {
+            if (!confirm('Delete this video permanently?')) return;
+            
+            try {
+                showLoading();
+                const result = await makeAPICall(`/api/videos/${videoId}`, { method: 'DELETE' });
+                
+                if (result.success) {
+                    showNotification('Video deleted!', 'success');
+                    document.querySelector(`[data-video-id="${videoId}"]`).remove();
+                    await updateStats();
+                    updateEmptyState();
+                }
+            } catch (error) {
+                showNotification('Delete failed: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function shareVideo(videoId) {
+            try {
+                showLoading();
+                const result = await makeAPICall(`/api/videos/${videoId}/share`, { method: 'POST' });
+                
+                if (result.success && result.share_data) {
+                    const shareData = result.share_data;
+                    
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: shareData.title,
+                                url: shareData.direct_url
+                            });
+                            showNotification('Shared!', 'success');
+                            return;
+                        } catch (e) {}
+                    }
+                    
+                    try {
+                        await navigator.clipboard.writeText(shareData.direct_url);
+                        showNotification('Link copied!', 'success');
+                    } catch (e) {
+                        showShareModal(shareData);
+                    }
+                }
+            } catch (error) {
+                showNotification('Share failed: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showShareModal(shareData) {
+            const modal = document.createElement('div');
+            modal.className = 'share-modal-overlay';
+            modal.innerHTML = `
+                <div class="share-modal">
+                    <div class="share-modal-header">
+                        <h3>Share Video</h3>
+                        <button onclick="this.closest('.share-modal-overlay').remove()" class="close-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="share-modal-content">
+                        <p>Copy link to share:</p>
+                        <div class="share-link-container">
+                            <input type="text" value="${shareData.direct_url}" readonly class="share-link-input" id="shareLinkInput">
+                            <button onclick="copyShareLink()" class="copy-link-btn">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLinkInput');
+            input.select();
+            document.execCommand('copy');
+            showNotification('Copied!', 'success');
+            document.querySelector('.share-modal-overlay').remove();
+        }
+
+        // FORCE DOWNLOAD
+        function forceDownload(url, filename) {
+            if (!url) {
+                showNotification('No video URL', 'error');
+                return;
+            }
+            
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+            
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    showNotification('Download started!', 'success');
+                })
+                .catch(error => {
+                    showNotification('Download failed', 'error');
+                })
+                .finally(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                });
+        }
+
+        // UTILITY FUNCTIONS
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+
+        function refreshVideos() {
+            showLoading();
+            location.reload();
+        }
+
+        function logout() {
+            if (confirm('Logout?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        function toggleSidebar() {
+            console.log('Toggle sidebar');
+        }
+
+        function toggleTheme() {
+            console.log('Toggle theme');
+        }
+
+        // SEARCH AND FILTER
+        function filterVideos() {
+            const searchTerm = document.getElementById('videoSearch').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const videoCards = document.querySelectorAll('.video-card');
+            
+            videoCards.forEach(card => {
+                const title = card.dataset.title.toLowerCase();
+                const status = card.dataset.status;
+                
+                const matchesSearch = title.includes(searchTerm);
+                const matchesStatus = statusFilter === 'all' || status === statusFilter;
+                
+                if (matchesSearch && matchesStatus) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            updateEmptyState();
+        }
+
+        function sortVideos() {
+            const sortBy = document.getElementById('sortBy').value;
+            const videosGrid = document.getElementById('videosGrid');
+            const videoCards = Array.from(videosGrid.querySelectorAll('.video-card'));
+            
+            videoCards.sort((a, b) => {
+                switch (sortBy) {
+                    case 'newest':
+                        return new Date(b.dataset.date) - new Date(a.dataset.date);
+                    case 'oldest':
+                        return new Date(a.dataset.date) - new Date(b.dataset.date);
+                    case 'title':
+                        return a.dataset.title.localeCompare(b.dataset.title);
+                    case 'status':
+                        return a.dataset.status.localeCompare(b.dataset.status);
+                    default:
+                        return 0;
+                }
+            });
+            
+            videoCards.forEach(card => videosGrid.appendChild(card));
+        }
+
+        // BULK MODE
+        function toggleBulkMode() {
+            bulkModeActive = !bulkModeActive;
+            const bulkButton = document.getElementById('bulkModeBtn');
+            const bulkActionsBar = document.getElementById('bulkActionsBar');
+            const checkboxes = document.querySelectorAll('.bulk-checkbox');
+            
+            if (bulkModeActive) {
+                bulkButton.innerHTML = '<i class="fas fa-times"></i> Cancel';
+                bulkActionsBar.style.display = 'flex';
+                checkboxes.forEach(cb => cb.style.display = 'block');
+            } else {
+                bulkButton.innerHTML = '<i class="fas fa-check-square"></i> Select';
+                bulkActionsBar.style.display = 'none';
+                checkboxes.forEach(cb => cb.style.display = 'none');
+                clearSelection();
+            }
+        }
+
+        function updateBulkSelection() {
+            const checkedBoxes = document.querySelectorAll('.video-checkbox:checked');
+            selectedVideos.clear();
+            checkedBoxes.forEach(cb => selectedVideos.add(cb.value));
+            document.getElementById('selectedCount').textContent = selectedVideos.size;
+        }
+
+        function selectAllVideos() {
+            const visibleCheckboxes = document.querySelectorAll('.video-card:not([style*="display: none"]) .video-checkbox');
+            visibleCheckboxes.forEach(cb => cb.checked = true);
+            updateBulkSelection();
+        }
+
+        function clearSelection() {
+            const checkboxes = document.querySelectorAll('.video-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            selectedVideos.clear();
+            document.getElementById('selectedCount').textContent = '0';
+        }
+
+        async function bulkDelete() {
+            if (selectedVideos.size === 0) {
+                showNotification('Select videos first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Delete ${selectedVideos.size} videos?`)) return;
+            
+            try {
+                showLoading();
+                const result = await makeAPICall('/api/videos/bulk-delete', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        video_ids: Array.from(selectedVideos).map(id => parseInt(id))
+                    })
+                });
+                
+                if (result.success) {
+                    showNotification(`Deleted ${result.deleted_count} videos!`, 'success');
+                    
+                    result.deleted_ids.forEach(videoId => {
+                        const videoCard = document.querySelector(`[data-video-id="${videoId}"]`);
+                        if (videoCard) videoCard.remove();
+                    });
+                    
+                    clearSelection();
+                    toggleBulkMode();
+                    await updateStats();
+                    updateEmptyState();
+                }
+            } catch (error) {
+                showNotification('Bulk delete failed: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // STATS UPDATE
+        async function updateStats() {
+            try {
+                const result = await makeAPICall('/api/videos/stats');
+                
+                if (result.success && result.stats) {
+                    const stats = result.stats;
+                    
+                    const totalElement = document.querySelector('.videos-stats .stat-item:first-child .stat-number');
+                    const completedElement = document.getElementById('completedCount');
+                    const processingElement = document.getElementById('processingCount');
+                    
+                    if (totalElement) totalElement.textContent = stats.total;
+                    if (completedElement) completedElement.textContent = stats.completed;
+                    if (processingElement) processingElement.textContent = stats.processing;
+                }
+            } catch (error) {
+                console.error('Failed to update stats:', error);
+                updateStatsLocal();
+            }
+        }
+
+        function updateStatsLocal() {
+            const completedCards = document.querySelectorAll('.video-card[data-status="completed"]');
+            const processingCards = document.querySelectorAll('.video-card[data-status="processing"]');
+            
+            const completedElement = document.getElementById('completedCount');
+            const processingElement = document.getElementById('processingCount');
+            
+            if (completedElement) completedElement.textContent = completedCards.length;
+            if (processingElement) processingElement.textContent = processingCards.length;
+        }
+
+        function updateEmptyState() {
+            const visibleCards = document.querySelectorAll('.video-card:not([style*="display: none"])');
+            const emptyState = document.querySelector('.empty-state');
+            const videosGrid = document.getElementById('videosGrid');
+            
+            if (visibleCards.length === 0 && emptyState) {
+                emptyState.style.display = 'block';
+                if (videosGrid) videosGrid.style.display = 'none';
+            } else if (emptyState) {
+                emptyState.style.display = 'none';
+                if (videosGrid) videosGrid.style.display = 'grid';
+            }
+        }
+
+        function setView(viewType) {
+            const viewButtons = document.querySelectorAll('.view-btn');
+            const videosGrid = document.getElementById('videosGrid');
+            
+            viewButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.view === viewType);
+            });
+            
+            if (viewType === 'list') {
+                videosGrid.classList.add('list-view');
+            } else {
+                videosGrid.classList.remove('list-view');
+            }
+        }
+
+        // REFRESH STATUS
+        async function refreshVideoStatus(videoId) {
+            try {
+                const result = await makeAPICall(`/api/videos/${videoId}/status`);
+                
+                if (result.success && result.video) {
+                    const video = result.video;
+                    const videoCard = document.querySelector(`[data-video-id="${videoId}"]`);
+                    
+                    if (videoCard && video.status !== videoCard.dataset.status) {
+                        showNotification('Status updated!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification('Status up to date', 'info');
+                    }
+                }
+            } catch (error) {
+                showNotification('Refresh failed: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatsLocal();
+            updateEmptyState();
+            updateStats();
+            console.log('📚 Narrower Videos Library loaded');
+        });
+    </script>
+</body>
+</html>

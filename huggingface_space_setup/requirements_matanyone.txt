@@ -1,0 +1,23 @@
+gradio==4.44.0
+opencv-python==4.8.1.78
+numpy==1.24.3
+Pillow==10.0.1
+moviepy==1.0.3
+torch>=2.0.0
+torchvision>=0.15.0
+
+# MatAnyone dependencies
+matanyone>=1.0.0
+omegaconf==2.3.0
+hydra-core==1.3.2
+easydict==0.1.10
+imageio==2.25.0
+huggingface-hub>=0.16.0
+safetensors>=0.3.0
+einops>=0.6.0
+scipy>=1.10.0
+av>=10.0.0
+
+# Fallback dependencies (keep existing rembg support)
+rembg==2.0.50
+pathlib

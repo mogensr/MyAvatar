@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribution Engine - MyAvatar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .distribution-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .distribution-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            color: white;
+        }
+        
+        .distribution-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .distribution-header p {
+            margin: 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .engine-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .engine-status.available {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            border: 2px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .engine-status.unavailable {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 2px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .distribution-iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            background: white;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border-radius: 15px;
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .iframe-container {
+            position: relative;
+            margin-top: 30px;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 40px;
+            background-color: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 15px;
+            color: #dc2626;
+            margin-top: 30px;
+        }
+        
+        .error-message i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .retry-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s ease;
+        }
+        
+        .retry-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .feature-card i {
+            font-size: 2.5rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .feature-card h3 {
+            margin: 0 0 10px 0;
+            color: #1f2937;
+        }
+        
+        .feature-card p {
+            margin: 0;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="distribution-container">
+        <div class="distribution-header">
+            <h1><i class="fas fa-share-alt"></i> Distribution Engine</h1>
+            <p>Automatically distribute your videos to social media platforms, LinkedIn, and video hosting services</p>
+            
+            {% if engine_available %}
+            <div class="engine-status available">
+                <i class="fas fa-check-circle"></i>
+                <span>Distribution Engine is Online</span>
+            </div>
+            {% else %}
+            <div class="engine-status unavailable">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Distribution Engine is Currently Unavailable</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if engine_available %}
+        <div class="iframe-container">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <p>Loading Distribution Engine...</p>
+            </div>
+            <iframe 
+                src="{{ engine_url }}" 
+                class="distribution-iframe"
+                id="distributionFrame"
+                onload="hideLoading()"
+                onerror="showError()">
+            </iframe>
+        </div>
+        {% else %}
+        <div class="error-message">
+            <i class="fas fa-server"></i>
+            <h3>Distribution Engine Unavailable</h3>
+            <p>The Distribution Engine service is currently offline. Please try again later or contact support if the issue persists.</p>
+            <button class="retry-button" onclick="window.location.reload()">
+                <i class="fas fa-redo"></i> Retry
+            </button>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <i class="fas fa-rocket"></i>
+                <h3>Multi-Platform Distribution</h3>
+                <p>Automatically post your videos to LinkedIn, Facebook, X (Twitter), YouTube, and more platforms simultaneously.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-brain"></i>
+                <h3>AI Content Assistant</h3>
+                <p>Generate engaging captions, hashtags, and comments tailored for each platform using advanced AI.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-chart-line"></i>
+                <h3>Analytics Dashboard</h3>
+                <p>Track performance across all platforms with unified analytics and engagement insights.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-clock"></i>
+                <h3>Smart Scheduling</h3>
+                <p>Schedule posts for optimal engagement times across different platforms and time zones.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-envelope"></i>
+                <h3>Email Campaigns</h3>
+                <p>Create and send professional email campaigns with your video content to your subscriber lists.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-users"></i>
+                <h3>Team Collaboration</h3>
+                <p>Work with your team to create, review, and approve content before distribution.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        function showError() {
+            const overlay = document.getElementById('loadingOverlay');
+            const iframe = document.getElementById('distributionFrame');
+            
+            if (overlay) {
+                overlay.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #ef4444; margin-bottom: 20px;"></i>
+                    <h3 style="color: #dc2626; margin: 0 0 10px 0;">Failed to Load Distribution Engine</h3>
+                    <p style="color: #6b7280; margin: 0 0 20px 0;">There was an error loading the Distribution Engine interface.</p>
+                    <button class="retry-button" onclick="window.location.reload()">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                `;
+            }
+        }
+        
+        // Auto-hide loading after 10 seconds if iframe doesn't load
+        setTimeout(() => {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay && overlay.style.display !== 'none') {
+                showError();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

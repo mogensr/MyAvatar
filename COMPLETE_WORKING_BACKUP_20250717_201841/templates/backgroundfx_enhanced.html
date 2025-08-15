@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BackgroundFX Studio - Enhanced</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #fff, #e0e7ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .workflow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .step-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .step-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #5b5bd6;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        .btn-error { background: var(--error); }
+
+        .background-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .bg-option {
+            aspect-ratio: 16/9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bg-option:hover {
+            transform: scale(1.05);
+        }
+
+        .bg-option.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .bg-color {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .bg-gradient-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .bg-gradient-purple { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .bg-solid-white { background: #ffffff; color: #333; }
+        .bg-solid-black { background: #000000; }
+
+        .progress-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .result-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .result-video {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success { background: rgba(16, 185, 129, 0.2); border-left: 4px solid var(--success); }
+        .alert-error { background: rgba(239, 68, 68, 0.2); border-left: 4px solid var(--error); }
+        .alert-warning { background: rgba(245, 158, 11, 0.2); border-left: 4px solid var(--warning); }
+
+        .file-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .quality-selector {
+            margin-bottom: 1rem;
+        }
+
+        .quality-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .quality-option {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quality-option.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .workflow {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 BackgroundFX Studio</h1>
+            <p>Professional AI-powered background replacement for your videos</p>
+        </div>
+
+        <!-- Step 1: Upload Video -->
+        <div class="workflow">
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Upload Video</div>
+                </div>
+                
+                <div class="upload-area" onclick="document.getElementById('videoFile').click()" id="videoUploadArea">
+                    <div class="upload-icon">🎥</div>
+                    <div>Click to upload or drag & drop your video</div>
+                    <div style="font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem;">MP4, MOV, AVI (max 500MB)</div>
+                </div>
+                
+                <input type="file" id="videoFile" class="file-input" accept=".mp4,.mov,.avi,.mkv,.webm" onchange="handleVideoUpload(this)">
+                
+                <div id="videoInfo" class="file-info" style="display: none;"></div>
+            </div>
+
+            <!-- Step 2: Choose Background -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Choose Background</div>
+                </div>
+
+                <div class="background-options">
+                    <div class="bg-option bg-gradient-blue" onclick="selectBackground('color', '#667eea')" data-bg="gradient-blue">
+                        <div class="bg-color">Blue Gradient</div>
+                    </div>
+                    <div class="bg-option bg-gradient-purple" onclick="selectBackground('color', '#f093fb')" data-bg="gradient-purple">
+                        <div class="bg-color">Purple Gradient</div>
+                    </div>
+                    <div class="bg-option bg-solid-white" onclick="selectBackground('color', '#ffffff')" data-bg="solid-white">
+                        <div class="bg-color">White</div>
+                    </div>
+                    <div class="bg-option bg-solid-black" onclick="selectBackground('color', '#000000')" data-bg="solid-black">
+                        <div class="bg-color">Black</div>
+                    </div>
+                </div>
+
+                <div class="upload-area" onclick="document.getElementById('backgroundFile').click()" style="margin-top: 1rem;">
+                    <div class="upload-icon">🖼️</div>
+                    <div>Upload Custom Background</div>
+                    <div style="font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem;">JPG, PNG (max 50MB)</div>
+                </div>
+                
+                <input type="file" id="backgroundFile" class="file-input" accept=".jpg,.jpeg,.png,.bmp,.webp" onchange="handleBackgroundUpload(this)">
+                
+                <div id="backgroundInfo" class="file-info" style="display: none;"></div>
+            </div>
+
+            <!-- Step 3: Process -->
+            <div class="step-card">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Process Video</div>
+                </div>
+
+                <div class="quality-selector">
+                    <div style="margin-bottom: 0.5rem; font-weight: 600;">Quality Setting:</div>
+                    <div class="quality-options">
+                        <div class="quality-option" onclick="selectQuality('low')">Fast</div>
+                        <div class="quality-option selected" onclick="selectQuality('medium')">Balanced</div>
+                        <div class="quality-option" onclick="selectQuality('high')">Best</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-success" id="processBtn" onclick="startProcessing()" disabled>
+                    <span>🚀</span>
+                    Start Processing
+                </button>
+
+                <div style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+                    Processing typically takes 2-5 minutes depending on video length and quality settings.
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-section" id="progressSection">
+            <h3>🔄 Processing Your Video</h3>
+            <div class="progress-text" id="progressText">Initializing...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <button class="btn btn-warning" onclick="cancelProcessing()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div class="result-section" id="resultSection">
+            <h3>✅ Processing Complete!</h3>
+            <div class="result-video">
+                <video id="resultVideo" controls style="width: 100%; border-radius: 12px;">
+                    <source id="resultVideoSource" src="" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div style="text-align: center;">
+                <button class="btn btn-success" id="downloadBtn" onclick="downloadResult()">
+                    <span>📥</span>
+                    Download Video
+                </button>
+                <button class="btn btn-primary" onclick="startNew()">
+                    <span>🔄</span>
+                    Process Another Video
+                </button>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+    </div>
+
+    <script>
+        // Global state
+        let uploadedVideoId = null;
+        let uploadedBackgroundPath = null;
+        let selectedBackgroundType = 'color';
+        let selectedBackgroundValue = '#667eea';
+        let selectedQuality = 'medium';
+        let currentJobId = null;
+        let progressInterval = null;
+
+        // Get authentication token from cookies
+        function getAuthToken() {
+            // Try to get token from cookie
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'access_token') {
+                    return value;
+                }
+            }
+            
+            // Fallback: try localStorage
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                return token;
+            }
+            
+            // If no token found, show error
+            console.error('No authentication token found');
+            showAlert('❌ Authentication required. Please refresh the page and log in again.', 'error');
+            return null;
+        }
+
+        // Drag and drop functionality
+        function setupDragAndDrop(areaId, fileInputId) {
+            const area = document.getElementById(areaId);
+            const input = document.getElementById(fileInputId);
+
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    input.files = files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        // Initialize drag and drop
+        setupDragAndDrop('videoUploadArea', 'videoFile');
+
+        // Video upload handler
+        async function handleVideoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Show file info
+            const videoInfo = document.getElementById('videoInfo');
+            videoInfo.innerHTML = `
+                <strong>📁 ${file.name}</strong><br>
+                Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                Type: ${file.type}
+            `;
+            videoInfo.style.display = 'block';
+
+            // Upload to API
+            showAlert('📤 Uploading video...', 'warning');
+            
+            try {
+                const formData = new FormData();
+                formData.append('video', file);
+
+                const response = await fetch('/video-processing/upload-video', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    uploadedVideoId = result.video_id;
+                    
+                    // Add video preview
+                    const videoPreview = document.createElement('video');
+                    videoPreview.controls = true;
+                    videoPreview.style.width = '100%';
+                    videoPreview.style.maxWidth = '400px';
+                    videoPreview.style.borderRadius = '8px';
+                    videoPreview.style.marginTop = '1rem';
+                    
+                    // Create object URL for preview
+                    const videoUrl = URL.createObjectURL(file);
+                    videoPreview.src = videoUrl;
+                    
+                    // Update video info with preview
+                    const videoInfo = document.getElementById('videoInfo');
+                    videoInfo.innerHTML = `
+                        <strong>📁 ${file.name}</strong><br>
+                        Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                        Type: ${file.type}<br>
+                        Status: ✅ Uploaded successfully!
+                    `;
+                    videoInfo.appendChild(videoPreview);
+                    
+                    showAlert(`✅ Video uploaded successfully! ID: ${result.video_id}`, 'success');
+                    updateProcessButton();
+                } else {
+                    showAlert('❌ Video upload failed: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Upload error: ' + error.message, 'error');
+            }
+        }
+
+        // Background upload handler
+        async function handleBackgroundUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Show file info
+            const backgroundInfo = document.getElementById('backgroundInfo');
+            backgroundInfo.innerHTML = `
+                <strong>🖼️ ${file.name}</strong><br>
+                Size: ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                Type: ${file.type}
+            `;
+            backgroundInfo.style.display = 'block';
+
+            // Upload to API
+            showAlert('📤 Uploading background...', 'warning');
+
+            try {
+                const formData = new FormData();
+                formData.append('background', file);
+
+                const response = await fetch('/video-processing/upload-background', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    uploadedBackgroundPath = result.file_path;
+                    selectedBackgroundType = 'image';
+                    selectedBackgroundValue = result.file_path;
+                    
+                    // Clear other background selections
+                    document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+                    
+                    showAlert(`✅ Background uploaded successfully!`, 'success');
+                    updateProcessButton();
+                } else {
+                    showAlert('❌ Background upload failed: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Upload error: ' + error.message, 'error');
+            }
+        }
+
+        // Background selection
+        function selectBackground(type, value) {
+            selectedBackgroundType = type;
+            selectedBackgroundValue = value;
+
+            // Update UI
+            document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.closest('.bg-option').classList.add('selected');
+
+            // Clear uploaded background info if selecting preset
+            if (type === 'color') {
+                uploadedBackgroundPath = null;
+                document.getElementById('backgroundInfo').style.display = 'none';
+            }
+
+            updateProcessButton();
+        }
+
+        // Quality selection
+        function selectQuality(quality) {
+            selectedQuality = quality;
+            document.querySelectorAll('.quality-option').forEach(opt => opt.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        // Update process button state
+        function updateProcessButton() {
+            const btn = document.getElementById('processBtn');
+            const hasVideo = uploadedVideoId !== null;
+            const hasBackground = selectedBackgroundType && selectedBackgroundValue;
+
+            btn.disabled = !(hasVideo && hasBackground);
+            
+            if (btn.disabled) {
+                btn.innerHTML = '<span>⏳</span> Upload video and select background';
+            } else {
+                btn.innerHTML = '<span>🚀</span> Start Processing';
+            }
+        }
+
+        // Start processing
+        async function startProcessing() {
+            if (!uploadedVideoId || !selectedBackgroundValue) {
+                showAlert('❌ Please upload a video and select a background first', 'error');
+                return;
+            }
+
+            try {
+                const backgroundConfig = {
+                    type: selectedBackgroundType,
+                    [selectedBackgroundType === 'color' ? 'color' : 'path']: selectedBackgroundValue
+                };
+
+                const requestData = {
+                    video_id: uploadedVideoId,
+                    background_config: backgroundConfig,
+                    quality: selectedQuality,
+                    segmentation_model: 'auto',
+                    preserve_audio: true
+                };
+
+                const response = await fetch('/video-processing/replace-background', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (result.job_id) {
+                    currentJobId = result.job_id;
+                    showProgressSection();
+                    startProgressTracking();
+                    showAlert('🚀 Processing started! This may take a few minutes...', 'success');
+                } else {
+                    showAlert('❌ Failed to start processing: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Processing error: ' + error.message, 'error');
+            }
+        }
+
+        // Progress tracking
+        function showProgressSection() {
+            document.getElementById('progressSection').classList.add('active');
+            document.querySelector('.workflow').style.display = 'none';
+        }
+
+        function startProgressTracking() {
+            updateProgress(0, 'Starting processing...');
+            
+            progressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/video-processing/job/${currentJobId}/status`, {
+                        headers: {
+                            'Authorization': `Bearer ${getAuthToken()}`
+                        }
+                    });
+
+                    const status = await response.json();
+
+                    if (status.status === 'completed') {
+                        updateProgress(100, 'Processing completed!');
+                        clearInterval(progressInterval);
+                        showResultSection(status.output_path);
+                    } else if (status.status === 'failed') {
+                        updateProgress(0, 'Processing failed: ' + (status.error_message || 'Unknown error'));
+                        clearInterval(progressInterval);
+                        showAlert('❌ Processing failed: ' + (status.error_message || 'Unknown error'), 'error');
+                    } else {
+                        updateProgress(status.progress || 0, status.message || 'Processing...');
+                    }
+                } catch (error) {
+                    console.error('Progress tracking error:', error);
+                }
+            }, 2000);
+        }
+
+        function updateProgress(percent, message) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = message;
+        }
+
+        // Show result
+        function showResultSection(outputPath) {
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultSection').classList.add('active');
+            
+            if (outputPath) {
+                const videoElement = document.getElementById('resultVideo');
+                const sourceElement = document.getElementById('resultVideoSource');
+                sourceElement.src = `/video-processing/job/${currentJobId}/download`;
+                videoElement.load();
+            }
+        }
+
+        // Download result
+        function downloadResult() {
+            if (currentJobId) {
+                window.open(`/video-processing/job/${currentJobId}/download`, '_blank');
+            }
+        }
+
+        // Start new processing
+        function startNew() {
+            // Reset state
+            uploadedVideoId = null;
+            uploadedBackgroundPath = null;
+            currentJobId = null;
+            
+            // Clear intervals
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+
+            // Reset UI
+            document.getElementById('progressSection').classList.remove('active');
+            document.getElementById('resultSection').classList.remove('active');
+            document.querySelector('.workflow').style.display = 'grid';
+            
+            // Clear file inputs
+            document.getElementById('videoFile').value = '';
+            document.getElementById('backgroundFile').value = '';
+            document.getElementById('videoInfo').style.display = 'none';
+            document.getElementById('backgroundInfo').style.display = 'none';
+            
+            // Clear background selections
+            document.querySelectorAll('.bg-option').forEach(opt => opt.classList.remove('selected'));
+            
+            // Reset process button
+            updateProcessButton();
+            
+            showAlert('🔄 Ready for new video processing', 'success');
+        }
+
+        // Cancel processing
+        function cancelProcessing() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            
+            // You could add an API call to cancel the job here
+            
+            startNew();
+        }
+
+        // Utility functions
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            container.appendChild(alert);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 5000);
+        }
+
+        function getAuthToken() {
+            // Get JWT token from cookie or localStorage
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'access_token') {
+                    return value;
+                }
+            }
+            return localStorage.getItem('access_token') || '';
+        }
+
+        // Initialize
+        updateProcessButton();
+    </script>
+</body>
+</html>

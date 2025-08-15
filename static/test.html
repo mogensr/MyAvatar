@@ -1,0 +1,60 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dashboard</title>
+</head>
+<body>
+    <h1>Test Dashboard</h1>
+    <div id="user-info">Loading user...</div>
+    <div id="avatars-info">Loading avatars...</div>
+    <div id="videos-info">Loading videos...</div>
+    
+    <script>
+        // Test user endpoint
+        fetch('/api/user')
+            .then(response => {
+                console.log('User response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('User data:', data);
+                document.getElementById('user-info').innerHTML = 'User: ' + JSON.stringify(data);
+            })
+            .catch(error => {
+                console.error('User error:', error);
+                document.getElementById('user-info').innerHTML = 'Error: ' + error;
+            });
+            
+        // Test avatars endpoint
+        fetch('/api/avatars')
+            .then(response => {
+                console.log('Avatars response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Avatars data:', data);
+                document.getElementById('avatars-info').innerHTML = 'Avatars: ' + JSON.stringify(data);
+            })
+            .catch(error => {
+                console.error('Avatars error:', error);
+                document.getElementById('avatars-info').innerHTML = 'Error: ' + error;
+            });
+            
+        // Test videos endpoint
+        fetch('/api/videos')
+            .then(response => {
+                console.log('Videos response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Videos data:', data);
+                document.getElementById('videos-info').innerHTML = 'Videos: ' + JSON.stringify(data);
+            })
+            .catch(error => {
+                console.error('Videos error:', error);
+                document.getElementById('videos-info').innerHTML = 'Error: ' + error;
+            });
+    </script>
+</body>
+</html>
