@@ -1157,6 +1157,16 @@
             }
         }
 
+        function startDistribution(type) {
+            if (type === 'social') {
+                window.location.href = '/social-media';
+            } else if (type === 'email') {
+                showComingSoonModal();
+            } else {
+                window.location.href = '/distribution';
+            }
+        }
+
         function showPremiumModal() {
             alert(' Premium feature coming soon! Subscribe to get early access.');
         }
