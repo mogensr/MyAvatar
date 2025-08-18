@@ -98,8 +98,19 @@ def load_models(progress=gr.Progress()):
 
     # Load MatAnyone
     progress(0.6, desc="Loading MatAnyone Model...")
-    MODELS["matanyone_processor"] = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
-    print("MatAnyone loaded.")
+    logger.info("Attempting to load MatAnyone model...")
+    try:
+        from matanyone import InferenceCore
+        logger.info("Successfully imported InferenceCore from matanyone.")
+        MODELS["matanyone_processor"] = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
+        logger.info("✅ MatAnyone model loaded successfully.")
+        print("MatAnyone loaded.")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import 'matanyone'. It might not be installed correctly. Error: {e}")
+        raise gr.Error("Critical Error: MatAnyone library failed to import. Please check the installation.")
+    except Exception as e:
+        logger.error(f"❌ An unexpected error occurred while loading the MatAnyone model: {e}")
+        raise gr.Error("Critical Error: Failed to initialize MatAnyone model. Check logs for details.")
     progress(1, desc="Models loaded!")
 
 def offload_models():

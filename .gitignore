@@ -19,6 +19,30 @@ Thumbs.db
 # Project specific 
 Cloudinare.txt
 
+# Backups
+COMPLETE_WORKING_BACKUP_20250717_201841/
+WORKING_BACKUP_20250717_201722/
+
+# User Uploads & Temporary Files
+uploads/
+user_uploads/
+temp/
+temp_audio/
+processed/
+output/
+
+# Logs and Databases
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Editor & System Files
+*.swp
+*~
+.idea/
+.vscode/
+
 # AI_Worker (separate project in same repo)
 AI_Worker/
 ../AI_Worker/ 
