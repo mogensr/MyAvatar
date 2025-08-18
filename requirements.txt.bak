@@ -12,7 +12,6 @@ gradio_client==1.0.1
 
 # Core Gradio (HF Spaces compatible version) - REMOVED to avoid conflicts
 # gradio==3.50.2
-gradio==4.44.1
 
 # Essential image processing
 Pillow==10.0.1
@@ -27,14 +26,12 @@ opencv-python-headless==4.10.0.84
 imageio==2.25.0
 imageio-ffmpeg==0.4.8
 transformers==4.36.0
-moviepy==1.0.3
-huggingface-hub==0.23.4
 
 # MatAnyone - Professional AI Matting (GitHub install requires git in container)
-git+https://github.com/pq-yang/MatAnyone.git
+# git+https://github.com/pq-yang/MatAnyone.git
 
 # SAM2 - State-of-the-art Segmentation (GitHub install requires git in container)
-git+https://github.com/facebookresearch/segment-anything-2.git
+# git+https://github.com/facebookresearch/segment-anything-2.git
 
 # Alternative: Use HuggingFace Space for SAM2 + MatAnyone processing
 # The actual AI processing happens on HF Space, not locally

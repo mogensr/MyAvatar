@@ -7,6 +7,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 
+# Import the JWT creation function
+from app.auth.authentication import create_access_token, get_current_user as get_user_from_token
+
 # Configure logging
 logger = logging.getLogger("LeadGenEngine-iframe")
 
@@ -27,32 +30,17 @@ LEADGEN_URL = os.getenv("LEADGEN_URL", DEFAULT_LEADGEN_URL).strip()
 
 # Dependency to get current user (reusing existing auth)
 async def get_current_user(request: Request):
-    """Get current user from session - reusing MyAvatar auth"""
-    try:
-        # Try cookie-based auth first
-        token = request.cookies.get("access_token")
-        if token:
-            try:
-                from app.routes.video_routes import get_current_user_fixed
-                return get_current_user_fixed(request)
-            except ImportError:
-                pass
-        
-        # Fallback to session
-        user_id = request.session.get("user_id")
-        if user_id:
-            from app.db.database import execute_query
-            user = execute_query(
-                "SELECT * FROM users WHERE id = %s",
-                (user_id,),
-                fetch_one=True
-            )
-            return user
-        
-        return None
-    except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        return None
+    """Get current user from session or token, reusing MyAvatar auth"""
+    user = get_user_from_token(request)
+    if user:
+        return user
+    # Fallback for older session-based logic if needed, though token is standard
+    user_id = request.session.get("user_id")
+    if user_id:
+        from app.db.database import execute_query
+        db_user = execute_query("SELECT * FROM users WHERE id = %s", (user_id,), fetch_one=True)
+        return db_user
+    return None
 
 @router.get("/distribution", response_class=HTMLResponse)
 async def distribution_page(request: Request):
@@ -66,12 +54,28 @@ async def distribution_page(request: Request):
         
         logger.info(f"🎯 DISTRIBUTION ENGINE - User {user.get('username')} accessing LeadGenEngine")
         
+        # --- JWT AUTHENTICATION BRIDGE ---
+        token_data = {
+            "sub": user.get("username"), 
+            "user_id": user.get("id"),
+            "is_admin": user.get("is_admin", False)
+        }
+        auth_token = create_access_token(data=token_data)
+
+        if not auth_token:
+            logger.error(f"❌ Failed to create auth token for user {user.get('username')}")
+            return HTMLResponse("<h1>Authentication Error</h1><p>Could not generate a secure token to access the Distribution Engine.</p>", status_code=500)
+
+        # Append token to the URL
+        secure_leadgen_url = f"{LEADGEN_URL}?token={auth_token}"
+        logger.info(f"Secure LeadGen URL generated for user {user.get('username')}")
+
         # Template context
         context = {
             "request": request,
             "user": user,
             "username": user.get("username", "User"),
-            "leadgen_url": LEADGEN_URL,
+            "leadgen_url": secure_leadgen_url, # Use the secure URL
             "user_id": user.get("id"),
             "is_premium": user.get("subscription_type") == "Premium"
         }

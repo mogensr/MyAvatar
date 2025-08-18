@@ -139,21 +139,8 @@
         <h1 class="loading-title">Distribution Engine</h1>
         <p class="loading-subtitle">Distribute your MyAvatar videos across multiple platforms with ease</p>
         
-        <!-- Distribution Options -->
-        <div style="display: flex; gap: 20px; margin: 2rem 0;">
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; text-align: center; min-width: 200px;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🔗</div>
-                <h3>Social Media</h3>
-                <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 15px;">Advanced lead generation with LinkedIn Sales Navigator</p>
-                <button onclick="window.location.href='/social-media'" style="background: #0ea5e9; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500;">Setup Social</button>
-            </div>
-            
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; text-align: center; min-width: 200px;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">📧</div>
-                <h3>Email Campaigns</h3>
-                <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 15px;">Send videos via email with advanced analytics</p>
-                <button onclick="showComingSoonModal()" style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 500;">Email Setup</button>
-            </div>
+        <div style="margin: 2rem 0;">
+            <button id="openEngineButton" style="background: #10b981; color: white; border: none; padding: 14px 28px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 1.1rem;">Open Distribution Engine</button>
         </div>
         
         <div class="loading-spinner"></div>
@@ -251,6 +238,9 @@
         
         // Handle iframe communication
         window.addEventListener('message', function(event) {
+            if (!event.data || typeof event.data !== 'object') {
+                return; // Ignore messages that are not objects
+            }
             // Handle messages from LeadGenEngine iframe
             if (event.data.type === 'leadgen_ready') {
                 showIframe();
@@ -263,9 +253,9 @@
         function passUserContext() {
             const userContext = {
                 type: 'myavatar_user_context',
-                user_id: {{ user_id }},
+                user_id: '{{ user_id }}',
                 username: '{{ username }}',
-                is_premium: {{ is_premium|lower }}
+                is_premium: '{{ is_premium|lower }}'
             };
             
             iframe.contentWindow.postMessage(userContext, '*');
@@ -280,6 +270,10 @@
         function showComingSoonModal() {
             alert('📧 Email Campaigns Coming Soon!\n\nThis feature is currently under development and will be available in the next update.\n\nFor now, you can use the Social Media integration for lead generation and distribution.');
         }
+
+        document.getElementById('openEngineButton').addEventListener('click', () => {
+            showIframe();
+        });
     </script>
 </body>
 </html>

@@ -1329,16 +1329,15 @@ except Exception as e:
 # Start video polling service for HeyGen video status checking
 try:
     from app.services.video_polling_service import video_polling_service
-        video_polling_service.start_polling()
-{{ ... }}
-        logger.info("✅ Video polling service started successfully - checking every 5 minutes")
-    except Exception as e:
+    video_polling_service.start_polling()
+    logger.info("✅ Video polling service started successfully - checking every 5 minutes")
+except Exception as e:
         logger.error(f"❌ Failed to start video polling service: {e}")
         import traceback
         traceback.print_exc()
-    
-    # Start video completion notifier service for SMS/email notifications
-    try:
+
+# Start video completion notifier service for SMS/email notifications
+try:
         from app.services.video_completion_notifier import video_completion_notifier
         video_completion_notifier.start()
         logger.info("✅ Video completion notifier started successfully - monitoring for completed videos")

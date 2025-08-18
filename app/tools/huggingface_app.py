@@ -1,3 +1,7 @@
+# app/tools/huggingface_app.py
+# Adapted from huggingface_space_setup/app.py to be importable by the main application.
+# This version uses SAM2 + MatAnyone for production-quality background removal.
+
 import gradio as gr
 import torch
 import numpy as np
@@ -6,9 +10,8 @@ from PIL import Image
 import tempfile
 import os
 import gc
-from moviepy.editor import VideoFileClip, AudioFileClip
+from moviepy.editor import VideoFileClip
 from huggingface_hub import hf_hub_download
-from accelerate import init_empty_weights
 
 # --- 1. Global State and Configuration ---
 MODELS = {
@@ -43,7 +46,6 @@ def load_models(progress=gr.Progress()):
 
     # Load MatAnyone
     progress(0.6, desc="Loading MatAnyone Model...")
-    # InferenceCore is expected to handle its own model downloading and loading
     matanyone_processor = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
     MODELS["matanyone_processor"] = matanyone_processor
     print("MatAnyone loaded.")
@@ -90,8 +92,13 @@ def process_video(video_path, bg_image_path, progress=gr.Progress()):
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Get SAM mask
+            # This part is simplified. A real implementation would need user input for points/boxes.
+            # For a fully automatic approach, we'll assume the largest object is the person.
+            # Note: This is a placeholder for a more sophisticated object selection.
             sam_input = torch.from_numpy(frame_rgb).to(DEVICE).permute(2, 0, 1)
-            sam_mask = MODELS["sam_predictor"].predict(sam_input, point_coords=None, point_labels=None, box=None, multimask_output=False)[0]
+            # A full bounding box is a simple way to segment the whole image content
+            input_box = np.array([0, 0, width, height])
+            sam_mask = MODELS["sam_predictor"].predict(sam_input, box=input_box, multimask_output=False)[0]
             sam_mask_np = sam_mask.cpu().numpy().astype(np.uint8) * 255
 
             # Get MatAnyone alpha matte
@@ -126,29 +133,31 @@ def process_video(video_path, bg_image_path, progress=gr.Progress()):
     finally:
         offload_models()
 
-# --- 4. Gradio User Interface ---
+# --- 4. Gradio App Creation ---
+def create_huggingface_app():
+    """Creates and returns the Gradio app."""
+    with gr.Blocks(theme=gr.themes.Soft()) as demo:
+        gr.Markdown("""
+        # 🚀 SAM2 + MatAnyone Video Background Changer
+        Upload a video and a background image to replace the background with cinema-quality results.
+        Powered by Segment Anything 2 and MatAnyone.
+        """)
 
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
-    gr.Markdown("""
-    # 🚀 SAM2 + MatAnyone Video Background Changer
-    Upload a video and a background image to replace the background with cinema-quality results.
-    Powered by Segment Anything 2 and MatAnyone.
-    """)
+        with gr.Row():
+            with gr.Column():
+                video_input = gr.Video(label="Your Video")
+                bg_input = gr.Image(label="Background Image", type="filepath")
+                process_button = gr.Button("Process Video", variant="primary")
+            
+            with gr.Column():
+                video_output = gr.Video(label="Result")
 
-    with gr.Row():
-        with gr.Column():
-            video_input = gr.Video(label="Your Video")
-            bg_input = gr.Image(label="Background Image", type="filepath")
-            process_button = gr.Button("Process Video", variant="primary")
-        
-        with gr.Column():
-            video_output = gr.Video(label="Result")
+        process_button.click(
+            fn=process_video,
+            inputs=[video_input, bg_input],
+            outputs=video_output
+        )
+    return demo
 
-    process_button.click(
-        fn=process_video,
-        inputs=[video_input, bg_input],
-        outputs=video_output
-    )
-
-if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=True)
+# Create the app instance to be imported by FastAPI
+huggingface_gradio_app = create_huggingface_app()

@@ -189,12 +189,13 @@ try:
     original_get_type = gc_utils.get_type
 
     def patched_get_type(schema):
-        if isinstance(schema, bool):
-            return "boolean"
         # The original function fails if schema is not a dict, handle this gracefully
         if not isinstance(schema, dict):
-            # Fallback for unexpected schema format
-            return "string" 
+            # if the schema is a boolean, return "boolean" to avoid an iteration error
+            if isinstance(schema, bool):
+                return "boolean"
+            # Fallback for other unexpected schema formats
+            return "string"
         return original_get_type(schema)
 
     gc_utils.get_type = patched_get_type
@@ -393,16 +394,11 @@ async def backgroundfx_page(request: Request):
                 </head>
                 <body>
                     <div class="container">
-                        <h1>🎬 BackgroundFX Studio</h1>
-                        <p>Advanced AI-powered background replacement system</p>
-                        
+                        <h1>BackgroundFX - Enhanced Video Processing</h1>
                         <div class="status">
-                            <h3>✅ System Status: OPERATIONAL</h3>
-                            <p>• Database tables created<br>
-                            • API endpoints active<br>
-                            • Video processing ready</p>
+                            <h3>⚠️ Enhanced UI Not Found</h3>
+                            <p>The advanced user interface file is missing.</p>
                         </div>
-                        
                         <p><strong>Save the Enhanced UI as:</strong> <code>templates/backgroundfx_enhanced.html</code></p>
                         <a href="/dashboard-direct" class="btn">← Back to Dashboard</a>
                         <a href="/video-processing/status" class="btn">🔧 Test API</a>
@@ -641,9 +637,9 @@ async def backgroundfx_system_status():
   """Check BackgroundFX system status for admin"""
   try:
       # Check environment variables
-      heygen_configured = bool(os.getenv("HEYGEN_API_KEY") and os.getenv("HEYGEN_API_KEY") != "your-heygen-api-key")
-      unsplash_configured = bool(os.getenv("UNSPLASH_ACCESS_KEY") and os.getenv("UNSPLASH_ACCESS_KEY") != "your-unsplash-key")
-      openai_configured = bool(os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY") != "your-openai-api-key")
+      heygen_configured = heygen_api_configured
+      unsplash_configured = unsplash_api_configured
+      openai_configured = openai_api_configured
       
       # Check if routers are loaded
       backgroundfx_router_loaded = "app.routes.backgroundfx_routes" in str(routers_loaded)
@@ -1026,4 +1022,4 @@ async def startup_event():
 # Main application entry point
 if __name__ == "__main__":
   import uvicorn
-  uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+  uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
