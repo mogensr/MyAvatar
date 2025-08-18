@@ -764,7 +764,25 @@ async def debug_avatars():
   """
   try:
       log_info("Debug avatars endpoint accessed", "Debug")
-      
+      from huggingface_hub import hf_hub_download
+
+      # Define local cache path and check/download if missing
+      cache_dir = os.path.expanduser("~/.cache/sam2")
+      os.makedirs(cache_dir, exist_ok=True)
+      checkpoint_path = os.path.join(cache_dir, checkpoint_name)
+
+      if not os.path.exists(checkpoint_path):
+          logger.info(f"Downloading {checkpoint_name} from Hugging Face Hub...")
+          try:
+              hf_hub_download(
+                  repo_id=f"facebook/{config_name.replace('.yaml', '')}",
+                  filename=checkpoint_name,
+                  local_dir=cache_dir,
+                  local_dir_use_symlinks=False # Use direct download
+              )
+              logger.info(f"✅ Download complete: {checkpoint_path}")
+          except Exception as download_error:
+              raise FileNotFoundError(f"Failed to download {checkpoint_name}: {download_error}")
       api_key = os.getenv("HEYGEN_API_KEY")
       if not api_key:
           logger.error("HEYGEN_API_KEY not found in environment")

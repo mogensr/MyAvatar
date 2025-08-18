@@ -23,34 +23,82 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # --- 2. Model Management (Lazy Loading & Offloading) ---
 
 def load_models(progress=gr.Progress()):
-    """Loads models into memory only when needed."""
+    """Loads models into memory, downloading from Hugging Face Hub if necessary."""
     progress(0, desc="Initializing models...")
     global MODELS
-    
+
     if MODELS["sam_predictor"] is not None and MODELS["matanyone_processor"] is not None:
         print("Models already loaded.")
         return
 
     print("Loading models...")
-    from matanyone import InferenceCore
+    import hydra
+    from omegaconf import OmegaConf
     from sam2.build_sam import build_sam2
     from sam2.sam2_image_predictor import SAM2ImagePredictor
+    from matanyone import InferenceCore
+    import logging
+
+    logger = logging.getLogger("HuggingFaceAppLoader")
+
+    def load_sam2_predictor(device="cuda"):
+        configs_dir = os.path.join(os.getcwd(), "Configs")
+        tried = []
+
+        def try_load(config_name, checkpoint_name):
+            try:
+                # Download model from Hugging Face Hub if it doesn't exist
+                cache_dir = os.path.expanduser("~/.cache/sam2")
+                os.makedirs(cache_dir, exist_ok=True)
+                checkpoint_path = os.path.join(cache_dir, checkpoint_name)
+
+                if not os.path.exists(checkpoint_path):
+                    logger.info(f"Downloading {checkpoint_name} from Hugging Face Hub...")
+                    progress(0.1, desc=f"Downloading {checkpoint_name}...")
+                    hf_hub_download(
+                        repo_id=f"facebook/{config_name.replace('.yaml', '')}",
+                        filename=checkpoint_name,
+                        local_dir=cache_dir,
+                        local_dir_use_symlinks=False
+                    )
+                    logger.info(f"✅ Download complete: {checkpoint_path}")
+
+                # Load model using hydra config
+                hydra.core.global_hydra.GlobalHydra.instance().clear()
+                hydra.initialize(config_path=configs_dir)
+                cfg = hydra.compose(config_name=config_name)
+
+                logger.info(f"Trying to load {config_name} on {device} with checkpoint {checkpoint_path}")
+                progress(0.3, desc=f"Loading {config_name}...")
+                sam2_model = build_sam2(cfg.model, checkpoint_path, device=device)
+                predictor = SAM2ImagePredictor(sam2_model)
+                logger.info(f"✅ Loaded {config_name} successfully on {device}")
+                return predictor
+            except Exception as e:
+                tried.append(f"{config_name}: {e}")
+                logger.warning(f"Failed to load {config_name}: {e}")
+                return None
+
+        predictor = try_load("sam2_hiera_large.yaml", "sam2_hiera_large.pt")
+        if predictor is None:
+            logger.warning("Could not load large model, falling back to tiny model.")
+            predictor = try_load("sam2_hiera_tiny.yaml", "sam2_hiera_tiny.pt")
+            if predictor:
+                logger.warning("⚠️ Using Tiny model as fallback (less accurate, but faster and lighter).")
+        
+        if predictor is None:
+            error_message = "SAM2 loading failed for both large and tiny. Reasons: \n" + "\n".join(tried)
+            logger.error(f"❌ {error_message}")
+            raise gr.Error(error_message)
+
+        return predictor
 
     # Load SAM2
-    progress(0.2, desc="Downloading & Loading SAM2 Model...")
-    # Point to the locally downloaded checkpoint file
-    sam_checkpoint = "c:/Brugere/mogen/.cache/sam2/sam2_hiera_b+.pt"
-    # Add path to the configs, so the model can be found
-    config_path = os.path.join(os.getcwd(), "Configs")
-    sam_model = build_sam2(model_name='sam2_hiera_base_plus_t', ckpt_path=sam_checkpoint, model_config_path=config_path)
-    sam_model.to(DEVICE)
-    MODELS["sam_predictor"] = SAM2ImagePredictor(sam_model)
-    print("SAM2 loaded.")
+    MODELS["sam_predictor"] = load_sam2_predictor(device=DEVICE)
 
     # Load MatAnyone
     progress(0.6, desc="Loading MatAnyone Model...")
-    matanyone_processor = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
-    MODELS["matanyone_processor"] = matanyone_processor
+    MODELS["matanyone_processor"] = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
     print("MatAnyone loaded.")
     progress(1, desc="Models loaded!")
 
