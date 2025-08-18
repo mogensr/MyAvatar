@@ -38,8 +38,11 @@ def load_models(progress=gr.Progress()):
 
     # Load SAM2
     progress(0.2, desc="Downloading & Loading SAM2 Model...")
-    sam_checkpoint = hf_hub_download("facebook/sam2-hiera-base-plus", "sam2_hiera_b+.pt")
-    sam_model = build_sam2(model_name='sam2_hiera_base_plus_t', ckpt_path=sam_checkpoint)
+    # Point to the locally downloaded checkpoint file
+    sam_checkpoint = "c:/Brugere/mogen/.cache/sam2/sam2_hiera_b+.pt"
+    # Add path to the configs, so the model can be found
+    config_path = os.path.join(os.getcwd(), "Configs")
+    sam_model = build_sam2(model_name='sam2_hiera_base_plus_t', ckpt_path=sam_checkpoint, model_config_path=config_path)
     sam_model.to(DEVICE)
     MODELS["sam_predictor"] = SAM2ImagePredictor(sam_model)
     print("SAM2 loaded.")

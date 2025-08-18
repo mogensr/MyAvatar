@@ -1,0 +1,15 @@
+model:
+  type: sam2
+  model_name: sam2_hiera_base_plus_t
+  # Checkpoint path is optional. If not provided, it will be downloaded automatically.
+  # ckpt_path: "/path/to/your/sam2_hiera_b+.pt"
+  hiera_config:
+    embed_dim: 1408
+    num_heads: 16
+    depth: 40
+    mlp_ratio: 4.3637
+    qkv_bias: True
+    use_rel_pos: True
+    window_size: 14
+    block_chunks: 4 # for memory saving
+  image_size: 1024
