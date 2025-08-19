@@ -4,8 +4,10 @@ MyAvatar - Complete AI Avatar Video Generation Platform
 Modular version with enhanced organization - REFACTORED ROUTES + PREMIUM FEATURES + BACKGROUNDFX + VIDEO PROCESSING
 """
 from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import uvicorn
 from app.database.database import init_database, create_admin_user, update_database_schema
 from app.utils.logging_config import logger, log_info, log_error, log_compatibility_status
 import gradio as gr
@@ -23,6 +25,9 @@ import sys
 
 # Load environment variables
 load_dotenv()
+
+# Define the base directory of the project
+BASE_DIR = Path(__file__).resolve().parent
 
 # Setup logging
 logging.basicConfig(
@@ -134,12 +139,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Mount static files safely
 try:
-  app.mount("/static", StaticFiles(directory="static"), name="static")
+  app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 except Exception as e:
   logger.warning(f"Could not mount static files: {e}")
 
-# Mount the Gradio app for the background removal tool
-app = gr.mount_gradio_app(app, huggingface_gradio_app, path="/tools/background_remover")
 
 # =============================================================================
 # VIDEO URL REFRESHER BACKGROUND SERVICE
@@ -212,8 +215,9 @@ def ensure_directories():
     # Ensure necessary directories exist
     directories = ['static', 'templates', 'app/database']
     for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        dir_path = BASE_DIR / directory
+        if not dir_path.exists():
+            os.makedirs(dir_path)
 
 def install_system_dependencies():
     # Install system dependencies
@@ -364,13 +368,13 @@ async def backgroundfx_page(request: Request):
         logger.info("BackgroundFX page accessed")
         
         # First try the enhanced template
-        enhanced_html_file = Path("templates/backgroundfx_enhanced.html")
+        enhanced_html_file = BASE_DIR / "templates" / "backgroundfx_enhanced.html"
         if enhanced_html_file.exists():
-            templates = Jinja2Templates(directory="templates")
+            templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
             return templates.TemplateResponse("backgroundfx_enhanced.html", {"request": request})
         
         # Fall back to original template
-        html_file = Path("templates/backgroundfx.html")
+        html_file = BASE_DIR / "templates" / "backgroundfx.html"
         if html_file.exists():
             with open(html_file, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -428,9 +432,9 @@ async def admin_premium_page(request: Request):
         logger.info("Admin premium page accessed")
         
         # Check if admin premium template exists
-        admin_premium_file = Path("templates/admin_premium.html")
+        admin_premium_file = BASE_DIR / "templates" / "admin_premium.html"
         if admin_premium_file.exists():
-            templates = Jinja2Templates(directory="templates")
+            templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
             return templates.TemplateResponse("admin_premium.html", {"request": request})
         else:
             # Fallback to basic admin premium page
@@ -493,7 +497,7 @@ directories = [
 
 for directory in directories:
   try:
-      os.makedirs(directory, exist_ok=True)
+      os.makedirs(BASE_DIR / directory, exist_ok=True)
   except Exception as e:
       logger.warning(f"Could not create directory {directory}: {e}")
 
@@ -1002,7 +1006,17 @@ async def startup_event():
   # Log system status
   modular_count = len([r for r in routers_loaded if not "legacy" in r])
   legacy_count = len([r for r in routers_loaded if "legacy" in r])
-  logger.info(f"🏗️ REFACTORING COMPLETE: {modular_count} modular routes, {legacy_count} legacy routes")
+      logger.info(f"🏗️ REFACTORING COMPLETE: {modular_count} modular routes, {legacy_count} legacy routes")
+
+    # Mount the Gradio app for the background removal tool
+    # This is done at the end of startup to ensure all other initializations are complete
+    try:
+        logger.info("🔧 Mounting Gradio app for background removal tool...")
+        gr.mount_gradio_app(app, huggingface_gradio_app, path="/tools/background_remover")
+        logger.info("✅ Gradio app mounted successfully at /tools/background_remover")
+    except Exception as e:
+        logger.error(f"❌ Failed to mount Gradio app: {e}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
   
   # Check feature status
   premium_loaded = any("premium_routes" in r for r in routers_loaded)
@@ -1039,5 +1053,18 @@ async def startup_event():
 # Entry point
 # Main application entry point
 if __name__ == "__main__":
-  import uvicorn
-  uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    try:
+        logger.info("Starting application server...")
+        # Note: Database initialization is now handled by the startup event.
+        # Start the FastAPI application using uvicorn
+        uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", 7860)), reload=True)
+
+    except ImportError as e:
+        print(f"FATAL: Missing essential dependency: {e}")
+        print("Please run 'pip install -r requirements.txt' to install required packages.")
+        import traceback
+        traceback.print_exc()
+    except Exception as e:
+        print(f"FATAL: Application failed to start: {e}")
+        import traceback
+        traceback.print_exc()

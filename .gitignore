@@ -12,6 +12,9 @@ __pycache__/
 *.pyo 
 venv/ 
 # 
+# User-specific files
+COMPLETE_WORKING_BACKUP_20250717_201841/ 
+# 
 # System files 
 .DS_Store 
 Thumbs.db 

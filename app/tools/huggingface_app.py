@@ -42,7 +42,13 @@ def load_models(progress=gr.Progress()):
     logger = logging.getLogger("HuggingFaceAppLoader")
 
     def load_sam2_predictor(device="cuda"):
-        configs_dir = os.path.join(os.getcwd(), "Configs")
+        # Use an absolute path to the 'Configs' directory relative to this script's location
+        # to avoid issues with the current working directory.
+        from pathlib import Path
+        script_dir = Path(__file__).resolve().parent
+        project_root = script_dir.parent.parent  # Move up from app/tools to the root
+        configs_dir = str(project_root / "Configs")
+        logger.info(f"Looking for SAM2 configs in: {configs_dir}")
         tried = []
 
         def try_load(config_name, checkpoint_name):
@@ -99,18 +105,34 @@ def load_models(progress=gr.Progress()):
     # Load MatAnyone
     progress(0.6, desc="Loading MatAnyone Model...")
     logger.info("Attempting to load MatAnyone model...")
+    # Step 1: Attempt to import the library
+    logger.info("--- MatAnyone Model Loading ---")
     try:
         from matanyone import InferenceCore
-        logger.info("Successfully imported InferenceCore from matanyone.")
-        MODELS["matanyone_processor"] = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
-        logger.info("✅ MatAnyone model loaded successfully.")
-        print("MatAnyone loaded.")
+        logger.info("✅ Successfully imported 'InferenceCore' from 'matanyone'.")
     except ImportError as e:
-        logger.error(f"❌ Failed to import 'matanyone'. It might not be installed correctly. Error: {e}")
-        raise gr.Error("Critical Error: MatAnyone library failed to import. Please check the installation.")
+        logger.critical(f"❌ CRITICAL: Failed to import 'matanyone'. The package is likely not installed correctly.")
+        logger.critical(f"   Please ensure it is installed, e.g., via 'pip install git+https://github.com/pq-yang/MatAnyone.git'")
+        logger.critical(f"   Full ImportError: {e}")
+        raise gr.Error("Critical Error: MatAnyone library not found. Check installation.")
     except Exception as e:
-        logger.error(f"❌ An unexpected error occurred while loading the MatAnyone model: {e}")
+        logger.critical(f"❌ CRITICAL: An unexpected error occurred during import of 'matanyone'. Error: {e}")
+        raise gr.Error("Critical Error: An unexpected error occurred during MatAnyone import.")
+
+    # Step 2: Attempt to initialize the model
+    try:
+        logger.info("Initializing MatAnyone InferenceCore...")
+        progress(0.7, desc="Initializing MatAnyone Core...")
+        MODELS["matanyone_processor"] = InferenceCore(model_name="PeiqingYang/MatAnyone-v1.0", device=DEVICE)
+        logger.info("✅ MatAnyone InferenceCore initialized successfully.")
+        print("✅ MatAnyone model loaded.")
+    except Exception as e:
+        logger.critical(f"❌ CRITICAL: Failed to initialize MatAnyone InferenceCore.")
+        logger.critical(f"   This could be a CUDA issue, a problem downloading the model weights from Hugging Face, or a configuration error.")
+        logger.critical(f"   Full Exception: {e}")
         raise gr.Error("Critical Error: Failed to initialize MatAnyone model. Check logs for details.")
+    
+    logger.info("--- MatAnyone Model Loading Complete ---")
     progress(1, desc="Models loaded!")
 
 def offload_models():
