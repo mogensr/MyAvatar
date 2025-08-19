@@ -768,27 +768,7 @@ async def debug_avatars():
   """
   try:
       log_info("Debug avatars endpoint accessed", "Debug")
-      from huggingface_hub import hf_hub_download
 
-      # Define local cache path and check/download if missing
-      # Use a robust path relative to this file's location
-      configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Configs')
-      cache_dir = os.path.join(configs_dir, "sam2")
-      os.makedirs(cache_dir, exist_ok=True)
-      checkpoint_path = os.path.join(cache_dir, checkpoint_name)
-
-      if not os.path.exists(checkpoint_path):
-          logger.info(f"Downloading {checkpoint_name} from Hugging Face Hub...")
-          try:
-              hf_hub_download(
-                  repo_id=f"facebook/{config_name.replace('.yaml', '')}",
-                  filename=checkpoint_name,
-                  local_dir=cache_dir,
-                  local_dir_use_symlinks=False # Use direct download
-              )
-              logger.info(f"✅ Download complete: {checkpoint_path}")
-          except Exception as download_error:
-              raise FileNotFoundError(f"Failed to download {checkpoint_name}: {download_error}")
       api_key = os.getenv("HEYGEN_API_KEY")
       if not api_key:
           logger.error("HEYGEN_API_KEY not found in environment")
@@ -1008,17 +988,17 @@ async def startup_event():
   # Log system status
   modular_count = len([r for r in routers_loaded if not "legacy" in r])
   legacy_count = len([r for r in routers_loaded if "legacy" in r])
-      logger.info(f"🏗️ REFACTORING COMPLETE: {modular_count} modular routes, {legacy_count} legacy routes")
+  logger.info(f"🏗️ REFACTORING COMPLETE: {modular_count} modular routes, {legacy_count} legacy routes")
 
-    # Mount the Gradio app for the background removal tool
-    # This is done at the end of startup to ensure all other initializations are complete
-    try:
-        logger.info("🔧 Mounting Gradio app for background removal tool...")
-        gr.mount_gradio_app(app, huggingface_gradio_app, path="/tools/background_remover")
-        logger.info("✅ Gradio app mounted successfully at /tools/background_remover")
-    except Exception as e:
-        logger.error(f"❌ Failed to mount Gradio app: {e}")
-        logger.error(f"Full traceback: {traceback.format_exc()}")
+  # Mount the Gradio app for the background removal tool
+  # This is done at the end of startup to ensure all other initializations are complete
+  try:
+      logger.info("🔧 Mounting Gradio app for background removal tool...")
+      gr.mount_gradio_app(app, huggingface_gradio_app, path="/tools/background_remover")
+      logger.info("✅ Gradio app mounted successfully at /tools/background_remover")
+  except Exception as e:
+      logger.error(f"❌ Failed to mount Gradio app: {e}")
+      logger.error(f"Full traceback: {traceback.format_exc()}")
   
   # Check feature status
   premium_loaded = any("premium_routes" in r for r in routers_loaded)

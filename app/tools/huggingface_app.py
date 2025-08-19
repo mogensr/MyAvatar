@@ -56,36 +56,36 @@ def load_models(progress=gr.Progress()):
 
         def try_load(config_name, checkpoint_name):
             try:
-                # Download model from Hugging Face Hub if it doesn't exist
-                cache_dir = os.path.expanduser("~/.cache/sam2")
-                os.makedirs(cache_dir, exist_ok=True)
-                checkpoint_path = os.path.join(cache_dir, checkpoint_name)
+                # Construct path to local checkpoint file within the repository
+                checkpoint_path = project_root / "segment-anything-2" / "checkpoints" / checkpoint_name
+                logger.info(f"Attempting to load checkpoint from local path: {checkpoint_path}")
 
                 if not os.path.exists(checkpoint_path):
-                    logger.info(f"Downloading {checkpoint_name} from Hugging Face Hub...")
-                    progress(0.1, desc=f"Downloading {checkpoint_name}...")
-                    hf_hub_download(
-                        repo_id=f"facebook/{config_name.replace('.yaml', '')}",
-                        filename=checkpoint_name,
-                        local_dir=cache_dir,
-                        local_dir_use_symlinks=False
-                    )
-                    logger.info(f"✅ Download complete: {checkpoint_path}")
+                    error_msg = f"FATAL: Checkpoint file not found at {checkpoint_path}. Ensure it is tracked by Git LFS and present in your Hugging Face Space."
+                    logger.error(error_msg)
+                    raise FileNotFoundError(error_msg)
 
                 # Load model using hydra config
-                hydra.core.global_hydra.GlobalHydra.instance().clear()
+                if hydra.core.global_hydra.GlobalHydra.instance().is_initialized():
+                    hydra.core.global_hydra.GlobalHydra.instance().clear()
+                
                 hydra.initialize(config_path=relative_configs_dir)
                 cfg = hydra.compose(config_name=config_name)
 
-                logger.info(f"Trying to load {config_name} on {device} with checkpoint {checkpoint_path}")
+                logger.info(f"Loading model '{config_name}' on '{DEVICE}' with checkpoint '{checkpoint_path}'")
                 progress(0.3, desc=f"Loading {config_name}...")
-                sam2_model = build_sam2(cfg.model, checkpoint_path, device=device)
+                
+                # Pass the config NAME (string), not the loaded config object, to build_sam2
+                sam2_model = build_sam2(config_name, str(checkpoint_path), device=DEVICE)
                 predictor = SAM2ImagePredictor(sam2_model)
-                logger.info(f"✅ Loaded {config_name} successfully on {device}")
+                
+                logger.info(f"✅ Loaded {config_name} successfully on {DEVICE}")
                 return predictor
             except Exception as e:
-                tried.append(f"{config_name}: {e}")
-                logger.warning(f"Failed to load {config_name}: {e}")
+                import traceback
+                error_msg = f"Failed to load {config_name}: {e}\nTraceback: {traceback.format_exc()}"
+                tried.append(error_msg)
+                logger.warning(error_msg)
                 return None
 
         predictor = try_load("sam2_hiera_large.yaml", "sam2_hiera_large.pt")
