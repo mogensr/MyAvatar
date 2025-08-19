@@ -47,8 +47,11 @@ def load_models(progress=gr.Progress()):
         from pathlib import Path
         script_dir = Path(__file__).resolve().parent
         project_root = script_dir.parent.parent  # Move up from app/tools to the root
-        configs_dir = str(project_root / "Configs")
-        logger.info(f"Looking for SAM2 configs in: {configs_dir}")
+        configs_dir_abs = project_root / "Configs"
+        # Hydra expects a path relative to the calling file, so we calculate it.
+        relative_configs_dir = os.path.relpath(configs_dir_abs, start=script_dir)
+        logger.info(f"Absolute path to SAM2 configs: {configs_dir_abs}")
+        logger.info(f"Relative path for Hydra: {relative_configs_dir}")
         tried = []
 
         def try_load(config_name, checkpoint_name):
@@ -71,7 +74,7 @@ def load_models(progress=gr.Progress()):
 
                 # Load model using hydra config
                 hydra.core.global_hydra.GlobalHydra.instance().clear()
-                hydra.initialize(config_path=configs_dir)
+                hydra.initialize(config_path=relative_configs_dir)
                 cfg = hydra.compose(config_name=config_name)
 
                 logger.info(f"Trying to load {config_name} on {device} with checkpoint {checkpoint_path}")

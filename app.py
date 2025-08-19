@@ -771,7 +771,9 @@ async def debug_avatars():
       from huggingface_hub import hf_hub_download
 
       # Define local cache path and check/download if missing
-      cache_dir = os.path.expanduser("~/.cache/sam2")
+      # Use a robust path relative to this file's location
+      configs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Configs')
+      cache_dir = os.path.join(configs_dir, "sam2")
       os.makedirs(cache_dir, exist_ok=True)
       checkpoint_path = os.path.join(cache_dir, checkpoint_name)
 
