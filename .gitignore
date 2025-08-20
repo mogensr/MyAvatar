@@ -5,26 +5,43 @@
 .env.development 
 .env.production 
 .env.template 
-# 
-# Python 
-__pycache__/ 
-*.pyc 
-*.pyo 
-venv/ 
-# 
-# User-specific files
-COMPLETE_WORKING_BACKUP_20250717_201841/ 
-# 
-# System files 
-.DS_Store 
-Thumbs.db 
-# 
-# Project specific 
-Cloudinare.txt
 
-# Backups
+# Python 
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv
+venv/
+ENV/
+
+# User-specific files
 COMPLETE_WORKING_BACKUP_20250717_201841/
 WORKING_BACKUP_20250717_201722/
+
+# System files 
+.DS_Store 
+Thumbs.db
+
+# Project specific 
+Cloudinare.txt
 
 # User Uploads & Temporary Files
 uploads/
@@ -45,7 +62,31 @@ output/
 *~
 .idea/
 .vscode/
+*.sublime-*
 
 # AI_Worker (separate project in same repo)
 AI_Worker/
+
+# CI/CD
+.cache/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local development
+local_settings.py
+db.sqlite3
+
+# Koyeb
+koyeb/
+
+# Supabase
+supabase/
+
+# Hugging Face
+.cache/
+.huggingface/
 ../AI_Worker/ 
